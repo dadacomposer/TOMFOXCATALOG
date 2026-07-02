@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TomFoxCatalog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script>
+      window.addEventListener('error', function(e) {
+        document.body.innerHTML = '<div style="color:red; font-size:20px; padding:20px; font-family:monospace;"><strong>Global Error:</strong><br/>' + e.message + '<br/><br/><strong>Location:</strong><br/>' + e.filename + ':' + e.lineno + '<br/><br/><strong>Stack:</strong><br/><pre>' + (e.error ? e.error.stack : '') + '</pre></div>';
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        document.body.innerHTML = '<div style="color:red; font-size:20px; padding:20px; font-family:monospace;"><strong>Unhandled Promise Rejection:</strong><br/>' + e.reason + '</div>';
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

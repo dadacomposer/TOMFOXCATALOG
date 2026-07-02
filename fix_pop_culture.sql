@@ -1,0 +1,1 @@
+UPDATE playlists SET cover_url = 'https://images.unsplash.com/photo-1602450069437-d52c62f52a71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8Mnx8YWJzdHJhY3QlMjBjb2xvcmZ1bCUyMHBvcHVwJTIwYnJpZ2h0JTIwcG9wJTIwYXJ0fGVufDB8fHx8MTc4MjU4NDMwNnww&ixlib=rb-4.1.0&q=80&w=1080', created_at = created_at - INTERVAL '10 days' WHERE title ILIKE '%Pop Culture Quirk%';

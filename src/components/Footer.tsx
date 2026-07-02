@@ -1,0 +1,92 @@
+import React from 'react';
+import { Music } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { siTiktok, siInstagram, siYoutube } from 'simple-icons';
+import { useAuth } from '../context/AuthContext';
+
+export default function Footer({ isDark = false }: { isDark?: boolean }) {
+  const textColor = isDark ? 'text-white' : 'text-black';
+  const bgColor = isDark ? 'bg-[#111]' : 'bg-[#fafafa]/85 backdrop-blur-xl';
+  const mutedTextColor = isDark ? 'text-white/50' : 'text-black/50';
+  const borderColor = isDark ? 'border-white/10' : 'border-black/10';
+  const { setContactModalOpen } = useAuth();
+
+  return (
+    <footer className={`w-full ${bgColor} ${textColor} pt-16 md:pt-24 pb-8 border-t ${borderColor} z-10 relative`}>
+      <div className="w-full max-w-[1600px] mx-auto px-6 md:px-12 lg:px-16">
+        
+        <div className="w-full flex flex-col lg:flex-row justify-between gap-16 mb-16 md:mb-20">
+          
+          {/* LOGO & TAGLINE */}
+          <div className="flex flex-col items-start max-w-sm">
+            <Link to="/" className="mb-8 block cursor-pointer transition-transform hover:scale-105 active:scale-95 group">
+               <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" className={`w-20 md:w-24 h-auto ${isDark ? 'invert' : ''}`} alt="Tom Fox Logo" />
+            </Link>
+            <p className={`font-sans ${mutedTextColor} text-xs md:text-sm uppercase tracking-widest leading-relaxed`}>
+              Premium music licensing for creators, brands, and filmmakers who refuse to compromise on sound.
+            </p>
+          </div>
+
+          {/* NAVIGATION LINKS */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 flex-1 lg:max-w-4xl pt-2 lg:pt-0">
+            
+            <div className="flex flex-col gap-4">
+              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Explore</h4>
+              <Link to="/browse" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Catalog</Link>
+              <Link to="/playlists" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Playlists</Link>
+              <Link to="/browse?playlist=new-music" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>New Releases</Link>
+              <Link to="/pricing" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Pricing</Link>
+              <Link to="/enterprise" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Enterprise</Link>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Support</h4>
+              <Link to="/faq" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>FAQ</Link>
+              <button onClick={() => setContactModalOpen(true)} className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold text-left`}>Contact Us</button>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Legal</h4>
+              <Link to="/terms" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Terms of Service</Link>
+              <Link to="/privacy" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Privacy Policy</Link>
+              <Link to="/cookie-policy" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Cookie Policy</Link>
+            </div>
+
+            {/* SOCIALS */}
+            <div className="flex flex-col gap-4">
+              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Connect</h4>
+              <div className="flex gap-4">
+                <a href="https://instagram.com/tomfoxmusic" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <path d={siInstagram.path} />
+                  </svg>
+                </a>
+                <a href="https://youtube.com/tomfoxmusic" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <path d={siYoutube.path} />
+                  </svg>
+                </a>
+                <a href="https://tiktok.com/@tomfoxmusic" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <path d={siTiktok.path} />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BOTTOM ROW */}
+        <div className={`w-full flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t ${borderColor}`}>
+          <div className={`font-sans text-[10px] uppercase tracking-widest ${mutedTextColor}`}>
+            © {new Date().getFullYear()} Tom Fox Music. All rights reserved.
+          </div>
+          <div className={`font-sans text-[10px] uppercase tracking-widest ${mutedTextColor} flex items-center gap-2`}>
+            Designed with <Music className="w-3 h-3" /> in Los Angeles
+          </div>
+        </div>
+
+      </div>
+    </footer>
+  );
+}

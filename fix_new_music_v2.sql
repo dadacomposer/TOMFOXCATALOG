@@ -1,0 +1,1 @@
+UPDATE playlists SET cover_url = 'https://images.unsplash.com/photo-1620121684840-edffcfc4b878?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MXxzZWFyY2h8NHx8YWJzdHJhY3QlMjB2aXZpZCUyMGNvbG9yJTIwYmx1ciUyMGxpcXVpZCUyMHNoYXBlfGVufDB8fHx8MTc4MjU4NDgyMnww&ixlib=rb-4.1.0&q=80&w=1080' WHERE title ILIKE '%New Music%';

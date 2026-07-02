@@ -1,0 +1,86 @@
+  const handlePlayPause = (track: Track, source?: 'top' | 'browse') => {
+    const effectiveSource = source || currentSource;
+    if (source) setCurrentSource(source);
+    
+    if (currentTrack?.id === track.id) {
+      if (isPlaying) {
+        audioRef.current?.pause();
+      } else {
+        audioRef.current?.play();
+      }
+      setIsPlaying(!isPlaying);
+    } else {
+      setCurrentTrack(track);
+      if (source) setCurrentSource(source);
+      
+      const shouldPreview = isPreviewMode && effectiveSource !== 'top';
+      if (shouldPreview) {
+        const timings = getPreviewTimings(track);
+        if (timings) {
+          setPendingSeek(timings.startPct);
+        } else {
+          setProgress(0);
+        }
+      } else {
+        setProgress(0);
+      }
+      setIsPlaying(true);
+    }
+  };
+
+  const handleSeek = (track: Track, percentage: number) => {
+    if (currentTrack?.id === track.id) {
+      if (audioRef.current && audioRef.current.duration) {
+        audioRef.current.currentTime = (percentage / 100) * audioRef.current.duration;
+        setProgress(percentage);
+      }
+    } else {
+      setCurrentTrack(track);
+      setPendingSeek(percentage);
+      setIsPlaying(true);
+    }
+  };
+
+  // Global spacebar shortcut for play/pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        if (currentTrack) {
+          e.preventDefault();
+          handlePlayPause(currentTrack);
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentTrack, handlePlayPause]);
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      const current = audioRef.current.currentTime;
+      const duration = audioRef.current.duration;
+      setProgress((current / duration) * 100);
+
+      const shouldPreview = isPreviewMode && currentSource !== 'top';
+      if (shouldPreview && currentTrack) {
+        const timings = getPreviewTimings(currentTrack);
+        if (timings && current >= timings.end) {
+          playNextTrack();
+        }
+      }
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="flex flex-col w-full min-h-screen pt-[88px] bg-[#fafafa] text-black relative">
