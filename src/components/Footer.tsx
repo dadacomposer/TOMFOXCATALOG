@@ -1,7 +1,7 @@
 import React from 'react';
 import { Music } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { siTiktok, siInstagram, siYoutube } from 'simple-icons';
+import { siLinkedin, siInstagram, siYoutube } from 'simple-icons';
 import { useAuth } from '../context/AuthContext';
 
 export default function Footer({ isDark = false }: { isDark?: boolean }) {
@@ -56,19 +56,19 @@ export default function Footer({ isDark = false }: { isDark?: boolean }) {
             <div className="flex flex-col gap-4">
               <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Connect</h4>
               <div className="flex gap-4">
-                <a href="https://instagram.com/tomfoxmusic" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
+                <a href="https://www.instagram.com/tom._fox/" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
                   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                     <path d={siInstagram.path} />
                   </svg>
                 </a>
-                <a href="https://youtube.com/tomfoxmusic" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
+                <a href="https://www.youtube.com/@tomfoxcatalog" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
                   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                     <path d={siYoutube.path} />
                   </svg>
                 </a>
-                <a href="https://tiktok.com/@tomfoxmusic" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
+                <a href="https://www.linkedin.com/in/tom-fox-199225198" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
                   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                    <path d={siTiktok.path} />
+                    <path d={siLinkedin.path} />
                   </svg>
                 </a>
               </div>
