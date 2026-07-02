@@ -479,20 +479,6 @@ export default function Pricing() {
             </div>
           )}
 
-          {/* ENTERPRISE */}
-          {activeTab === 'enterprise' && (
-            <div className="flex flex-col items-center justify-center text-center py-6 md:py-12">
-              <div className="bg-[#111] text-white border border-white/5 p-8 md:p-20 rounded-[32px] max-w-4xl flex flex-col items-center shadow-2xl shadow-black/20">
-                <h3 className="text-4xl md:text-6xl font-bold uppercase tracking-tighter leading-tight mb-6 md:mb-8">Custom Enterprise Terms</h3>
-                <p className="font-sans text-[14px] md:text-[16px] text-white/60 max-w-2xl leading-relaxed mb-10 md:mb-12 uppercase tracking-wide">
-                  Need blanket clearances for massive global broadcasts, major networks, or custom enterprise terms? Get dedicated support, totally frictionless clearance, and absolute peace of mind.
-                </p>
-                <button className="bg-white text-black font-bold uppercase text-xs tracking-widest py-4 md:py-5 px-10 md:px-12 rounded-full hover:bg-white/90 transition-transform hover:scale-105 active:scale-95 flex items-center gap-3">
-                  <Mail className="w-5 h-5" /> Contact Sales
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

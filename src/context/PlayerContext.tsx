@@ -6,6 +6,9 @@ export type Track = {
   file_name: string;
   r2_url: string;
   waveform_data?: number[];
+  subgenre?: string | string[];
+  moods?: string | string[];
+  scenarios?: string | string[];
   // altre props se servono...
 };
 

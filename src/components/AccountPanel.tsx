@@ -13,7 +13,7 @@ export default function AccountPanel() {
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
   
-  const [activeView, setActiveView] = useState<'menu' | 'overview' | 'licenses' | 'team' | 'settings' | 'billing'>('menu');
+  const [activeView, setActiveView] = useState<'menu' | 'overview' | 'licenses' | 'team' | 'settings' | 'billing' | 'notifications'>('menu');
   const [editName, setEditName] = useState('');
   const [editCompany, setEditCompany] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
@@ -693,8 +693,8 @@ export default function AccountPanel() {
                               <svg className="hidden fallback-svg w-4 h-4 text-black/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             </>
                           ) : (
-                            <div className="no-radius w-6 h-6 rounded-full bg-black/5 border border-black/10 flex items-center justify-center font-bold text-[10px]">
-                              {(member.profiles?.first_name?.[0] || '?').toUpperCase()}
+                            <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                              {(member.profiles?.first_name || '')[0] || (member.profiles?.last_name || '')[0] || '?'}
                             </div>
                           )}
                           <span className="font-sans text-xs font-medium">{member.profiles?.first_name} {member.profiles?.last_name}</span>
@@ -737,8 +737,8 @@ export default function AccountPanel() {
                     </div>
                     
                     <UpgradePlan 
-                      currentPlanId={profile?.subscription_tier} 
-                      currentInterval={profile?.billing_interval}
+                      currentPlanId={profile?.subscription_tier || undefined} 
+                      currentInterval={profile?.billing_interval || undefined}
                       onSuccess={async () => {
                         setIsChangingPlan(false);
                         await refreshProfile();

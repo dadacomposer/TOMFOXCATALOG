@@ -27,6 +27,7 @@ import AccountPanel from './components/AccountPanel';
 import ContactSalesModal from './components/ContactSalesModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
+import UnderConstruction from './components/UnderConstruction';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -110,18 +111,20 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <PlayerProvider>
-          <DownloadProvider>
-            <LicenseProvider>
-              <AppLayout />
-              <DownloadModal />
-              <LicenseModal />
-            </LicenseProvider>
-          </DownloadProvider>
-        </PlayerProvider>
-      </Router>
-    </AuthProvider>
+    <UnderConstruction>
+      <AuthProvider>
+        <Router>
+          <PlayerProvider>
+            <DownloadProvider>
+              <LicenseProvider>
+                <AppLayout />
+                <DownloadModal />
+                <LicenseModal />
+              </LicenseProvider>
+            </DownloadProvider>
+          </PlayerProvider>
+        </Router>
+      </AuthProvider>
+    </UnderConstruction>
   );
 }

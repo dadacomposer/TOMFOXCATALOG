@@ -19,7 +19,7 @@ export default function Home() {
 
   const [realPlaylists, setRealPlaylists] = useState<any[]>([]);
   const { isPlaying, togglePlay, playPlaylist, currentTrack } = usePlayer();
-  const { user, loading, setLoginModalOpen } = useAuth();
+  const { user, loading, setLoginModalOpen, setContactModalOpen } = useAuth();
 
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
 
