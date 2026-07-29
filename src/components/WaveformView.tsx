@@ -7,9 +7,10 @@ interface WaveformViewProps {
   onSeek?: (percentage: number) => void;
   previewStartPct?: number; // 0 to 100
   previewEndPct?: number; // 0 to 100
+  isDark?: boolean;
 }
 
-export default function WaveformView({ data, isPlaying = false, progress = 0, onSeek, previewStartPct, previewEndPct }: WaveformViewProps) {
+export default function WaveformView({ data, isPlaying = false, progress = 0, onSeek, previewStartPct, previewEndPct, isDark = false }: WaveformViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -31,7 +32,7 @@ export default function WaveformView({ data, isPlaying = false, progress = 0, on
   if (!data || data.length === 0) {
     return (
       <div className="w-full h-full flex items-center opacity-30">
-        <div className="w-full h-[2px] bg-black/20 rounded-full"></div>
+        <div className={`w-full h-[2px] ${isDark ? 'bg-white/20' : 'bg-black/20'} rounded-full`}></div>
       </div>
     );
   }
@@ -47,14 +48,14 @@ export default function WaveformView({ data, isPlaying = false, progress = 0, on
       className="w-full h-full flex items-center justify-between cursor-pointer group/waveform relative"
     >
       <div 
-        className={`absolute h-[150%] top-[-25%] bg-black/5 rounded-lg transition-opacity duration-300 pointer-events-none ${isActive ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute h-[150%] top-[-25%] ${isDark ? 'bg-white/10' : 'bg-black/5'} rounded-lg transition-opacity duration-300 pointer-events-none ${isActive ? 'opacity-100' : 'opacity-0'}`}
         style={{ 
           left: `${renderStart}%`, 
           width: `${Math.max(0, renderEnd - renderStart)}%`,
           zIndex: 0
         }} 
       >
-        <div className="absolute inset-0 rounded-lg border-[1.5px] border-black/30" />
+        <div className={`absolute inset-0 rounded-lg border-[1.5px] ${isDark ? 'border-white/30' : 'border-black/30'}`} />
       </div>
       {data.map((val, idx) => {
         // val is already 0-100. We ensure a minimum height of 8% for flatlines.
@@ -62,7 +63,13 @@ export default function WaveformView({ data, isPlaying = false, progress = 0, on
         
         // Progress is 0 to 100. idx / data.length is 0 to 1.
         const isPlayed = progress > 0 && (idx / data.length) * 100 <= progress;
-        const colorClass = isPlayed ? 'bg-black opacity-100' : 'bg-black/20 group-hover/waveform:bg-black/40';
+        
+        let colorClass = '';
+        if (isDark) {
+          colorClass = isPlayed ? 'bg-white opacity-100' : 'bg-white/20 group-hover/waveform:bg-white/40';
+        } else {
+          colorClass = isPlayed ? 'bg-black opacity-100' : 'bg-black/20 group-hover/waveform:bg-black/40';
+        }
 
         return (
           <div 

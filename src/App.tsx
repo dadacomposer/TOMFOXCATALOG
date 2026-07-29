@@ -14,10 +14,13 @@ import CheckoutSuccess from './pages/CheckoutSuccess';
 import CheckoutCancel from './pages/CheckoutCancel';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import Admin from './pages/Admin';
+import SharedPlayer from './pages/SharedPlayer';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { DownloadProvider } from './context/DownloadContext';
 import { LicenseProvider } from './context/LicenseContext';
 import { AuthProvider } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 import GlobalPlayer from './components/GlobalPlayer';
 import DownloadModal from './components/DownloadModal';
 import LicenseModal from './components/LicenseModal';
@@ -52,7 +55,7 @@ function AppLayout() {
   return (
     <div className={`w-full min-h-screen bg-[#fafafa] text-black font-sans selection:bg-black selection:text-white flex flex-col transition-all duration-500 ease-out ${currentTrack ? 'pb-[90px]' : ''}`}>
       <ScrollToTop />
-      <Header />
+      {location.pathname !== '/admin' && !location.pathname.startsWith('/share') && <Header />}
       
       <div className="flex-grow flex flex-col">
         <ErrorBoundary>
@@ -67,13 +70,15 @@ function AppLayout() {
             <Route path="/checkout-cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/share/:slug" element={<SharedPlayer />} />
           </Routes>
         </ErrorBoundary>
       </div>
 
-      <Footer isDark={location.pathname === '/'} />
-      <GlobalPlayer />
-      {!['/checkout-resume', '/checkout-success', '/checkout-cancel'].includes(location.pathname) && <OnboardingModal />}
+      {location.pathname !== '/admin' && !location.pathname.startsWith('/share') && <Footer isDark={location.pathname === '/'} />}
+      {!location.pathname.startsWith('/share') && <GlobalPlayer />}
+      {!['/checkout-resume', '/checkout-success', '/checkout-cancel', '/admin'].includes(location.pathname) && <OnboardingModal />}
       <AccountPanel />
       <Login />
       <ContactSalesModal />
@@ -112,19 +117,21 @@ function AppLayout() {
 export default function App() {
   return (
     <UnderConstruction>
-      <AuthProvider>
-        <Router>
-          <PlayerProvider>
-            <DownloadProvider>
-              <LicenseProvider>
-                <AppLayout />
-                <DownloadModal />
-                <LicenseModal />
-              </LicenseProvider>
-            </DownloadProvider>
-          </PlayerProvider>
-        </Router>
-      </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <Router>
+            <PlayerProvider>
+              <DownloadProvider>
+                <LicenseProvider>
+                  <AppLayout />
+                  <DownloadModal />
+                  <LicenseModal />
+                </LicenseProvider>
+              </DownloadProvider>
+            </PlayerProvider>
+          </Router>
+        </AuthProvider>
+      </SettingsProvider>
     </UnderConstruction>
   );
 }

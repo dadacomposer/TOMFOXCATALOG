@@ -6,6 +6,7 @@ import PlaylistArtwork from '../components/PlaylistArtwork';
 import { usePlayer } from '../context/PlayerContext';
 import { siGoogle } from 'simple-icons';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 type RoleId = 'youtube' | 'wedding' | 'freelance' | 'supervisor' | 'other' | 'small_biz' | 'medium_biz' | 'enterprise_biz' | 'extended_biz';
 
@@ -20,6 +21,7 @@ export default function Pricing() {
   const [isInterceptModalOpen, setIsInterceptModalOpen] = useState(false);
   const [isManagingBilling, setIsManagingBilling] = useState(false);
   const { user, profile, setPlayIntro, setContactModalOpen } = useAuth();
+  const { settings } = useSettings();
 
   const handleManageBilling = async () => {
     try {
@@ -343,13 +345,32 @@ export default function Pricing() {
       
       {/* Hero Section */}
       <div className="relative z-10 w-full px-6 md:px-24 lg:px-32 flex flex-col items-center text-center mb-16 md:mb-24">
-        <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter leading-[1.05] text-black max-w-5xl mb-8">
-          Pick your plan,<br /><span className="text-black/30">Get unlimited access.</span>
-        </h1>
+        {!settings.subscriptions_enabled ? (
+           <>
+             <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter leading-[1.05] text-black max-w-5xl mb-8">
+                {settings.content['pricing']?.hero_custom_title || 'Custom Music & Licensing'}<br /><span className="text-black/30">{settings.content['pricing']?.hero_custom_subtitle || 'Built for your project.'}</span>
+             </h1>
+             <p className="font-sans text-sm md:text-base uppercase leading-relaxed tracking-wide text-black/50 max-w-2xl mb-12">
+                {settings.content['pricing']?.hero_custom_desc || 'We craft bespoke scores, custom sound design, and provide tailored clearance for high-stakes campaigns.'}
+             </p>
+             <button 
+               onClick={() => setContactModalOpen(true)}
+               className="px-10 py-5 bg-black text-white font-bold uppercase text-xs tracking-widest hover:bg-black/90 transition-colors rounded-full"
+             >
+               Book a Call
+             </button>
+           </>
+        ) : (
+           <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter leading-[1.05] text-black max-w-5xl mb-8">
+             {settings.content['pricing']?.hero_title || 'Pick your plan,'}<br /><span className="text-black/30">{settings.content['pricing']?.hero_subtitle || 'Get unlimited access.'}</span>
+           </h1>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div className="w-full px-6 md:px-24 lg:px-32 mb-12 md:mb-16 flex flex-col sm:flex-row justify-center items-center gap-4">
+      {!settings.subscriptions_enabled ? null : (
+        <>
+          {/* Tabs */}
+          <div className="w-full px-6 md:px-24 lg:px-32 mb-12 md:mb-16 flex flex-col sm:flex-row justify-center items-center gap-4">
         <div className="flex border border-black/10 rounded-full overflow-hidden p-1 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
           {renderTabButton('individual', 'Individual')}
           {renderTabButton('business', 'Business')}
@@ -390,7 +411,7 @@ export default function Pricing() {
                 {/* Right Side: Perks Panel */}
                 <div className="w-full lg:w-[60%] bg-white border border-black/10 rounded-[32px] p-8 md:p-12 h-fit">
                   <p className="font-sans text-[14px] md:text-[15px] text-black/60 leading-relaxed mb-8 border-b border-black/10 pb-8 uppercase tracking-wide">
-                    Perfect for freelance filmmakers, wedding videographers, creators, and podcasters. All individual subscriptions include:
+                    {settings.content['pricing']?.ind_perks_title || 'Perfect for freelance filmmakers, wedding videographers, creators, and podcasters. All individual subscriptions include:'}
                   </p>
                   <ul className="flex flex-col gap-6">
                     {[
@@ -416,7 +437,7 @@ export default function Pricing() {
                   onClick={() => setContactModalOpen(true)} 
                   className="text-[12px] md:text-[13px] text-black/50 hover:text-black transition-colors underline underline-offset-4 decoration-black/20 hover:decoration-black uppercase tracking-widest font-bold"
                 >
-                  Don't fit into these categories? Contact Sales for Other Use Cases.
+                  {settings.content['pricing']?.ind_other || "Don't fit into these categories? Contact Sales for Other Use Cases."}
                 </button>
               </div>
             </div>
@@ -446,7 +467,7 @@ export default function Pricing() {
                 {/* Right Side: Perks Panel */}
                 <div className="w-full lg:w-[60%] bg-white border border-black/10 rounded-[32px] p-8 md:p-12 h-fit">
                     <p className="font-sans text-[14px] md:text-[15px] text-black/60 leading-relaxed mb-8 border-b border-black/10 pb-8 uppercase tracking-wide">
-                      Perfect for production companies, agencies, brands, and non-profits. All business subscriptions include:
+                      {settings.content['pricing']?.biz_perks_title || 'Perfect for production companies, agencies, brands, and non-profits. All business subscriptions include:'}
                     </p>
                     <ul className="flex flex-col gap-6">
                       {[
@@ -473,7 +494,7 @@ export default function Pricing() {
                   onClick={() => setSelectedRole('extended_biz')} 
                   className="text-[14px] md:text-[15px] text-black/50 hover:text-black transition-colors underline underline-offset-4 decoration-black/20 hover:decoration-black"
                 >
-                  Need Extended Options? (TV, Cinema, Radio)
+                  {settings.content['pricing']?.biz_other || 'Need Extended Options? (TV, Cinema, Radio)'}
                 </button>
               </div>
             </div>
@@ -481,38 +502,42 @@ export default function Pricing() {
 
         </div>
       </div>
+      </>
+      )}
 
       {/* Validation Section (Dark Mode) */}
       <div className="w-full mt-24 md:mt-32 px-6 md:px-24 lg:px-32 py-24 md:py-32 flex flex-col items-center bg-[#111] text-white full-bleed">
-        <h2 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter mb-12 text-center">What's included</h2>
+        <h2 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter mb-12 text-center">
+          {settings.content['pricing']?.included_title || "What's included"}
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 w-full max-w-6xl">
           <div className="flex flex-col items-center text-center bg-[#1a1a1a] border border-white/5 rounded-[24px] p-8 hover:border-white/20 transition-all">
             <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-6">
               <Check className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-bold uppercase tracking-tight text-[18px] mb-3">Unlimited Access</h3>
-            <p className="font-sans text-white/70 text-[13px] leading-relaxed uppercase tracking-wide">Full access to our entire premium catalog of world-class, curated music.</p>
+            <h3 className="font-bold uppercase tracking-tight text-[18px] mb-3">{settings.content['pricing']?.inc_1_title || 'Unlimited Access'}</h3>
+            <p className="font-sans text-white/70 text-[13px] leading-relaxed uppercase tracking-wide">{settings.content['pricing']?.inc_1_desc || 'Full access to our entire premium catalog of world-class, curated music.'}</p>
           </div>
           <div className="flex flex-col items-center text-center bg-[#1a1a1a] border border-white/5 rounded-[24px] p-8 hover:border-white/20 transition-all">
             <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-6">
               <Check className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-bold uppercase tracking-tight text-[18px] mb-3">Monetization Ready</h3>
-            <p className="font-sans text-white/70 text-[13px] leading-relaxed uppercase tracking-wide">Keep what you earn. Full monetization rights across YouTube, social, and web.</p>
+            <h3 className="font-bold uppercase tracking-tight text-[18px] mb-3">{settings.content['pricing']?.inc_2_title || 'Monetization Ready'}</h3>
+            <p className="font-sans text-white/70 text-[13px] leading-relaxed uppercase tracking-wide">{settings.content['pricing']?.inc_2_desc || 'Keep what you earn. Full monetization rights across YouTube, social, and web.'}</p>
           </div>
           <div className="flex flex-col items-center text-center bg-[#1a1a1a] border border-white/5 rounded-[24px] p-8 hover:border-white/20 transition-all">
             <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-6">
               <Check className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-bold uppercase tracking-tight text-[18px] mb-3">Frictionless Clearance</h3>
-            <p className="font-sans text-white/70 text-[13px] leading-relaxed uppercase tracking-wide">Simple, whitelist-driven copyright clearance. No strikes, no stress.</p>
+            <h3 className="font-bold uppercase tracking-tight text-[18px] mb-3">{settings.content['pricing']?.inc_3_title || 'Frictionless Clearance'}</h3>
+            <p className="font-sans text-white/70 text-[13px] leading-relaxed uppercase tracking-wide">{settings.content['pricing']?.inc_3_desc || 'Simple, whitelist-driven copyright clearance. No strikes, no stress.'}</p>
           </div>
           <div className="flex flex-col items-center text-center bg-[#1a1a1a] border border-white/5 rounded-[24px] p-8 hover:border-white/20 transition-all">
             <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-6">
               <Check className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-bold uppercase tracking-tight text-[18px] mb-3">Direct Licensing</h3>
-            <p className="font-sans text-white/70 text-[13px] leading-relaxed uppercase tracking-wide">You're licensing directly from the source. Zero hidden fees or third-party headaches.</p>
+            <h3 className="font-bold uppercase tracking-tight text-[18px] mb-3">{settings.content['pricing']?.inc_4_title || 'Direct Licensing'}</h3>
+            <p className="font-sans text-white/70 text-[13px] leading-relaxed uppercase tracking-wide">{settings.content['pricing']?.inc_4_desc || "You're licensing directly from the source. Zero hidden fees or third-party headaches."}</p>
           </div>
         </div>
       </div>
@@ -521,12 +546,13 @@ export default function Pricing() {
       <div className="w-full py-24 md:py-32 px-6 md:px-24 lg:px-32 flex flex-col lg:flex-row items-stretch gap-16 lg:gap-24 max-w-[1600px] mx-auto">
         <div className="w-full lg:w-1/3 flex flex-col justify-between h-full items-start pt-4 pb-2">
           <div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tighter leading-[1.05] mb-8">
-            Curated for<br/>your story.
-          </h2>
+            <h2 
+              className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tighter leading-[1.05] mb-8"
+              dangerouslySetInnerHTML={{ __html: settings.content['pricing']?.curated_title || 'Curated for<br/>your story.' }}
+            />
           <p className="font-sans text-black/50 uppercase tracking-widest text-sm mb-12 max-w-xl">
-          Don't settle for boring stock music. Find the exact vibe you need from our hand-picked collections.
-        </p>
+            {settings.content['pricing']?.curated_desc || "Don't settle for boring stock music. Find the exact vibe you need from our hand-picked collections."}
+          </p>
           </div>
           <button 
             onClick={() => navigate('/browse')}
@@ -572,14 +598,15 @@ export default function Pricing() {
 
       {/* Beyond the Library (Centered) */}
       <div className="w-full pt-20 pb-24 md:pt-24 md:pb-32 px-6 bg-[#111] text-white flex flex-col items-center text-center full-bleed">
-        <h2 className="text-5xl md:text-6xl lg:text-8xl font-bold uppercase tracking-tighter mb-6 leading-[0.9]">
-          Beyond the Library
-        </h2>
+        <h2 
+          className="text-5xl md:text-6xl lg:text-8xl font-bold uppercase tracking-tighter mb-6 leading-[0.9]"
+          dangerouslySetInnerHTML={{ __html: settings.content['pricing']?.beyond_title || 'Beyond the Library' }}
+        />
         <div className="text-xs md:text-sm font-bold uppercase tracking-widest text-white/50 mb-8 border-b-2 border-white/10 pb-4">
-          Custom Music and Sound
+          {settings.content['pricing']?.beyond_subtitle || 'Custom Music and Sound'}
         </div>
         <p className="font-sans text-sm md:text-base uppercase leading-relaxed tracking-wide text-white/50 max-w-2xl mb-12">
-          Some projects demand a completely original sound. We craft bespoke scores and custom sound design for high-stakes campaigns.
+          {settings.content['pricing']?.beyond_desc || 'Some projects demand a completely original sound. We craft bespoke scores and custom sound design for high-stakes campaigns.'}
         </p>
         <button 
           onClick={() => setContactModalOpen(true)}

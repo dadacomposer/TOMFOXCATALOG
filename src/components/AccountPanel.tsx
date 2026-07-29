@@ -4,12 +4,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { X, Plus, Check, Settings, Bell, LogOut, FileText, CreditCard, Users, Star, LayoutGrid, Upload, Crown, Search, Download, ExternalLink } from 'lucide-react';
 import { supabase, updateWorkspace, getWorkspaceMembers, createWorkspace, updateWorkspaceMember } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { useSettings } from '../context/SettingsContext';
 import ProfileSettings from './ProfileSettings';
 import Pricing from '../pages/Pricing';
 import UpgradePlan from './UpgradePlan';
 
 export default function AccountPanel() {
   const { user, profile, workspaces, setWorkspaces, activeWorkspace, setActiveWorkspace, isAccountPanelOpen, setAccountPanelOpen, signOut, fetchWorkspaces, refreshProfile } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
   
@@ -403,14 +405,16 @@ export default function AccountPanel() {
                     Overview
                   </span>
                 </button>
-                <button 
-                  onClick={() => setActiveView(activeView === 'licenses' ? 'menu' : 'licenses')}
-                  disabled={!activeWorkspace}
-                  className={`flex items-center gap-3 p-1.5 px-3 rounded-lg transition-all text-left text-xs font-sans text-black/80 disabled:opacity-50 ${activeView === 'licenses' ? 'bg-black/10 font-bold' : 'hover:bg-black/5'}`}
-                >
-                  <FileText className={`w-3.5 h-3.5 ${activeView === 'licenses' ? 'opacity-100' : 'opacity-50'}`} />
-                  Licenses
-                </button>
+                {settings.subscriptions_enabled && (
+                  <button 
+                    onClick={() => setActiveView(activeView === 'licenses' ? 'menu' : 'licenses')}
+                    disabled={!activeWorkspace}
+                    className={`flex items-center gap-3 p-1.5 px-3 rounded-lg transition-all text-left text-xs font-sans text-black/80 disabled:opacity-50 ${activeView === 'licenses' ? 'bg-black/10 font-bold' : 'hover:bg-black/5'}`}
+                  >
+                    <FileText className={`w-3.5 h-3.5 ${activeView === 'licenses' ? 'opacity-100' : 'opacity-50'}`} />
+                    Licenses
+                  </button>
+                )}
                 <button 
                   onClick={() => setActiveView(activeView === 'team' ? 'menu' : 'team')}
                   disabled={!activeWorkspace}
@@ -435,13 +439,15 @@ export default function AccountPanel() {
                   <Settings className={`w-3.5 h-3.5 ${activeView === 'settings' ? 'opacity-100' : 'opacity-50'}`} />
                   Preferences
                 </button>
-                <button 
-                  onClick={() => setActiveView(activeView === 'billing' ? 'menu' : 'billing')}
-                  className={`flex items-center gap-3 p-1.5 px-3 rounded-lg transition-all text-left text-xs font-sans text-black/80 disabled:opacity-50 ${activeView === 'billing' ? 'bg-black/10 font-bold' : 'hover:bg-black/5'}`}
-                >
-                  <CreditCard className={`w-3.5 h-3.5 ${activeView === 'billing' ? 'opacity-100' : 'opacity-50'}`} />
-                  Billing & Plan
-                </button>
+                {settings.subscriptions_enabled && (
+                  <button 
+                    onClick={() => setActiveView(activeView === 'billing' ? 'menu' : 'billing')}
+                    className={`flex items-center gap-3 p-1.5 px-3 rounded-lg transition-all text-left text-xs font-sans text-black/80 disabled:opacity-50 ${activeView === 'billing' ? 'bg-black/10 font-bold' : 'hover:bg-black/5'}`}
+                  >
+                    <CreditCard className={`w-3.5 h-3.5 ${activeView === 'billing' ? 'opacity-100' : 'opacity-50'}`} />
+                    Billing & Plan
+                  </button>
+                )}
                 <button 
                   onClick={() => setActiveView(activeView === 'notifications' ? 'menu' : 'notifications')}
                   className={`flex items-center gap-3 p-1.5 px-3 rounded-lg transition-all text-left text-xs font-sans text-black/80 disabled:opacity-50 ${activeView === 'notifications' ? 'bg-black/10 font-bold' : 'hover:bg-black/5'}`}
@@ -1033,7 +1039,7 @@ export default function AccountPanel() {
                 <select 
                   value={newOwnerId}
                   onChange={(e) => setNewOwnerId(e.target.value)}
-                  className="w-full appearance-none bg-[#f0f0f0] border border-black/5 p-4 font-sans text-sm pr-10 focus:ring-2 focus:ring-black/20 outline-none"
+                  className="w-full"
                 >
                   <option value="" disabled>Select team member...</option>
                   {members.filter(m => m.role !== 'owner').map(m => (

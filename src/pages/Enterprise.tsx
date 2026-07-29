@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ShieldCheck, Headphones, Sparkles, ArrowRight } from 'lucide-react';
 import { siGoogle, siNike, siAdidas, siNewyorktimes, siAnthropic, siVox } from 'simple-icons';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 const GOOGLE_G_PATH = "M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09zM12 22.9c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 22.9 12 22.9zM5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62zM12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.37 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z";
 const VOX_OFFICIAL_PATH = "M54.9.8h1.7l.2-.8H35.4l-.2.8h3.1c2.7 0 4.9 1.9 4.9 5.6 0 2.1-.9 4.8-2.4 8.1L26.9 45.2 23.5 5.3C23.2 2.2 24.8.8 28.3.8h2l.2-.8H.3L0 .8h1.9c2.4 0 3.3 1.5 3.5 4.3l5.4 51.6h12.7l21.3-45.1C48.1 4.9 51.5.8 54.9.8zm-2.5 56.1c-1.9 0-3.1-.6-3.1-3.8 0-4 1.5-11.9 3.1-19.1.2 3.3 2.5 6.6 5.9 6.6.8 0 1.5-.1 2.2-.2-3.2 13.7-4.4 16.5-8.1 16.5zM113 29.8c4 0 6.6-3.3 6.6-7.1 0-3.2-2.3-5.6-5.6-5.6-5.9 0-8.7 4.7-13.6 13.3-1-5.4-3.5-12.4-9.7-12.4-7 0-15.1 10-22.5 16.2-3.4 2.9-7.1 4.7-10.1 4.7-3.1 0-4.9-3.1-4.9-8.6 2.2-9 3.3-11.3 6.7-11.3 2.3 0 3.3 1.3 3.3 4 0 2.9-.6 7.7-1.9 13.8 3.3-1 8.3-5.2 12.5-9.7-2.2-5.3-7-8.9-13.8-8.9-12.7 0-23.9 11.4-23.9 24.2 0 8.8 6.3 15.5 16.1 15.5 16.2 0 23-14 23-23.8 0-1.4-.1-2.4-.2-3.7 2.5-2.7 5.7-5.3 8.3-5.3 3 0 5.4 7.5 7.7 18.8-2.1 2.3-4.2 6.7-5.2 7.5-.4-4-3.1-6.5-6.6-6.5-4 0-6.7 3.8-6.7 7 0 3.6 2.5 6 5.8 6 6.9 0 8.8-6.5 13.1-12.3 1.3 6.2 4.4 12.3 9.7 12.3 6.3 0 12.1-5.4 15.1-9.2l-.6-.9c-1.9 1.9-3.8 3.1-6 3.1-3.9 0-6.7-8.4-8.8-18.6 1.3-1.7 3.3-6.1 4.7-7.7.9 1.8 2.9 5.2 7.5 5.2z";
@@ -21,6 +22,8 @@ const LOGOS: { name: string, svgPath?: string, textMode?: boolean, label?: React
 
 export default function Enterprise() {
   const { setContactModalOpen } = useAuth();
+  const { content } = useSettings();
+  const enterpriseContent = content['enterprise'] || {};
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-[#fafafa] text-black overflow-hidden">
@@ -44,9 +47,8 @@ export default function Enterprise() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="text-[64px] md:text-[96px] lg:text-[120px] font-bold uppercase tracking-tighter leading-[0.85] mb-8 max-w-6xl"
-          >
-            Scale your<br />sound.
-          </motion.h1>
+            dangerouslySetInnerHTML={{ __html: enterpriseContent.hero_title || 'Scale your<br />sound.' }}
+          />
           
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -54,7 +56,7 @@ export default function Enterprise() {
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="font-sans text-black/50 uppercase tracking-widest text-sm md:text-base max-w-xl leading-relaxed"
           >
-            Uncapped access for teams that build at scale. No limits, no legal headaches. 
+            {enterpriseContent.hero_desc || 'Uncapped access for teams that build at scale. No limits, no legal headaches.'}
           </motion.p>
         </div>
       </div>
@@ -87,7 +89,10 @@ export default function Enterprise() {
             </div>
             {/* Right side: text */}
             <div className="w-full md:w-1/4 order-1 md:order-2 flex justify-start md:justify-end">
-              <h2 className="text-3xl md:text-5xl font-bold uppercase tracking-tighter text-white text-left md:text-right">Among our<br/>clients.</h2>
+              <h2 
+                className="text-3xl md:text-5xl font-bold uppercase tracking-tighter text-white text-left md:text-right"
+                dangerouslySetInnerHTML={{ __html: enterpriseContent.clients_title || 'Among our<br/>clients.' }}
+              />
             </div>
           </div>
         </section>
@@ -116,10 +121,10 @@ export default function Enterprise() {
             </div>
             <div className="relative z-10">
               <h2 className="text-4xl md:text-5xl lg:text-7xl font-bold uppercase tracking-tighter leading-[0.9] mb-6">
-                Zero Clearance Drama.
+                {enterpriseContent.perk_1_title || 'Zero Clearance Drama.'}
               </h2>
               <p className="font-sans text-white/80 uppercase tracking-widest text-sm max-w-md leading-relaxed">
-                We play nice with procurement. Standardized MSAs ready to sign, indemnification included, and global all-media rights cleared upfront.
+                {enterpriseContent.perk_1_desc || 'We play nice with procurement. Standardized MSAs ready to sign, indemnification included, and global all-media rights cleared upfront.'}
               </p>
             </div>
           </div>
@@ -132,9 +137,12 @@ export default function Enterprise() {
                 <Headphones className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold uppercase tracking-tighter mb-4">Your Personal<br />Supervisor</h3>
+                <h3 
+                  className="text-2xl font-bold uppercase tracking-tighter mb-4"
+                  dangerouslySetInnerHTML={{ __html: enterpriseContent.perk_2_title || 'Your Personal<br />Supervisor' }}
+                />
                 <p className="font-sans text-white/50 uppercase tracking-widest text-xs leading-relaxed">
-                  Need the perfect track fast? Talk directly to humans who know the catalog inside out.
+                  {enterpriseContent.perk_2_desc || 'Need the perfect track fast? Talk directly to humans who know the catalog inside out.'}
                 </p>
               </div>
             </div>
@@ -144,9 +152,12 @@ export default function Enterprise() {
                 <Sparkles className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold uppercase tracking-tighter mb-4">The Secret<br />Vault</h3>
+                <h3 
+                  className="text-2xl font-bold uppercase tracking-tighter mb-4"
+                  dangerouslySetInnerHTML={{ __html: enterpriseContent.perk_3_title || 'The Secret<br />Vault' }}
+                />
                 <p className="font-sans text-black/50 uppercase tracking-widest text-xs leading-relaxed">
-                  Get exclusive early access to unreleased tracks, custom scores, and stems for your sound design.
+                  {enterpriseContent.perk_3_desc || 'Get exclusive early access to unreleased tracks, custom scores, and stems for your sound design.'}
                 </p>
               </div>
             </div>
@@ -164,11 +175,12 @@ export default function Enterprise() {
         <div className="relative z-10 w-full max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
           
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
-            <h2 className="text-6xl md:text-8xl lg:text-[120px] font-bold uppercase tracking-tighter leading-[0.85] text-black mb-6">
-              Let's<br />Talk<br />Scale.
-            </h2>
+            <h2 
+              className="text-6xl md:text-8xl lg:text-[120px] font-bold uppercase tracking-tighter leading-[0.85] text-black mb-6"
+              dangerouslySetInnerHTML={{ __html: enterpriseContent.contact_title || "Let's<br />Talk<br />Scale." }}
+            />
             <p className="font-sans text-black/50 uppercase tracking-widest text-sm max-w-sm mb-12">
-              Our enterprise team will reach out within 24 hours.
+              {enterpriseContent.contact_desc || 'Our enterprise team will reach out within 24 hours.'}
             </p>
           </div>
 

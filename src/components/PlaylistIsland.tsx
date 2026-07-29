@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchPlaylistTrackIds, fetchTracksByIds, supabase } from '../lib/supabase';
 import { Play, Pause, Download, ShoppingBag, X, TrendingUp } from 'lucide-react';
 import WaveformView from './WaveformView';
+import { DEFAULT_ARTIST, DEFAULT_ARTWORK } from '../config';
 import { usePlayer } from '../context/PlayerContext';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
 import { useDownload } from '../context/DownloadContext';
@@ -149,7 +150,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                   onClick={() => handlePlayPauseIsland(track)}
                 >
                   <div className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}>
-                    <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png" alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
+                    <img src={track.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
                     <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       {currentTrack?.id === track.id && isPlaying ? (
                         <Pause className="w-4 h-4 fill-white text-white" />
@@ -165,7 +166,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                   </div>
                   <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
                     <div className="font-bold truncate text-[14px]">{cleanTitle(track.file_name)}</div>
-                    <div className="font-sans text-[12px] text-black/50 mt-0.5">Tom Fox</div>
+                    <div className="font-sans text-[12px] text-black/50 mt-0.5">{DEFAULT_ARTIST}</div>
                   </div>
                   
                   {/* TAGS Column */}

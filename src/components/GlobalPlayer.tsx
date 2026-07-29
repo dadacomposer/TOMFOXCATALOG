@@ -1,5 +1,6 @@
 import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, ShoppingBag, FileCheck2, Download, TrendingUp } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2, Minimize2, FileCheck2, Download, ShoppingBag, TrendingUp } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import WaveformView from './WaveformView';
 import { usePlayer } from '../context/PlayerContext';
 import { getPreviewTimings, parseWaveform } from '../lib/audioUtils';
@@ -7,6 +8,7 @@ import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import { fetchSimilarTracks } from '../lib/supabase';
 import { Track } from '../context/PlayerContext';
+import { DEFAULT_ARTWORK, DEFAULT_ARTIST } from '../config';
 
 const formatTime = (seconds: number) => {
   const m = Math.floor(seconds / 60);
@@ -34,7 +36,10 @@ const parseTags = (t: string[] | string | undefined): string[] => {
 };
 
 export default function GlobalPlayer() {
-  const { currentTrack, currentPlaylist, isPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId } = usePlayer();
+  const location = useLocation();
+  const isSharedPage = location.pathname.startsWith('/share');
+  
+  const { currentTrack, currentPlaylist, isPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId } = usePlayer();
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const [isSimilarExpanded, setIsSimilarExpanded] = React.useState(false);
@@ -43,6 +48,7 @@ export default function GlobalPlayer() {
   const [isSimilarLoading, setIsSimilarLoading] = React.useState(false);
   const [similarOffset, setSimilarOffset] = React.useState(0);
   const [hasMoreSimilar, setHasMoreSimilar] = React.useState(true);
+  const [isBuffering, setIsBuffering] = React.useState(false);
   const originalPlaylistRef = React.useRef<Track[]>([]);
 
   const expandSimilar = () => {
@@ -132,6 +138,7 @@ export default function GlobalPlayer() {
 
   const handleSeek = (percentage: number) => {
     setIsCurrentPreviewDormant(true);
+    setIsBuffering(true); // Assuming seeking will cause buffering
     if (audioRef.current && audioRef.current.duration) {
       audioRef.current.currentTime = (percentage / 100) * audioRef.current.duration;
       setProgress(percentage);
@@ -181,9 +188,9 @@ export default function GlobalPlayer() {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTrack ? cleanTitle(currentTrack.file_name) : 'Unknown Track',
-        artist: 'Tom Fox',
+        artist: DEFAULT_ARTIST,
         artwork: [
-          { src: 'https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png', sizes: '512x512', type: 'image/png' }
+          { src: currentTrack?.artwork_url || DEFAULT_ARTWORK, sizes: '512x512', type: 'image/png' }
         ]
       });
 
@@ -211,11 +218,16 @@ export default function GlobalPlayer() {
     };
   }, [currentTrack, isPlaying, togglePlay, playNextTrack, playPrevTrack]);
 
+  const baseBg = isSharedPage ? 'bg-[#111111]' : 'bg-[#fafafa]/85 backdrop-blur-xl';
+  const baseText = isSharedPage ? 'text-white' : 'text-black';
+  const baseBorder = isSharedPage ? 'border-white/10' : 'border-black/10';
+  const secondaryText = isSharedPage ? 'text-white/60' : 'text-black/60';
+
   return (
-    <div className={`fixed bottom-0 left-0 w-full flex flex-col bg-[#fafafa]/85 backdrop-blur-xl text-black border-t border-black/10 z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${currentTrack ? 'translate-y-0' : 'translate-y-[100%]'} ${isSimilarExpanded ? 'h-[75vh]' : 'h-[90px]'}`}>
+    <div className={`fixed bottom-0 left-0 w-full flex flex-col ${baseBg} ${baseText} border-t ${baseBorder} z-[90] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${currentTrack ? 'translate-y-0' : 'translate-y-[100%]'} ${isSimilarExpanded ? 'h-[75vh]' : 'h-[90px]'}`}>
 
       {/* Main Player Bar FIRST so it's at the top of the expanded panel */}
-      <div className={`w-full h-[90px] shrink-0 flex items-center px-4 md:px-6 gap-4 md:gap-8 transition-colors relative z-10 ${isSimilarExpanded ? 'border-b border-black/10 bg-white/50' : ''}`}>
+      <div className={`w-full h-[90px] shrink-0 flex items-center px-4 md:px-6 gap-4 md:gap-8 transition-colors relative z-10 ${isSimilarExpanded ? `border-b ${baseBorder} ${isSharedPage ? 'bg-[#1a1a1a]' : 'bg-white/50'}` : ''}`}>
       {getNextTrack() && (
         <audio preload="auto" src={getNextTrack()?.r2_url} className="hidden" muted />
       )}
@@ -231,23 +243,37 @@ export default function GlobalPlayer() {
           }}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleNextTrack}
+          onWaiting={() => setIsBuffering(true)}
+          onPlaying={() => setIsBuffering(false)}
+          onLoadStart={() => setIsBuffering(true)}
+          onCanPlay={() => setIsBuffering(false)}
         />
       )}
       <div className="flex items-center gap-4 w-auto md:w-[240px] shrink-0">
-        <div className={`w-12 h-12 rounded overflow-hidden flex items-center justify-center relative hidden sm:flex border border-black/10 bg-black/5`}>
-          <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png" alt="Artwork" className={`w-full h-full object-cover`} />
+        <div className={`w-12 h-12 rounded overflow-hidden flex items-center justify-center relative hidden sm:flex border ${baseBorder} ${isSharedPage ? 'bg-white/5' : 'bg-black/5'}`}>
+          <img src={currentTrack?.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className={`w-full h-full object-cover`} />
         </div>
         <div className="flex flex-col overflow-hidden">
           <div className="font-bold truncate text-[14px]">{currentTrack ? cleanTitle(currentTrack.file_name) : ''}</div>
-          <div className="font-sans text-[11px] text-black/60 truncate">Tom Fox</div>
+          <div className={`font-sans text-[11px] ${secondaryText} truncate`}>
+            {currentTrack?.composers 
+              ? currentTrack.composers.filter(c => c.trim() !== '').join(', ')
+              : 'Tom Fox'}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-4 shrink-0">
-        <button onClick={playPrevTrack} className="text-black/40 hover:text-black transition-colors"><SkipBack className="w-5 h-5 fill-current" /></button>
-        <button onClick={togglePlay} className="w-10 h-10 flex items-center justify-center rounded-lg bg-black text-white hover:bg-black/90 transition-colors">
-          {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" style={{ transform: 'translateX(4.166%)' }} />}
-        </button>
-        <button onClick={handleNextTrack} className="text-black/40 hover:text-black transition-colors"><SkipForward className="w-5 h-5 fill-current" /></button>
+        <button onClick={playPrevTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipBack className="w-5 h-5 fill-current" /></button>
+        {isBuffering ? (
+          <button disabled className={`w-10 h-10 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black' : 'bg-black text-white'} transition-colors`}>
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          </button>
+        ) : (
+          <button onClick={togglePlay} className={`w-10 h-10 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-black/90'} transition-colors`}>
+            {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" style={{ transform: 'translateX(4.166%)' }} />}
+          </button>
+        )}
+        <button onClick={handleNextTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipForward className="w-5 h-5 fill-current" /></button>
       </div>
       <div className="flex-grow flex items-center">
         <div className="flex-grow mx-8 h-8 flex items-center">
@@ -259,37 +285,54 @@ export default function GlobalPlayer() {
               onSeek={handleSeek}
               previewStartPct={isPreviewMode ? getPreviewTimings(currentTrack)?.startPct : undefined}
               previewEndPct={isPreviewMode ? getPreviewTimings(currentTrack)?.endPct : undefined}
+              isDark={isSharedPage}
             />
           )}
         </div>
-        <div className="font-sans text-[11px] text-black/60 uppercase tracking-widest w-12 text-right">{audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'}</div>
+        <div className={`font-sans text-[11px] ${secondaryText} uppercase tracking-widest w-12 text-right`}>{audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'}</div>
       </div>
       <div className="shrink-0 flex items-center gap-4 ml-4">
-        <button 
-          onClick={() => {
-            if (!isSimilarExpanded) {
-              expandSimilar();
-            } else {
-              if (currentTrack?.id !== referenceTrack?.id) {
+        {location.pathname.startsWith('/admin') && (
+          <div className="flex items-center gap-3 cursor-pointer group/preview mr-2" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+            <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
+            <div 
+              className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
+            </div>
+          </div>
+        )}
+        {!isSharedPage && (
+          <button 
+            onClick={() => {
+              if (!isSimilarExpanded) {
                 expandSimilar();
               } else {
-                closeSimilar();
+                if (currentTrack?.id !== referenceTrack?.id) {
+                  expandSimilar();
+                } else {
+                  closeSimilar();
+                }
               }
-            }
-          }} 
-          className={`hidden xl:flex items-center gap-2 font-sans text-[11px] uppercase tracking-widest transition-colors ${isSimilarExpanded && currentTrack?.id === referenceTrack?.id ? 'text-black' : 'text-black/60 hover:text-black'}`}
-        >
-          <FileCheck2 className="w-4 h-4" /> Show Similar
-        </button>
-        <button className="text-black/40 hover:text-black ml-2"><Volume2 className="w-5 h-5" /></button>
-        <div className="flex gap-2 ml-4">
-          <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
-            <Download className="w-3.5 h-3.5" /> Download
+            }} 
+            className={`hidden xl:flex items-center gap-2 font-sans text-[11px] uppercase tracking-widest transition-colors ${isSimilarExpanded && currentTrack?.id === referenceTrack?.id ? 'text-black' : 'text-black/60 hover:text-black'}`}
+          >
+            <FileCheck2 className="w-4 h-4" /> Show Similar
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={() => { if (currentTrack) { openLicenseModal(currentTrack); } }}>
-            <ShoppingBag className="w-3.5 h-3.5" /> License
-          </button>
-        </div>
+        )}
+        <button className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} ml-2`}><Volume2 className="w-5 h-5" /></button>
+        {!isSharedPage && (
+          <div className="flex gap-2 ml-4">
+            <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
+              <Download className="w-3.5 h-3.5" /> Download
+            </button>
+            {location.pathname !== '/admin' && (
+              <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={() => { if (currentTrack) { openLicenseModal(currentTrack); } }}>
+                <ShoppingBag className="w-3.5 h-3.5" /> License
+              </button>
+            )}
+          </div>
+        )}
       </div>
       </div>
 
@@ -298,7 +341,7 @@ export default function GlobalPlayer() {
         {referenceTrack && (
           <div className="flex items-center gap-6 px-6 py-6 border-b border-black/10 shrink-0 bg-black/5">
             <div className="w-24 h-24 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-black/10 shadow-sm relative bg-white">
-              <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png" alt="Artwork" className="w-full h-full object-cover" />
+              <img src={currentTrack?.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
               <div className="font-sans text-[10px] text-black/50 uppercase tracking-widest mb-1">Based on track</div>
@@ -335,7 +378,7 @@ export default function GlobalPlayer() {
                   onClick={() => handlePlaySimilar(track)}
                 >
                   <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5">
-                    <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png" alt="Artwork" className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={track?.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className="absolute inset-0 w-full h-full object-cover" />
                     <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       {currentTrack?.id === track.id && isPlaying ? (
                         <Pause className="w-4 h-4 fill-white text-white" />
@@ -346,7 +389,11 @@ export default function GlobalPlayer() {
                   </div>
                   <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
                     <div className={`font-bold truncate text-[14px] ${currentTrack?.id === track.id ? 'text-black' : ''}`}>{cleanTitle(track.file_name)}</div>
-                    <div className="font-sans text-[12px] text-black/50 mt-0.5">Tom Fox</div>
+                    <div className="font-sans text-[12px] text-black/50 mt-0.5">
+                      {track.composers 
+                        ? track.composers.filter(c => c.trim() !== '').join(', ')
+                        : 'Tom Fox'}
+                    </div>
                   </div>
                   
                   {/* Tags */}

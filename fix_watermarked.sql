@@ -1,0 +1,2 @@
+UPDATE tracks SET has_watermarked = true WHERE is_hidden = false AND deleted_at IS NULL;
+UPDATE tracks SET has_watermarked = false WHERE id IN ('8e7fdb8f-656f-4166-8d32-4276e768ff65','054f0a39-1d7b-4b1a-984b-0f3d7cde093c','31d1cd63-f842-46b8-b38f-bab90c212190','ae39f725-2d6e-4128-b22c-bd5885e3e9b1','a5af5da7-fe7c-4407-b3ed-f1ccfd65b2d1','56496900-cf3a-44b9-b568-c68f3356f94d','28ad9231-4c21-4174-ada2-e9d5f0da3d83','9cbcc611-6352-4fdd-bfe4-4f74b01f86d2');

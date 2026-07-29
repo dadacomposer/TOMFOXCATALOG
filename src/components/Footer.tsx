@@ -1,5 +1,5 @@
 import React from 'react';
-import { Music } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { siInstagram, siYoutube } from 'simple-icons';
 import { useAuth } from '../context/AuthContext';
@@ -82,7 +82,7 @@ export default function Footer({ isDark = false }: { isDark?: boolean }) {
             © {new Date().getFullYear()} Tom Fox Music. All rights reserved.
           </div>
           <div className={`font-sans text-[10px] uppercase tracking-widest ${mutedTextColor} flex items-center gap-2`}>
-            Designed with <Music className="w-3 h-3" /> in Los Angeles
+            Created with <Heart className="w-3 h-3" /> by @dadadesign
           </div>
         </div>
 

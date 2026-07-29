@@ -6,6 +6,7 @@ import PlaylistArtwork from '../components/PlaylistArtwork';
 import PlaylistIsland from '../components/PlaylistIsland';
 import { AnimatePresence } from 'framer-motion';
 import { usePlayer } from '../context/PlayerContext';
+import { useAuth } from '../context/AuthContext';
 
 type Playlist = {
   id: string;
@@ -14,6 +15,7 @@ type Playlist = {
   human_tags?: string[];
   track_count?: number;
   track_ids?: string[];
+  categories?: string[];
 };
 
 export default function Playlists() {
@@ -25,6 +27,7 @@ export default function Playlists() {
   const [loading, setLoading] = useState(true);
   
   const { playTrack, currentSource, audioRef, setIsCurrentPreviewDormant, setPendingSeek, progress } = usePlayer();
+  const { user, loading: authLoading, setLoginModalOpen } = useAuth();
 
   const handleSeek = (track: any, percentage: number) => {
     if (audioRef?.current) {
@@ -60,25 +63,36 @@ export default function Playlists() {
   const getCategories = (allPlaylists: Playlist[]) => {
     if (!allPlaylists.length) return [];
     
-    const catPercussion = allPlaylists.filter(p => p.title?.toLowerCase()?.match(/drum|percussive|beat|rhythm|octane|pulse/));
-    const catCinematic = allPlaylists.filter(p => p.title?.toLowerCase()?.match(/film|space|cinematic|score|trailer|dramatic|epic/));
-    const catDark = allPlaylists.filter(p => p.title?.toLowerCase()?.match(/dark|shadow|breach|tension|suspense|thriller/));
-    const catSynth = allPlaylists.filter(p => p.title?.toLowerCase()?.match(/synth|tech|code|electronic/));
-    const catCalm = allPlaylists.filter(p => p.title?.toLowerCase()?.match(/piano|nostalgia|morning|ambient|chill|calm|emotion/));
-    const catDocs = allPlaylists.filter(p => p.title?.toLowerCase()?.match(/vox|explainer|documentary|session|underscore/));
-    const catJazz = allPlaylists.filter(p => p.title?.toLowerCase()?.match(/jazz|organic|acoustic/));
-    
-    const categories = [
-      { title: "Percussion & Rhythm", playlists: catPercussion },
-      { title: "Cinematic & Film", playlists: catCinematic },
-      { title: "Dark & Tension", playlists: catDark },
-      { title: "Electronic & Synth", playlists: catSynth },
-      { title: "Calm & Reflective", playlists: catCalm },
-      { title: "Documentary & Explainer", playlists: catDocs },
-      { title: "Jazz & Organic", playlists: catJazz }
+    const MACROCATEGORIES = [
+      "Percussion & Rhythm", 
+      "Cinematic & Film", 
+      "Dark & Tension", 
+      "Electronic & Synth", 
+      "Calm & Reflective", 
+      "Documentary & Explainer", 
+      "Jazz & Organic"
     ];
 
-    return categories.filter(c => c.playlists.length > 0);
+    const categoriesData: { title: string, playlists: Playlist[] }[] = [];
+    const assignedIds = new Set<string>();
+
+    for (const catTitle of MACROCATEGORIES) {
+      const catPlaylists = allPlaylists.filter(p => {
+        if (p.categories && p.categories.includes(catTitle)) {
+          assignedIds.add(p.id);
+          return true;
+        }
+        return false;
+      });
+      categoriesData.push({ title: catTitle, playlists: catPlaylists });
+    }
+
+    const catOthers = allPlaylists.filter(p => !assignedIds.has(p.id) || (p.categories && p.categories.includes("Others")));
+    
+    const uniqueOthers = Array.from(new Set(catOthers));
+    categoriesData.push({ title: "Others", playlists: uniqueOthers });
+
+    return categoriesData.filter(c => c.playlists.length > 0);
   };
 
   const categories = getCategories(playlists);
@@ -175,27 +189,30 @@ export default function Playlists() {
       </div>
 
       {/* CTA Section */}
-      <div className="w-full bg-[#f6f6f6] py-32 px-8 md:px-12 lg:px-24 flex flex-col items-center justify-center text-center">
-        <h2 className="text-4xl md:text-6xl font-bold uppercase tracking-tighter leading-[0.95] mb-6 max-w-3xl">
-          Keep exploring.
-        </h2>
-        <p className="font-sans text-black/50 uppercase tracking-widest text-sm mb-12 max-w-xl">
-          Create a free account to start saving your favorite tracks, or explore our entire catalog right now.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <button 
-            className="px-10 py-5 bg-black text-white font-bold uppercase text-xs tracking-widest hover:bg-black/80 transition-colors rounded-full shadow-lg"
-          >
-            Create Free Account
-          </button>
-          <button 
-            onClick={() => navigate('/browse')}
-            className="px-10 py-5 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-black/5 border border-black/10 transition-colors rounded-full"
-          >
-            Browse Catalog
-          </button>
+      {!user && !authLoading && (
+        <div className="w-full bg-[#f6f6f6] py-32 px-8 md:px-12 lg:px-24 flex flex-col items-center justify-center text-center relative z-10">
+          <h2 className="text-4xl md:text-6xl font-bold uppercase tracking-tighter leading-[0.95] mb-6 max-w-3xl">
+            Keep exploring.
+          </h2>
+          <p className="font-sans text-black/50 uppercase tracking-widest text-sm mb-12 max-w-xl">
+            Create a free account to start saving your favorite tracks, or explore our entire catalog right now.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <button 
+              onClick={() => setLoginModalOpen(true)}
+              className="px-10 py-5 bg-black text-white font-bold uppercase text-xs tracking-widest hover:bg-black/80 transition-colors rounded-full shadow-lg"
+            >
+              Create Free Account
+            </button>
+            <button 
+              onClick={() => navigate('/browse')}
+              className="px-10 py-5 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-black/5 border border-black/10 transition-colors rounded-full"
+            >
+              Browse Catalog
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );

@@ -6,6 +6,7 @@ import { fetchPlaylists, fetchPlaylistTracks } from '../lib/supabase';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 const BACKGROUND_VIDEOS = [
   "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/videos/Anthropic.mov",
@@ -20,6 +21,8 @@ export default function Home() {
   const [realPlaylists, setRealPlaylists] = useState<any[]>([]);
   const { isPlaying, togglePlay, playPlaylist, currentTrack } = usePlayer();
   const { user, loading, setLoginModalOpen, setContactModalOpen } = useAuth();
+  const { content } = useSettings();
+  const homeContent = content['home'] || {};
 
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
 
@@ -85,22 +88,21 @@ export default function Home() {
         {/* HERO */}
         <div className="relative z-10 w-full px-12 md:px-24 lg:px-32 pt-40 md:pt-48 pb-20 md:pb-32">
           <div className="max-w-4xl">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold uppercase tracking-tighter mb-8 leading-[0.9]">
-              The Soundtrack <br />
-              For Modern <br />
-              Storytelling.
-            </h1>
+            <h1 
+              className="text-5xl md:text-7xl lg:text-8xl font-bold uppercase tracking-tighter mb-8 leading-[0.9]"
+              dangerouslySetInnerHTML={{ __html: homeContent.hero_title || 'The Soundtrack <br />For Modern <br />Storytelling.' }}
+            />
             
             <p className="font-sans uppercase text-sm mb-10 max-w-md leading-relaxed tracking-wide text-black/50">
-              A meticulously curated library of 2,500+ premium tracks for media, ads, and film.
+              {homeContent.hero_subtitle || 'A meticulously curated library of 2,500+ premium tracks for media, ads, and film.'}
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
                <button onClick={() => navigate('/browse')} className="px-8 py-4 bg-black text-white font-bold uppercase text-xs tracking-widest hover:bg-black/80 transition-colors cursor-pointer">
-                 Browse
+                 {homeContent.hero_btn_1 || 'Browse'}
                </button>
                <button onClick={() => setLoginModalOpen(true)} className="px-8 py-4 border-2 border-black/10 font-bold uppercase text-xs tracking-widest hover:border-black transition-colors">
-                 Create Free Account
+                 {homeContent.hero_btn_2 || 'Create Free Account'}
                </button>
             </div>
           </div>
@@ -115,9 +117,10 @@ export default function Home() {
           
           {/* Value Proposition / Showcase */}
           <div className="mb-16">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tighter mb-12 leading-[1.1] max-w-5xl">
-              Built for creators, directors, and brands who refuse to compromise on sound.
-            </h2>
+            <h2 
+              className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tighter mb-12 leading-[1.1] max-w-5xl"
+              dangerouslySetInnerHTML={{ __html: homeContent.built_for_title || 'Built for creators, directors, and brands who refuse to compromise on sound.' }}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <video src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/videos/Anthropic.mov" autoPlay loop muted playsInline className="w-full aspect-video object-cover border border-white/10 bg-white/5" />
               <video src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/videos/Tunnel%20Vision.mov" autoPlay loop muted playsInline className="w-full aspect-video object-cover border border-white/10 bg-white/5" />
@@ -134,11 +137,12 @@ export default function Home() {
         <div className="w-full py-24 md:py-32 flex flex-col lg:flex-row items-stretch gap-16 lg:gap-24 mx-auto border-b border-black/10">
           <div className="w-full lg:w-1/3 flex flex-col justify-between h-full items-start pt-4 pb-2">
             <div>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tighter leading-[1.05] mb-8">
-              Curated for<br/>your story.
-            </h2>
+              <h2 
+                className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tighter leading-[1.05] mb-8"
+                dangerouslySetInnerHTML={{ __html: homeContent.curated_title || 'Curated for<br/>your story.' }}
+              />
             <p className="font-sans text-[14px] md:text-[16px] text-black/60 leading-relaxed mb-10 max-w-sm uppercase tracking-wide">
-              Forget generic stock tracks. Dive into hand-picked playlists designed to give your project the exact sound it needs.
+              {homeContent.curated_desc || 'Forget generic stock tracks. Dive into hand-picked playlists designed to give your project the exact sound it needs.'}
             </p>
             </div>
             <button 
@@ -188,9 +192,10 @@ export default function Home() {
           {/* HUGE DRIBBBLE LOGO WATERMARK */}
           <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" className="absolute -bottom-40 -right-20 w-[150%] md:w-[90%] opacity-[0.02] rotate-6 pointer-events-none select-none mix-blend-multiply z-0" alt="" />
 
-          <h2 className="relative z-10 text-4xl md:text-5xl lg:text-7xl font-bold uppercase tracking-tighter leading-[1.05] mb-16">
-            Search less, create more.
-          </h2>
+          <h2 
+            className="relative z-10 text-4xl md:text-5xl lg:text-7xl font-bold uppercase tracking-tighter leading-[1.05] mb-16"
+            dangerouslySetInnerHTML={{ __html: homeContent.search_title || 'Search less, create more.' }}
+          />
 
           <div className="w-full max-w-[1400px] px-6 md:px-12 flex flex-col gap-24 mt-8">
             
@@ -198,7 +203,9 @@ export default function Home() {
             <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-24 w-full">
               {/* Preview Box (Left) */}
               <div className="w-full md:w-[65%] bg-[#f6f6f6] rounded-2xl p-8 md:p-12 flex flex-col h-[400px] relative overflow-hidden border border-black/5 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-widest text-black/40 mb-10 text-left">Try our AI driven search</div>
+                <div className="text-xs font-bold uppercase tracking-widest text-black/40 mb-10 text-left">
+                  {homeContent.search_ai_label || 'Try our AI driven search'}
+                </div>
                 
                 {/* Mock Search Bar */}
                 <div className="bg-white rounded-xl shadow-sm border border-black/10 flex items-center px-5 py-4 mb-8 relative z-10 mx-auto w-full">
@@ -233,9 +240,11 @@ export default function Home() {
 
               {/* Description (Right) */}
               <div className="w-full md:w-[35%] flex flex-col text-left">
-                <h3 className="text-3xl font-bold uppercase tracking-tighter mb-4">Find the exact vibe.</h3>
+                <h3 className="text-3xl font-bold uppercase tracking-tighter mb-4">
+                  {homeContent.search_find_title || 'Find the exact vibe.'}
+                </h3>
                 <p className="font-sans text-black/60 text-sm leading-relaxed uppercase tracking-wide">
-                  Describe what you need in plain English. Our search engine understands mood, instrumentation, and genre, delivering pinpoint accuracy in seconds.
+                  {homeContent.search_find_desc || 'Describe what you need in plain English. Our search engine understands mood, instrumentation, and genre, delivering pinpoint accuracy in seconds.'}
                 </p>
               </div>
             </div>
@@ -244,7 +253,9 @@ export default function Home() {
             <div className="flex flex-col md:flex-row-reverse items-center gap-12 lg:gap-24 w-full">
               {/* Preview Box (Right) */}
               <div className="w-full md:w-[65%] bg-black text-white rounded-2xl p-8 md:p-12 flex flex-col h-[400px] relative overflow-hidden shadow-2xl">
-                <div className="text-xs font-bold uppercase tracking-widest text-white/40 mb-10 text-left">Instant Toggle Preview</div>
+                <div className="text-xs font-bold uppercase tracking-widest text-white/40 mb-10 text-left">
+                  {homeContent.search_preview_label || 'Instant Toggle Preview'}
+                </div>
                 
                 {/* Mock Track Row */}
                 <div className="mt-auto mb-auto w-full mx-auto border border-white/10 rounded-2xl p-5 flex flex-col gap-8 bg-white/5 backdrop-blur-md relative">
@@ -328,9 +339,11 @@ export default function Home() {
 
               {/* Description (Left) */}
               <div className="w-full md:w-[35%] flex flex-col text-left">
-                <h3 className="text-3xl font-bold uppercase tracking-tighter mb-4">Preview instantly.</h3>
+                <h3 className="text-3xl font-bold uppercase tracking-tighter mb-4">
+                  {homeContent.search_preview_title || 'Preview instantly.'}
+                </h3>
                 <p className="font-sans text-black/60 text-sm leading-relaxed uppercase tracking-wide">
-                  Don't waste time clicking into every track. Flip the preview toggle to instantly scrub through the best parts of any song directly from the search results.
+                  {homeContent.search_preview_desc || "Don't waste time clicking into every track. Flip the preview toggle to instantly scrub through the best parts of any song directly from the search results."}
                 </p>
               </div>
             </div>
@@ -352,14 +365,15 @@ export default function Home() {
 
       {/* Beyond the Library (Dark Mode) */}
       <div className="pt-20 pb-24 md:pt-24 md:pb-32 flex flex-col items-center text-center bg-[#111] text-white full-bleed">
-        <h2 className="text-5xl md:text-6xl lg:text-8xl font-bold uppercase tracking-tighter mb-6 leading-[0.9]">
-          Beyond the Library
-        </h2>
+        <h2 
+          className="text-5xl md:text-6xl lg:text-8xl font-bold uppercase tracking-tighter mb-6 leading-[0.9]"
+          dangerouslySetInnerHTML={{ __html: homeContent.beyond_title || 'Beyond the Library' }}
+        />
         <div className="text-xs md:text-sm font-bold uppercase tracking-widest text-white/50 mb-8 border-b-2 border-white/10 pb-4">
-          Custom Music and Sound
+          {homeContent.beyond_subtitle || 'Custom Music and Sound'}
         </div>
         <p className="font-sans text-sm md:text-base uppercase leading-relaxed tracking-wide text-white/50 max-w-2xl mb-12 px-6">
-          Some projects demand a completely original sound. We craft bespoke scores and custom sound design for high-stakes campaigns.
+          {homeContent.beyond_desc || 'Some projects demand a completely original sound. We craft bespoke scores and custom sound design for high-stakes campaigns.'}
         </p>
         <button 
           onClick={() => setContactModalOpen(true)}

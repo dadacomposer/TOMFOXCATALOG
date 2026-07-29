@@ -21,22 +21,21 @@ serve(async (req) => {
     const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
     let event;
 
-    if (webhookSecret) {
-      try {
-        event = await stripe.webhooks.constructEventAsync(
-          body,
-          signature,
-          webhookSecret,
-          undefined,
-          cryptoProvider
-        );
-      } catch (err: any) {
-        console.error(`Webhook signature verification failed: ${err.message}`);
-        return new Response(`Webhook Error: ${err.message}`, { status: 400 });
-      }
-    } else {
-      // Fallback for local testing if secret is not set, though highly unrecommended for production
-      event = JSON.parse(body);
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not set');
+    }
+
+    try {
+      event = await stripe.webhooks.constructEventAsync(
+        body,
+        signature,
+        webhookSecret,
+        undefined,
+        cryptoProvider
+      );
+    } catch (err: any) {
+      console.error(`Webhook signature verification failed: ${err.message}`);
+      return new Response(`Webhook Error: ${err.message}`, { status: 400 });
     }
 
     const supabase = createClient(

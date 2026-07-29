@@ -5,40 +5,101 @@ const supabaseKey = 'sb_publishable_qKmdOmdtIZYB6i_pQEkt_Q_A7bp127D';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+const filterDeletedVersions = (tracks: any[]) => {
+  return tracks.map(t => {
+    if (t.versions && Array.isArray(t.versions)) {
+      t.versions = t.versions.filter((v: any) => v.deleted_at === null);
+    }
+    return t;
+  });
+};
+
 // Helper function to fetch a specific page of tracks
-export async function fetchTracks(page: number = 1, pageSize: number = 20, filters: Record<string, string[]> = {}) {
+export async function fetchTracks(page: number = 1, pageSize: number = 20, filters: Record<string, any> = {}, sortBy: string = 'relevance', searchIds?: string[]) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   
   let query = supabase
     .from('tracks')
-    .select('*')
-    .order('file_name', { ascending: true });
+    .select('*, versions:tracks!parent_track_id(*)')
+    .eq('status', 'published')
+    .eq('is_hidden', false)
+    .is('deleted_at', null)
+    .eq('track_type', 'main');
+    
+  if (searchIds && searchIds.length > 0) {
+    query = query.in('id', searchIds);
+  } else if (searchIds && searchIds.length === 0) {
+    // If searchIds is explicitly empty, it means the search returned no results.
+    return [];
+  }
+    
+  if (sortBy === 'newest') query = query.order('release_date', { ascending: false });
+  else if (sortBy === 'oldest') query = query.order('release_date', { ascending: true });
+  else if (sortBy === 'most_played') query = query.order('play_count', { ascending: false });
+  else if (sortBy === 'a-z') query = query.order('file_name', { ascending: true });
+  else {
+    // relevance default
+    if (!searchIds || searchIds.length === 0) {
+      query = query.order('release_date', { ascending: false });
+    }
+    // If searchIds is present, we do not order in SQL so we can order in memory later
+  }
     
   // Apply filters
   for (const [key, values] of Object.entries(filters)) {
-    if (values && values.length > 0) {
-      if (key === 'subgenre') {
-        // subgenre is a text column containing JSON string, so we use ilike
-        const conditions = values.map(v => `subgenre.ilike.%${v}%`).join(',');
-        query = query.or(conditions);
-      } else {
-        // moods, instruments, scenarios, human_tags are jsonb columns
-        // Supabase allows .contains for checking if jsonb array contains elements
-        query = query.contains(key, values);
-      }
+    if (!values || (Array.isArray(values) && values.length === 0)) continue;
+
+    if (key === 'genre') {
+      // genre is a plain text column
+      const conditions = (values as string[]).map(v => `genre.ilike.%${v}%`).join(',');
+      query = query.or(conditions);
+    } else if (key === 'subgenre') {
+      // subgenre is a text column, sometimes containing a JSON array string
+      const conditions = (values as string[]).map(v => `subgenre.ilike.%${v}%`).join(',');
+      query = query.or(conditions);
+    } else if (key === 'energy_level') {
+      // energy_level is a plain text column
+      const conditions = (values as string[]).map(v => `energy_level.eq.${v}`).join(',');
+      query = query.or(conditions);
+    } else if (key === 'bpm_range' && Array.isArray(values) && values.length === 2) {
+      // bpm_range is [min, max]
+      const [min, max] = values as [number, number];
+      if (min > 0) query = query.gte('bpm', min);
+      if (max > 0 && max < 400) query = query.lte('bpm', max);
+    } else if (key === 'human_tags') {
+      // human_tags is jsonb
+      query = query.contains(key, values as string[]);
+    } else if (['moods', 'instruments', 'textures', 'scenarios'].includes(key)) {
+      // These are text[] arrays — use Postgres && operator via .overlaps (OR logic)
+      query = query.overlaps(key, values as string[]);
     }
   }
-  
-  const { data, error } = await query.range(from, to);
-    
+  let data, error;
+
+  if (searchIds && searchIds.length > 0 && sortBy === 'relevance') {
+    // Fetch all matching IDs without DB pagination to sort them exactly by the searchIds array in memory
+    const result = await query;
+    error = result.error;
+    if (result.data) {
+      const trackMap = new Map(result.data.map(t => [t.id, t]));
+      data = searchIds.map(id => trackMap.get(id)).filter(Boolean);
+      data = data.slice(from, to + 1);
+    }
+  } else {
+    // Normal query with DB pagination
+    const result = await query.range(from, to);
+    data = result.data;
+    error = result.error;
+  }    
   if (error) {
     console.error('Error fetching tracks:', error);
     return [];
   }
   
-  return data || [];
+  return data ? filterDeletedVersions(data) : [];
 }
+
 
 export async function fetchSimilarTracks(trackId: string, limit: number = 5, offset: number = 0) {
   // Uses the match_similar_tracks RPC if available, otherwise falls back to a basic query
@@ -49,7 +110,7 @@ export async function fetchSimilarTracks(trackId: string, limit: number = 5, off
   // Let's fetch the track to get its subgenre/moods
   const { data: trackData } = await supabase.from('tracks').select('subgenre, moods').eq('id', trackId).single();
   
-  let query = supabase.from('tracks').select('*').neq('id', trackId).range(offset, offset + limit - 1);
+  let query = supabase.from('tracks').select('*').eq('is_hidden', false).is('deleted_at', null).eq('track_type', 'main').neq('id', trackId).range(offset, offset + limit - 1);
   
   if (trackData) {
     if (trackData.subgenre) {
@@ -64,7 +125,7 @@ export async function fetchSimilarTracks(trackId: string, limit: number = 5, off
   
   if (error || !data || data.length === 0) {
     // fallback to just random
-    const fallback = await supabase.from('tracks').select('*').neq('id', trackId).range(offset, offset + limit - 1);
+    const fallback = await supabase.from('tracks').select('*').eq('is_hidden', false).is('deleted_at', null).eq('track_type', 'main').neq('id', trackId).range(offset, offset + limit - 1);
     return fallback.data || [];
   }
   
@@ -87,6 +148,9 @@ export async function fetchDefaultTrackOrder(): Promise<string[]> {
       const { data: chunk, error: tracksError } = await supabase
         .from('tracks')
         .select('id, file_name')
+        .eq('is_hidden', false)
+        .is('deleted_at', null)
+        .eq('track_type', 'main')
         .range(page * pageSize, (page + 1) * pageSize - 1);
         
       if (tracksError) throw tracksError;
@@ -190,7 +254,9 @@ export async function fetchTracksByIds(ids: string[]) {
   if (ids.length === 0) return [];
   const { data, error } = await supabase
     .from('tracks')
-    .select('*')
+    .select('*, versions:tracks!parent_track_id(*)')
+    .eq('status', 'published')
+    .is('deleted_at', null)
     .in('id', ids);
     
   if (error) {
@@ -199,7 +265,8 @@ export async function fetchTracksByIds(ids: string[]) {
   }
   
   // Sort data to match the exact order of the `ids` array
-  const trackMap = new Map(data.map(t => [t.id, t]));
+  const cleanData = data ? filterDeletedVersions(data) : [];
+  const trackMap = new Map(cleanData.map(t => [t.id, t]));
   return ids.map(id => trackMap.get(id)).filter(Boolean);
 }
 
@@ -216,6 +283,9 @@ export async function fetchTrendingTracks() {
   const { data: exactData, error: exactError } = await supabase
     .from('tracks')
     .select('id, file_name')
+    .eq('is_hidden', false)
+    .is('deleted_at', null)
+    .eq('track_type', 'main')
     .or(orQuery);
     
   let fixedIds: string[] = [];
@@ -242,7 +312,10 @@ export async function searchTracksByTitle(query: string) {
   // Try full text search first (handles stemming: investigation -> investig)
   const { data: ftsData, error: ftsError } = await supabase
     .from('tracks')
-    .select('*')
+    .select('*, versions:tracks!parent_track_id(*)')
+    .eq('is_hidden', false)
+    .is('deleted_at', null)
+    .eq('track_type', 'main')
     .textSearch('file_name', query, {
       type: 'websearch',
       config: 'english'
@@ -250,13 +323,16 @@ export async function searchTracksByTitle(query: string) {
     .limit(100);
     
   if (!ftsError && ftsData && ftsData.length > 0) {
-    return ftsData;
+    return filterDeletedVersions(ftsData);
   }
 
   // Fallback to simple ilike if full text search returns nothing
   const { data, error } = await supabase
     .from('tracks')
-    .select('*')
+    .select('*, versions:tracks!parent_track_id(*)')
+    .eq('is_hidden', false)
+    .is('deleted_at', null)
+    .eq('track_type', 'main')
     .ilike('file_name', `%${query}%`)
     .limit(100);
     
@@ -265,7 +341,60 @@ export async function searchTracksByTitle(query: string) {
     return [];
   }
   
-  return data || [];
+  return data ? filterDeletedVersions(data) : [];
+}
+
+// Search across ALL tag fields: moods, instruments, textures, scenarios, human_tags, genre, subgenre, description
+export async function searchTracksByTags(query: string) {
+  const q = query.trim();
+  if (!q) return [];
+  
+  // Build an OR across all text fields containing the query
+  const conditions = [
+    `file_name.ilike.%${q}%`,
+    `genre.ilike.%${q}%`,
+    `subgenre.ilike.%${q}%`,
+    `description.ilike.%${q}%`,
+    `energy_level.ilike.%${q}%`,
+  ].join(',');
+  
+  const { data: textData } = await supabase
+    .from('tracks')
+    .select('id')
+    .eq('is_hidden', false)
+    .is('deleted_at', null)
+    .eq('track_type', 'main')
+    .or(conditions)
+    .limit(100);
+    
+  // Also check array fields via RPC for moods/instruments/textures/scenarios/human_tags
+  const { data: tagData } = await supabase.rpc('search_tracks_by_tag', { search_term: q }).limit(100);
+  
+  const ids = new Set<string>();
+  (textData || []).forEach((r: any) => ids.add(r.id));
+  (tagData || []).forEach((r: any) => ids.add(r.id));
+  
+  return Array.from(ids);
+}
+
+// Fetch all distinct filter options from the DB dynamically
+export async function fetchFilterOptions() {
+  const { data, error } = await supabase.rpc('get_filter_options');
+  if (error) {
+    console.error('Error fetching filter options:', error);
+    return null;
+  }
+  return data as {
+    genre: { value: string; count: number }[];
+    subgenre: { value: string; count: number }[];
+    moods: { value: string; count: number }[];
+    instruments: { value: string; count: number }[];
+    textures: { value: string; count: number }[];
+    scenarios: { value: string; count: number }[];
+    human_tags: { value: string; count: number }[];
+    energy_level: { value: string; count: number }[];
+    bpm_range: { min: number; max: number };
+  };
 }
 
 export async function searchTracksByEmbedding(embedding: number[]) {
@@ -277,6 +406,21 @@ export async function searchTracksByEmbedding(embedding: number[]) {
   
   if (error) {
     console.error('Error matching tracks:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function fetchTrackVersions(parentTrackId: string) {
+  const { data, error } = await supabase
+    .from('tracks')
+    .select('*')
+    .eq('parent_track_id', parentTrackId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true });
+    
+  if (error) {
+    console.error('Error fetching track versions:', error);
     return [];
   }
   return data || [];
@@ -298,8 +442,9 @@ export async function fetchPlaylists() {
 export async function fetchPlaylistTrackIds(playlistId: string) {
   const { data, error } = await supabase
     .from('playlist_tracks')
-    .select('position, tracks (id)')
+    .select('position, is_hidden, tracks (id)')
     .eq('playlist_id', playlistId)
+    .eq('is_hidden', false)
     .order('position', { ascending: true });
     
   if (error) {

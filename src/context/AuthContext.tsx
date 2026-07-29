@@ -134,12 +134,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (mounted) {
-        if (event === 'SIGNED_IN') {
-          setPlayIntro(true);
-        }
         setSession(session);
-        setUser(session.user);
-        await loadProfile(session.user.id);
+        if (session?.user) {
+          setUser(session.user);
+          await loadProfile(session.user.id);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
         setLoading(false);
       }
     });

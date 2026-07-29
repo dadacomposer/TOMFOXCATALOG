@@ -1,21 +1,28 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { fetchTracks, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, searchTracksByTitle, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds } from '../lib/supabase';
+import { fetchTracks, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, searchTracksByTitle, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds, fetchFilterOptions, searchTracksByTags } from '../lib/supabase';
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import { useAuth } from '../context/AuthContext';
 import { generateEmbedding, initEmbeddingModel } from '../lib/embedding';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
-import { ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag } from 'lucide-react';
+import { ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import WaveformView from '../components/WaveformView';
 import { usePlayer } from '../context/PlayerContext';
+import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS, DEFAULT_ARTIST } from '../config';
 
 type Track = {
   id: string;
   file_name: string;
   r2_url: string;
+  created_at?: string;
+  release_date?: string;
+  has_wav?: boolean;
+  has_aiff?: boolean;
+  has_mp3?: boolean;
+  has_watermarked?: boolean;
   bpm?: number;
   duration?: number;
   key?: string;
@@ -26,6 +33,9 @@ type Track = {
   textures?: string[] | string;
   scenarios?: string[] | string;
   waveform_data?: number[];
+  artwork_url?: string;
+  composers?: string[];
+  versions?: Track[];
 };
 
 const parseTags = (t: string[] | string | undefined): string[] => {
@@ -34,33 +44,18 @@ const parseTags = (t: string[] | string | undefined): string[] => {
   try { return JSON.parse(t); } catch(e) { return []; }
 };
 
-const FILTER_CATEGORIES = [
-  {
-    title: 'Genres',
-    key: 'subgenre',
-    options: ['Progressive House', 'Melodic Techno', 'Deep House', 'Industrial Techno', 'Hard Techno', 'Techno', 'Dark Ambient', 'cinematic electronic', 'Hypnotic Techno', 'EBM', 'Deep Techno', 'Modern Classical', 'Chillhop', 'Drone', 'Lo-fi Hip Hop']
-  },
-  {
-    title: 'Moods',
-    key: 'moods',
-    options: ['Introspective', 'Intense', 'Euphoric', 'Dreamy', 'Uplifting', 'Hypnotic', 'Dark', 'Energetic', 'Driving', 'Aggressive', 'Nostalgic', 'Melancholic', 'Tense', 'Urgent']
-  },
-  {
-    title: 'Instrument',
-    key: 'instruments',
-    options: ['Drum Machine', 'Synthesizer', 'Bass Guitar', 'Distorted Bass', 'Synth Bass', 'Sub Bass', 'Arpeggiator', 'Reverb', 'Sequencer', 'Synth Pad', 'Sampler', 'Electric Piano']
-  },
-  {
-    title: 'Scenarios',
-    key: 'scenarios',
-    options: ['Late Night Drive', 'Warehouse Rave', 'Sunrise Set', 'Warehouse Party', 'Late Night Club', 'Industrial Setting', 'Chilling Out', 'High-Energy Workout', 'Art Installation', 'Intense Workout', 'Underground Club', 'Rainy Day', 'Meditation', 'Studying', 'Film Score']
-  },
-  {
-    title: 'Tags',
-    key: 'human_tags',
-    options: ['Atmospheric', 'Building', 'Uptempo', 'Midtempo', 'Dark', 'Fast', 'Cool', 'Driving', 'Reflective', 'Electronic', 'Synth', 'Cinematic', 'Hopeful', 'Tension', 'Emotive']
-  }
-];
+type FilterOption = { value: string; count: number };
+type FilterOptions = {
+  genre: FilterOption[];
+  subgenre: FilterOption[];
+  moods: FilterOption[];
+  instruments: FilterOption[];
+  textures: FilterOption[];
+  scenarios: FilterOption[];
+  human_tags: FilterOption[];
+  energy_level: FilterOption[];
+  bpm_range: { min: number; max: number };
+};
 
 export default function Browse() {
   const navigate = useNavigate();
@@ -78,10 +73,25 @@ export default function Browse() {
   const [isInitialTracksLoaded, setIsInitialTracksLoaded] = useState(false);
   const [hasMoreTracks, setHasMoreTracks] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({
-    subgenre: [], moods: [], instruments: [], scenarios: [], human_tags: []
+  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({
+    genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], bpm_range: [0, 0], shadow_tags: []
   });
+  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
+  const [filterSearch, setFilterSearch] = useState(''); // search within filter panel
+  const [bpmRange, setBpmRange] = useState<[number, number]>([0, 0]);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
+
+  const FILTER_CATEGORIES = useMemo(() => [
+    { title: 'Genre',       key: 'genre',        options: filterOptions?.genre || [] },
+    { title: 'Subgenre',    key: 'subgenre',     options: filterOptions?.subgenre || [] },
+    { title: 'Moods',       key: 'moods',        options: filterOptions?.moods || [] },
+    { title: 'Instruments', key: 'instruments',  options: filterOptions?.instruments || [] },
+    { title: 'Texture',     key: 'textures',     options: filterOptions?.textures || [] },
+    { title: 'Scenarios',   key: 'scenarios',    options: filterOptions?.scenarios || [] },
+    { title: 'Tags',        key: 'human_tags',   options: filterOptions?.human_tags || [] },
+    { title: 'Energy',      key: 'energy_level', options: filterOptions?.energy_level || [] },
+  ], [filterOptions]);
   
   const { playTrack, currentTrack, isPlaying, togglePlay, setProgress, progress, setPendingSeek, isPreviewMode, setIsPreviewMode, setFallbackPlaylist, currentSource, setCurrentSource, setIsCurrentPreviewDormant, currentPlaylist, setCurrentPlaylist } = usePlayer();
   const { openDownloadModal } = useDownload();
@@ -92,16 +102,30 @@ export default function Browse() {
   const [isTypingSearch, setIsTypingSearch] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [defaultTrackIds, setDefaultTrackIds] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState('relevance');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
   const tracksPerPage = 20;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setIsSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     initEmbeddingModel();
     
     async function loadData() {
-      const [pData, tData, ids] = await Promise.all([
+      const [pData, tData, ids, fOpts] = await Promise.all([
         fetchPlaylists(),
         fetchTrendingTracks(),
-        fetchDefaultTrackOrder()
+        fetchDefaultTrackOrder(),
+        fetchFilterOptions()
       ]);
       
       const newPlaylist = pData.find((p: any) => p.title.toLowerCase().includes('new music'));
@@ -116,6 +140,10 @@ export default function Browse() {
       
       setTrendingTracks(tData as Track[]);
       setDefaultTrackIds(ids);
+      if (fOpts) {
+        setFilterOptions(fOpts);
+        if (fOpts.bpm_range) setBpmRange([fOpts.bpm_range.min, fOpts.bpm_range.max]);
+      }
       
       setLoading(false);
     }
@@ -149,13 +177,68 @@ export default function Browse() {
     return () => window.removeEventListener('scrollToBrowse', handleScrollEvent);
   }, []);
 
+  const [shadowTagIds, setShadowTagIds] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    const shadowTags = (activeFilters.shadow_tags as string[]) || [];
+    if (shadowTags.length === 0) {
+      setShadowTagIds(null);
+      return;
+    }
+    
+    let isCancelled = false;
+    setIsSearching(true);
+    
+    const resolve = async () => {
+      const idSets: Set<string>[] = [];
+      for (const tag of shadowTags) {
+        const [textRaw, tagIds] = await Promise.all([
+          searchTracksByTitle(tag),
+          searchTracksByTags(tag)
+        ]);
+        const ids = new Set<string>();
+        textRaw.forEach((r: any) => ids.add(r.id));
+        tagIds.forEach((id: string) => ids.add(id));
+        idSets.push(ids);
+      }
+      
+      if (isCancelled) return;
+      
+      let finalIds = Array.from(idSets[0]);
+      for (let i = 1; i < idSets.length; i++) {
+        finalIds = finalIds.filter(id => idSets[i].has(id));
+      }
+      
+      setShadowTagIds(finalIds);
+      setIsSearching(false);
+    };
+    
+    resolve();
+    return () => { isCancelled = true; };
+  }, [activeFilters.shadow_tags]);
+
+  const totalActiveFilterCount = useMemo(() => {
+    let count = 0;
+    Object.entries(activeFilters).forEach(([k, v]) => {
+      if (k === 'bpm_range') return;
+      if (Array.isArray(v)) count += v.length;
+    });
+    // Count BPM range as active if changed from defaults
+    if (filterOptions?.bpm_range && (activeFilters.bpm_range[0] > filterOptions.bpm_range.min || activeFilters.bpm_range[1] > 0 && activeFilters.bpm_range[1] < filterOptions.bpm_range.max)) count++;
+    return count;
+  }, [activeFilters, filterOptions]);
+
   useEffect(() => {
     if (loading) return;
 
     if (!searchQuery.trim()) {
-      const hasFilters = Object.values(activeFilters).some(v => v.length > 0);
+      const hasFilters = totalActiveFilterCount > 0;
       
-      if (!hasFilters && defaultTrackIds.length > 0) {
+      // If we are waiting for shadow tags to resolve, don't fetch yet
+      const shadowTags = (activeFilters.shadow_tags as string[]) || [];
+      if (shadowTags.length > 0 && shadowTagIds === null) return;
+      
+      if (!hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance' && !shadowTagIds) {
         // Default browse view: Use pagination to avoid fetching 1000+ tracks at once
         fetchTracksByIds(defaultTrackIds.slice(0, tracksPerPage)).then(data => {
           setDisplayedTracks(data as Track[]);
@@ -163,48 +246,71 @@ export default function Browse() {
           setHasMoreTracks(defaultTrackIds.length > tracksPerPage);
           setIsInitialTracksLoaded(true);
           setIsTypingSearch(false);
+          setIsSearching(false);
         });
       } else {
-        fetchTracks(1, tracksPerPage, activeFilters).then(data => {
+        setIsSearching(true);
+        fetchTracks(1, tracksPerPage, activeFilters, sortBy, shadowTagIds || undefined).then(data => {
           setDisplayedTracks(data as Track[]);
           setCurrentPage(1);
           setHasMoreTracks(data.length === tracksPerPage);
           setIsInitialTracksLoaded(true);
           setIsTypingSearch(false);
+          setIsSearching(false);
         });
       }
     }
-  }, [searchQuery, loading, activeFilters, defaultTrackIds]);
+  }, [searchQuery, loading, activeFilters, defaultTrackIds, sortBy, totalActiveFilterCount, shadowTagIds]);
 
-  const executeSearch = async () => {
-    if (!searchQuery.trim()) return;
+  const executeSearch = async (overrideQuery?: string) => {
+    const q = overrideQuery || searchQuery;
+    if (!q.trim()) return;
     setIsSearching(true);
     try {
-      const vector = await generateEmbedding(searchQuery);
-      const semanticRaw = await searchTracksByEmbedding(vector);
-      const textRaw = await searchTracksByTitle(searchQuery);
-      
+      // Run semantic, title, and tag searches in parallel
+      const [vector, textRaw, tagIds] = await Promise.all([
+        generateEmbedding(q).catch(() => null),
+        searchTracksByTitle(q),
+        searchTracksByTags(q)
+      ]);
+
       const allIds = new Set<string>();
+      // Title results first (most precise)
       textRaw.forEach((r: any) => allIds.add(r.id));
-      semanticRaw.forEach((r: any) => allIds.add(r.id));
+      // Tag hits second  
+      tagIds.forEach((id: string) => allIds.add(id));
+      // Semantic last (broader)
+      if (vector) {
+        const semanticRaw = await searchTracksByEmbedding(vector);
+        semanticRaw.forEach((r: any) => allIds.add(r.id));
+      }
       
-      const uniqueIds = Array.from(allIds);
+      let finalIds = Array.from(allIds);
+      
+      // If we also have shadow tags active, intersect with them
+      if (shadowTagIds) {
+        finalIds = finalIds.filter(id => shadowTagIds.includes(id));
+      }
+      
       let combined: Track[] = [];
       
-      if (uniqueIds.length > 0) {
-        combined = await fetchTracksByIds(uniqueIds) as Track[];
+      if (finalIds.length > 0) {
+        // Use fetchTracks to apply activeFilters and sortBy on top of search results
+        combined = await fetchTracks(1, tracksPerPage, activeFilters, sortBy, finalIds) as Track[];
       }
       
       setDisplayedTracks(combined);
       setHasMoreTracks(false);
     } catch (err) {
-      console.error('Error during semantic search:', err);
+      console.error('Error during search:', err);
       try {
         const textRaw = await searchTracksByTitle(searchQuery);
         const textIds = textRaw.map((r: any) => r.id);
         let textResults: Track[] = [];
         if (textIds.length > 0) {
-          textResults = await fetchTracksByIds(textIds) as Track[];
+          let fallbackIds = textIds;
+          if (shadowTagIds) fallbackIds = fallbackIds.filter((id: string) => shadowTagIds.includes(id));
+          textResults = await fetchTracks(1, tracksPerPage, activeFilters, sortBy, fallbackIds) as Track[];
         }
         setDisplayedTracks(textResults);
         setHasMoreTracks(false);
@@ -231,12 +337,33 @@ export default function Browse() {
 
   const toggleFilter = (categoryKey: string, option: string) => {
     setActiveFilters(prev => {
-      const categoryOptions = prev[categoryKey] || [];
-      if (categoryOptions.includes(option)) {
-        return { ...prev, [categoryKey]: categoryOptions.filter(o => o !== option) };
-      } else {
-        return { ...prev, [categoryKey]: [...categoryOptions, option] };
+      const isSelected = (prev[categoryKey] as string[])?.includes(option);
+      return {
+        ...prev,
+        [categoryKey]: isSelected 
+          ? (prev[categoryKey] as string[]).filter(item => item !== option)
+          : [...(prev[categoryKey] as string[] || []), option]
+      };
+    });
+  };
+
+  const clearAllFilters = () => {
+    setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], bpm_range: [0, 0] });
+    if (filterOptions?.bpm_range) setBpmRange([filterOptions.bpm_range.min, filterOptions.bpm_range.max]);
+    setExpandedCategory(null);
+  };
+
+
+
+  const handleTagClick = (categoryKey: string, value: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Shadow search: add to shadow_tags filter instead of modifying strict categories
+    setActiveFilters(prev => {
+      const tags = (prev.shadow_tags as string[]) || [];
+      if (!tags.includes(value)) {
+        return { ...prev, shadow_tags: [...tags, value] };
       }
+      return prev;
     });
   };
 
@@ -244,22 +371,22 @@ export default function Browse() {
     const nextPage = currentPage + 1;
     const hasFilters = Object.values(activeFilters).some(v => v.length > 0);
     
-    if (!searchQuery.trim() && !hasFilters && defaultTrackIds.length > 0) {
+    if (!searchQuery.trim() && !hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance') {
       const startIndex = currentPage * tracksPerPage;
       const endIndex = startIndex + tracksPerPage;
-      const moreTracks = await fetchTracksByIds(defaultTrackIds.slice(startIndex, endIndex));
+      const nextIds = defaultTrackIds.slice(startIndex, endIndex);
       
-      if (moreTracks.length > 0) {
-        setDisplayedTracks(prev => [...prev, ...(moreTracks as Track[])]);
-        setCurrentPage(nextPage);
-        if (endIndex >= defaultTrackIds.length) {
-          setHasMoreTracks(false);
-        }
-      } else {
-        setHasMoreTracks(false);
-      }
+      const newTracks = await fetchTracksByIds(nextIds) as Track[];
+      setDisplayedTracks(prev => [...prev, ...newTracks]);
+      setCurrentPage(nextPage);
+      setHasMoreTracks(endIndex < defaultTrackIds.length);
+    } else if (!searchQuery.trim()) {
+      const newTracks = await fetchTracks(nextPage, tracksPerPage, activeFilters, sortBy);
+      setDisplayedTracks(prev => [...prev, ...newTracks]);
+      setCurrentPage(nextPage);
+      setHasMoreTracks(newTracks.length === tracksPerPage);
     } else {
-      const moreTracks = await fetchTracks(nextPage, tracksPerPage, activeFilters);
+      const moreTracks = await fetchTracks(nextPage, tracksPerPage, activeFilters, sortBy);
       if (moreTracks.length > 0) {
         setDisplayedTracks(prev => [...prev, ...moreTracks]);
         setCurrentPage(nextPage);
@@ -406,7 +533,7 @@ export default function Browse() {
                           onClick={() => handlePlayPause(track, 'top')}
                         >
                           <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
-                            <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png" alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
+                            <img src={track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
                             <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                               {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
                             </div>
@@ -417,7 +544,7 @@ export default function Browse() {
                           <div className="flex flex-col overflow-hidden w-full">
                             <div className="font-bold text-[14px] truncate text-black/90">{cleanTitle(track.file_name)}</div>
                             <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5">
-                               Tom Fox
+                               {DEFAULT_ARTIST}
                             </div>
                           </div>
                         </div>
@@ -470,7 +597,7 @@ export default function Browse() {
                 </div>
               ))
             ) : (
-              playlists.slice(0, 8).map((pl) => (
+              playlists.filter(pl => pl.is_featured).map((pl) => (
                 <div 
                   key={pl.id} 
                 className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer shrink-0 w-[340px] transition-all duration-300 border border-transparent hover:border-black/5"
@@ -495,73 +622,151 @@ export default function Browse() {
 
       <div id="main-search-bar" className="scroll-mt-[74px] md:scroll-mt-[82px]" />
       <div 
-        className={`sticky top-[74px] md:top-[82px] z-40 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 flex items-center border-b border-black/10 py-6 shadow-sm focus-within:border-black/30 transition-[bottom] duration-500 ease-out group/searchbar ${currentTrack ? 'bottom-[90px]' : 'bottom-0'} ${playlistUrlId ? 'hidden' : ''}`}
+        className={`sticky top-[74px] md:top-[82px] z-40 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 flex flex-col border-b border-black/10 py-6 shadow-sm focus-within:border-black/30 transition-[bottom] duration-500 ease-out group/searchbar ${currentTrack ? 'bottom-[90px]' : 'bottom-0'} ${playlistUrlId ? 'hidden' : ''}`}
       >
-        <div className="cursor-pointer group-hover/searchbar:text-black/80 group-focus-within/searchbar:text-black transition-colors z-10" onClick={() => executeSearch()}>
-          <Search className={`w-5 h-5 mr-4 shrink-0 transition-colors ${isSearching ? 'text-black animate-pulse' : 'text-black/50'}`} />
-        </div>
-        
-        <div className="relative flex-grow flex items-center">
-          <input 
-            type="text" 
-            placeholder="DESCRIBE THE MUSIC YOU NEED..." 
-            className="w-full bg-transparent outline-none font-bold uppercase text-[13px] tracking-widest placeholder:text-black/30 text-black relative z-10"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setIsTypingSearch(true);
-              if (e.target.value.trim() !== '') {
-                setActiveFilters({ subgenre: [], moods: [], instruments: [], scenarios: [], human_tags: [] });
-                setExpandedCategory(null);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                executeSearch();
-                document.getElementById('main-search-bar')?.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
-          />
+        <div className="flex items-center w-full">
+          <div className="cursor-pointer group-hover/searchbar:text-black/80 group-focus-within/searchbar:text-black transition-colors z-10" onClick={() => executeSearch()}>
+            <Search className={`w-5 h-5 mr-4 shrink-0 transition-colors ${isSearching ? 'text-black animate-pulse' : 'text-black/50'}`} />
+          </div>
           
-          <div className="absolute left-0 top-0 bottom-0 flex items-center pointer-events-none z-0">
-            <span className="invisible whitespace-pre font-bold uppercase text-[13px] tracking-widest">{searchQuery}</span>
-            {!isSearching && isTypingSearch && searchQuery.trim() !== '' && (
-              <span className="ml-2 text-[10px] uppercase font-bold text-black/40 tracking-widest animate-pulse whitespace-nowrap">Press Enter ↵</span>
-            )}
-            {isSearching && (
-              <span className="ml-2 text-[10px] uppercase font-bold text-black/40 tracking-widest animate-pulse whitespace-nowrap">Thinking...</span>
-            )}
+          <div className="relative flex-grow flex items-center">
+            <input 
+              type="text" 
+              placeholder="DESCRIBE THE MUSIC YOU NEED..." 
+              className="w-full bg-transparent outline-none font-bold uppercase text-[13px] tracking-widest placeholder:text-black/30 text-black relative z-10"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsTypingSearch(true);
+                if (e.target.value.trim() !== '') {
+                  setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], bpm_range: [0, 0], shadow_tags: [] });
+                  setExpandedCategory(null);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  executeSearch();
+                  document.getElementById('main-search-bar')?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            />
+            
+            <div className="absolute left-0 top-0 bottom-0 flex items-center pointer-events-none z-0">
+              <span className="invisible whitespace-pre font-bold uppercase text-[13px] tracking-widest">{searchQuery}</span>
+              {!isSearching && isTypingSearch && searchQuery.trim() !== '' && (
+                <span className="ml-2 text-[10px] uppercase font-bold text-black/40 tracking-widest animate-pulse whitespace-nowrap">Press Enter ↵</span>
+              )}
+              {isSearching && (
+                <span className="ml-2 text-[10px] uppercase font-bold text-black/40 tracking-widest animate-pulse whitespace-nowrap">Thinking...</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 ml-6 shrink-0 z-10 relative">
+            <div className="w-[1px] h-4 bg-black/10" />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold tracking-widest uppercase text-black/40">Sort</span>
+              <button 
+                onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-black outline-none cursor-pointer"
+              >
+                {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'most_played' ? 'Most Played' : 'A-Z'}
+                <svg className={`w-3 h-3 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              
+              {isSortDropdownOpen && (
+                <div className="absolute top-full left-0 mt-4 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                  {[
+                    { id: 'relevance', label: 'Relevance' },
+                    { id: 'newest', label: 'Newest' },
+                    { id: 'oldest', label: 'Oldest' },
+                    { id: 'most_played', label: 'Most Played' },
+                    { id: 'a-z', label: 'A-Z' }
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
+                      className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                    >
+                      {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="w-[1px] h-4 bg-black/10" />
+
+            <div className="flex items-center gap-3 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+              <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
+              <div 
+                className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 ml-6 shrink-0 border-l border-black/10 pl-6 cursor-pointer group/preview z-10" onClick={() => setIsPreviewMode(!isPreviewMode)}>
-          <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
-          <div 
-            className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
-          >
-            <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
+        {/* Active filter chips below search bar */}
+        {totalActiveFilterCount > 0 && (
+          <div className="w-full pt-4 flex flex-wrap gap-2 items-center">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-black/40 mr-1">Filtering:</span>
+            {FILTER_CATEGORIES.map(cat =>
+              (activeFilters[cat.key] as string[] || []).map(val => (
+                <button
+                  key={`${cat.key}-${val}`}
+                  onClick={() => toggleFilter(cat.key, val)}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
+                >
+                  {val}
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              ))
+            )}
+            {(activeFilters.shadow_tags as string[] || []).map(val => (
+              <button
+                key={`shadow-${val}`}
+                onClick={() => setActiveFilters(prev => ({ ...prev, shadow_tags: (prev.shadow_tags as string[]).filter(t => t !== val) }))}
+                className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
+              >
+                {val}
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            ))}
+            {activeFilters.bpm_range?.[1] > 0 && filterOptions?.bpm_range && (activeFilters.bpm_range[0] > filterOptions.bpm_range.min || activeFilters.bpm_range[1] < filterOptions.bpm_range.max) && (
+              <button
+                onClick={() => { setActiveFilters(prev => ({ ...prev, bpm_range: [0, 0] })); if (filterOptions?.bpm_range) setBpmRange([filterOptions.bpm_range.min, filterOptions.bpm_range.max]); }}
+                className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
+              >
+                BPM {activeFilters.bpm_range[0]}–{activeFilters.bpm_range[1]}
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+            <button onClick={() => setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], bpm_range: [0, 0], shadow_tags: [] })} className="text-[10px] font-bold uppercase tracking-wider text-black/40 hover:text-black underline ml-2 transition-colors">Clear all</button>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="w-full pb-16 pt-8 relative" id="full-catalog-browser">
 
         <div className="flex w-full px-4 md:px-8 gap-8 relative min-h-screen pb-20">
           
-          <div className={`hidden md:flex flex-col shrink-0 sticky top-[170px] h-[calc(100vh-190px)] z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'w-[360px]' : 'w-[130px]'}`}>
+          <div className={`hidden md:flex flex-col shrink-0 sticky top-[170px] h-[calc(100vh-190px)] z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
             
             <div className="flex w-full h-full relative">
               
               <div className="w-[130px] flex flex-col gap-1 shrink-0 relative z-20 bg-[#fafafa]">
                 {FILTER_CATEGORIES.map(category => {
-                  const count = activeFilters[category.key]?.length || 0;
+                  const count = (activeFilters[category.key] as string[])?.length || 0;
                   const isExpanded = expandedCategory === category.key;
                   
                   return (
                     <button 
                       key={category.key}
-                      onClick={() => setExpandedCategory(isExpanded ? null : category.key)}
+                      onClick={() => { setExpandedCategory(isExpanded ? null : category.key); setFilterSearch(''); }}
                       className={`w-full text-left px-3 h-[38px] shrink-0 rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center justify-between transition-colors ${isExpanded ? 'bg-black text-white' : 'hover:bg-black/5 text-black/60 hover:text-black'}`}
                     >
                       <span>{category.title}</span>
@@ -575,14 +780,28 @@ export default function Browse() {
                     </button>
                   );
                 })}
+
+                {/* BPM slider button */}
+                {filterOptions?.bpm_range && (
+                  <button
+                    onClick={() => { setExpandedCategory(expandedCategory === 'bpm_range' ? null : 'bpm_range'); setFilterSearch(''); }}
+                    className={`w-full text-left px-3 h-[38px] shrink-0 rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center justify-between transition-colors ${
+                      expandedCategory === 'bpm_range' ? 'bg-black text-white' : 'hover:bg-black/5 text-black/60 hover:text-black'
+                    }`}
+                  >
+                    <span>BPM</span>
+                    {activeFilters.bpm_range?.[1] > 0 && filterOptions?.bpm_range && (activeFilters.bpm_range[0] > filterOptions.bpm_range.min || activeFilters.bpm_range[1] < filterOptions.bpm_range.max) ? (
+                      <span className={`w-[18px] h-[18px] shrink-0 flex items-center justify-center rounded-full text-[9px] transition-colors ${ expandedCategory === 'bpm_range' ? 'bg-white text-black' : 'bg-black text-white'}`}>1</span>
+                    ) : (
+                      <span className="w-[18px] h-[18px] shrink-0 opacity-0 pointer-events-none" />
+                    )}
+                  </button>
+                )}
                 
                 <button 
-                  onClick={() => {
-                    setActiveFilters({ subgenre: [], moods: [], instruments: [], scenarios: [], human_tags: [] });
-                    setExpandedCategory(null);
-                  }}
+                  onClick={clearAllFilters}
                   className={`w-full text-left px-3 mt-2 h-[32px] shrink-0 text-[10px] transition-colors underline font-bold uppercase tracking-widest flex items-center ${
-                    Object.values(activeFilters).some(arr => arr.length > 0)
+                    totalActiveFilterCount > 0
                       ? 'text-black/50 hover:text-black pointer-events-auto'
                       : 'opacity-0 pointer-events-none'
                   }`}
@@ -591,22 +810,93 @@ export default function Browse() {
                 </button>
               </div>
 
-              <div className={`absolute left-[130px] top-0 bottom-0 w-[230px] pl-6 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
-                {expandedCategory && (
+              <div className={`absolute left-[130px] top-0 bottom-0 w-[250px] pl-6 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
+                {expandedCategory && expandedCategory !== 'bpm_range' && (() => {
+                  const cat = FILTER_CATEGORIES.find(c => c.key === expandedCategory);
+                  if (!cat) return null;
+                  const filteredOpts = filterSearch
+                    ? cat.options.filter(o => o.value.toLowerCase().includes(filterSearch.toLowerCase()))
+                    : cat.options;
+                  return (
+                    <div className="flex flex-col h-full w-full">
+                      {/* Search within filter */}
+                      <div className="relative mb-3 shrink-0">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/40" />
+                        <input
+                          type="text"
+                          placeholder={`Search ${cat.title}...`}
+                          value={filterSearch}
+                          onChange={e => setFilterSearch(e.target.value)}
+                          className="w-full pl-7 pr-2 py-1.5 bg-black/5 border border-black/10 rounded-lg text-[11px] focus:outline-none focus:border-black/30 transition-colors"
+                        />
+                      </div>
+                      <div className="text-black/40 text-[10px] font-bold uppercase tracking-widest mb-3 shrink-0">Select {cat.title}</div>
+                      <div className="flex flex-col gap-2.5 overflow-y-auto pb-24 pr-2 hide-scrollbar">
+                        {filteredOpts.map(opt => {
+                          const isActive = (activeFilters[expandedCategory] as string[])?.includes(opt.value);
+                          return (
+                            <label key={opt.value} className="flex items-center gap-3 cursor-pointer group" onClick={() => toggleFilter(expandedCategory, opt.value)}>
+                              <div className={`w-4 h-4 shrink-0 rounded flex items-center justify-center transition-colors border ${isActive ? 'bg-black border-black' : 'border-black/20 group-hover:border-black/50'}`}>
+                                {isActive && <div className="w-2 h-2 bg-white rounded-sm" />}
+                              </div>
+                              <span className={`text-[11px] transition-colors whitespace-normal leading-tight flex-1 ${isActive ? 'text-black font-bold' : 'text-black/70 group-hover:text-black'}`}>{opt.value}</span>
+                              <span className="text-[9px] text-black/30 shrink-0 font-mono">{opt.count}</span>
+                            </label>
+                          );
+                        })}
+                        {filteredOpts.length === 0 && <div className="text-[11px] text-black/30 py-4">No results</div>}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* BPM Slider Panel */}
+                {expandedCategory === 'bpm_range' && filterOptions?.bpm_range && (
                   <div className="flex flex-col h-full w-full">
-                    <div className="text-black/40 text-[10px] font-bold uppercase tracking-widest mb-4">Select {FILTER_CATEGORIES.find(c => c.key === expandedCategory)?.title}</div>
-                    <div className="flex flex-col gap-3 overflow-y-auto pb-24 pr-2 hide-scrollbar">
-                      {FILTER_CATEGORIES.find(c => c.key === expandedCategory)?.options.map(opt => {
-                        const isActive = activeFilters[expandedCategory]?.includes(opt);
-                        return (
-                          <label key={opt} className="flex items-center gap-3 cursor-pointer group" onClick={() => toggleFilter(expandedCategory, opt)}>
-                            <div className={`w-4 h-4 shrink-0 rounded flex items-center justify-center transition-colors border ${isActive ? 'bg-black border-black' : 'border-black/20 group-hover:border-black/50'}`}>
-                              {isActive && <div className="w-2 h-2 bg-white rounded-sm" />}
-                            </div>
-                            <span className={`text-[12px] transition-colors whitespace-normal leading-tight ${isActive ? 'text-black font-bold' : 'text-black/70 group-hover:text-black'}`}>{opt}</span>
-                          </label>
-                        );
-                      })}
+                    <div className="text-black/40 text-[10px] font-bold uppercase tracking-widest mb-4 shrink-0">BPM Range</div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-bold">{bpmRange[0]}</span>
+                        <span className="text-[10px] text-black/40 uppercase tracking-widest">to</span>
+                        <span className="text-[13px] font-bold">{bpmRange[1]}</span>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        <div>
+                          <label className="text-[10px] text-black/40 uppercase tracking-widest font-bold">Min</label>
+                          <input
+                            type="range"
+                            min={filterOptions.bpm_range.min}
+                            max={filterOptions.bpm_range.max}
+                            value={bpmRange[0]}
+                            onChange={e => {
+                              const v = Number(e.target.value);
+                              const newRange: [number, number] = [v, Math.max(v, bpmRange[1])];
+                              setBpmRange(newRange);
+                              setActiveFilters(prev => ({ ...prev, bpm_range: newRange }));
+                            }}
+                            className="w-full accent-black"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-black/40 uppercase tracking-widest font-bold">Max</label>
+                          <input
+                            type="range"
+                            min={filterOptions.bpm_range.min}
+                            max={filterOptions.bpm_range.max}
+                            value={bpmRange[1]}
+                            onChange={e => {
+                              const v = Number(e.target.value);
+                              const newRange: [number, number] = [Math.min(bpmRange[0], v), v];
+                              setBpmRange(newRange);
+                              setActiveFilters(prev => ({ ...prev, bpm_range: newRange }));
+                            }}
+                            className="w-full accent-black"
+                          />
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-black/40">
+                        Catalog range: {filterOptions.bpm_range.min}–{filterOptions.bpm_range.max} BPM
+                      </div>
                     </div>
                   </div>
                 )}
@@ -641,15 +931,15 @@ export default function Browse() {
               ))
             ) : (
               displayedTracks.map((track) => (
+              <React.Fragment key={track.id}>
               <div 
-                key={track.id}
               className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none"
               onClick={() => handlePlayPause(track, 'browse')}
             >
               <div 
                 className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
               >
-                <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png" alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
+                <img src={track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
                 <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                   {currentTrack?.id === track.id && isPlaying ? (
                     <Pause className="w-4 h-4 fill-white text-white" />
@@ -664,8 +954,15 @@ export default function Browse() {
                 )}
               </div>
               <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
-                <div className="font-bold truncate text-[14px]">{cleanTitle(track.file_name)}</div>
-                <div className="font-sans text-[12px] text-black/50 mt-0.5">Tom Fox</div>
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="font-bold truncate text-[14px]">{cleanTitle(track.file_name)}</div>
+                  {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 uppercase tracking-widest shrink-0">New</span>
+                  )}
+                </div>
+                <div className="font-sans text-[12px] text-black/50 mt-0.5">
+                  {track.composers ? (Array.isArray(track.composers) ? track.composers.join(', ') : track.composers) : DEFAULT_COMPOSERS.join(', ')}
+                </div>
               </div>
               
               <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] overflow-hidden">
@@ -675,15 +972,33 @@ export default function Browse() {
                   const moods = parseTags(track.moods);
                   const scenarios = parseTags(track.scenarios);
                   
-                  const all = [...human, ...subgenres, ...moods, ...scenarios];
-                  const unique = Array.from(new Set(all));
-                  const tags = unique.slice(0, 2);
+                  const tagMap = [
+                    ...human.map(t => ({ category: 'human_tags', val: t })),
+                    ...subgenres.map(t => ({ category: 'subgenre', val: t })),
+                    ...moods.map(t => ({ category: 'moods', val: t })),
+                    ...scenarios.map(t => ({ category: 'scenarios', val: t }))
+                  ];
+                  
+                  const uniqueTags: typeof tagMap = [];
+                  const seen = new Set();
+                  for (const obj of tagMap) {
+                    if (!seen.has(obj.val)) {
+                      seen.add(obj.val);
+                      uniqueTags.push(obj);
+                    }
+                  }
+                  
+                  const tags = uniqueTags.slice(0, 2);
                   
                   if (tags.length === 0) return <span className="text-[10px] text-black/30 font-bold uppercase tracking-widest">Tagging...</span>;
 
                   return tags.map((t, idx) => (
-                    <span key={idx} onClick={e => e.stopPropagation()} className="px-2 py-1 bg-black/5 rounded text-[10px] font-bold text-black/60 uppercase tracking-widest whitespace-nowrap cursor-default">
-                      {t}
+                    <span 
+                      key={idx} 
+                      onClick={e => handleTagClick(t.category, t.val, e)} 
+                      className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-bold text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                    >
+                      {t.val}
                     </span>
                   ));
                 })()}
@@ -701,9 +1016,21 @@ export default function Browse() {
                 />
               </div>
 
-              <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[280px]">
+              <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[340px]">
                 <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-10 text-right mr-2">
                   {track.duration ? formatTime(track.duration) : '0:00'}
+                </div>
+                <div className="w-[50px] flex justify-center shrink-0">
+                  {track.versions && track.versions.length > 0 && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setExpandedTrackId(expandedTrackId === track.id ? null : track.id); }}
+                      className={`flex items-center gap-1.5 px-2 py-1.5 rounded transition-colors ${expandedTrackId === track.id ? 'bg-black/10 text-black' : 'text-black/40 hover:bg-black/5 hover:text-black'}`}
+                      title={`${track.versions.length} alternative versions`}
+                    >
+                      <Layers className="w-4 h-4" />
+                      <span className="font-bold text-[11px] font-sans">{track.versions.length}</span>
+                    </button>
+                  )}
                 </div>
                 <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest text-black" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }}>
                   <Download className="w-3.5 h-3.5" /> Download
@@ -713,6 +1040,56 @@ export default function Browse() {
                 </button>
               </div>
             </div>
+            
+            {/* VERSIONS EXPANDED VIEW */}
+            {expandedTrackId === track.id && track.versions && track.versions.length > 0 && (
+              <div className="pl-12 pr-2 py-2 mt-1 mb-2 border-l-[3px] border-black/5 ml-[22px] space-y-1 relative">
+                {track.versions.map(version => (
+                  <div 
+                    key={version.id} 
+                    className="flex items-center gap-4 p-2 hover:bg-black/5 rounded-xl cursor-pointer transition-colors group/version"
+                    onClick={() => handlePlayPause(version, 'browse')}
+                  >
+                    <div className="w-8 h-8 rounded bg-black/5 flex items-center justify-center relative overflow-hidden shrink-0">
+                      <img src={version.artwork_url || track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className="absolute inset-0 w-full h-full object-cover" />
+                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === version.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/version:opacity-100'}`}>
+                        {currentTrack?.id === version.id && isPlaying ? (
+                          <Pause className="w-3 h-3 fill-white text-white" />
+                        ) : (
+                          <Play className="w-3 h-3 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col w-[20%] shrink-0 pr-4">
+                      <div className="font-bold text-[13px] truncate">{cleanTitle(version.file_name)}</div>
+                      <div className="font-sans text-[10px] text-black/40 uppercase tracking-widest mt-0.5">Version</div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%]" />
+                    <div className="hidden md:flex flex-grow h-6 items-center opacity-70 group-hover/version:opacity-100 transition-opacity pr-4">
+                      <WaveformView 
+                        data={parseWaveform(version.waveform_data)} 
+                        isPlaying={currentTrack?.id === version.id && isPlaying} 
+                        progress={currentTrack?.id === version.id ? progress : 0} 
+                        onSeek={(percentage) => handleSeek(version, percentage)}
+                        previewStartPct={isPreviewMode ? getPreviewTimings(version)?.startPct : undefined}
+                        previewEndPct={isPreviewMode ? getPreviewTimings(version)?.endPct : undefined}
+                      />
+                    </div>
+                    <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[340px]">
+                      <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-10 text-right mr-2">
+                        {version.duration ? formatTime(version.duration) : '0:00'}
+                      </div>
+                      {currentTrack?.id !== version.id && (
+                        <button className="flex items-center gap-2 px-3 py-1.5 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[10px] uppercase tracking-widest text-black" onClick={e => { e.stopPropagation(); openDownloadModal(version, e); }}>
+                          <Download className="w-3 h-3" /> Get
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            </React.Fragment>
             ))
             )}
           {displayedTracks.length === 0 && !loading && (

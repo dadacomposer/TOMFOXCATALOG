@@ -1,15 +1,29 @@
-import React, { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, ReactNode, useCallback } from 'react';
 import { getPreviewTimings } from '../lib/audioUtils';
+import { supabase } from '../lib/supabase';
 
 export type Track = {
   id: string;
   file_name: string;
-  r2_url: string;
+  duration?: number;
+  bpm?: number | null;
+  key?: string;
+  artwork_url?: string;
+  r2_url?: string;
   waveform_data?: number[];
+  is_hidden?: boolean;
+  album?: string;
+  composers?: string[];
+  parent_track_id?: string;
+  track_type?: 'main' | 'version' | 'stem';
   subgenre?: string | string[];
   moods?: string | string[];
   scenarios?: string | string[];
-  // altre props se servono...
+  instruments?: string | string[];
+  textures?: string | string[];
+  human_tags?: string | string[];
+  versions?: Track[];
+  [key: string]: any;
 };
 
 type PlayerContextType = {
@@ -24,6 +38,7 @@ type PlayerContextType = {
   togglePlay: () => void;
   playNextTrack: () => void;
   playPrevTrack: () => void;
+  stopPlayback: () => void;
   setPendingSeek: (seek: number | null) => void;
   setProgress: (prog: number) => void;
   isPreviewMode: boolean;
@@ -63,6 +78,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [currentTrack, isPlaying]);
+
+  useEffect(() => {
+    if (currentTrack?.id) {
+      supabase.rpc('increment_play_count', { track_id: currentTrack.id }).then(({ error }) => {
+        if (error) console.error("Failed to increment play count:", error);
+      });
+    }
+  }, [currentTrack?.id]);
 
   const applyPreview = (track: Track, overridePreviewMode?: boolean) => {
     const isPreviewActive = overridePreviewMode !== undefined ? overridePreviewMode : isPreviewMode;
@@ -108,9 +131,46 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setIsPlaying(!isPlaying);
   };
 
-  const playNextTrack = () => {
+  const stopPlayback = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setCurrentTrack(null);
+    setIsPlaying(false);
+  }, []);
+
+  const playNextTrack = useCallback(() => {
     setIsCurrentPreviewDormant(false);
     if (!currentPlaylist.length || !currentTrack) return;
+    
+    // Check if the current track is a version
+    if (currentTrack.parent_track_id) {
+      const parentIndex = currentPlaylist.findIndex(t => t.id === currentTrack.parent_track_id);
+      if (parentIndex !== -1) {
+        const parentTrack = currentPlaylist[parentIndex];
+        if (parentTrack.versions && parentTrack.versions.length > 0) {
+          const versionIndex = parentTrack.versions.findIndex((v: any) => v.id === currentTrack.id);
+          if (versionIndex >= 0 && versionIndex < parentTrack.versions.length - 1) {
+            // Play next version
+            const nextVersion = parentTrack.versions[versionIndex + 1];
+            applyPreview(nextVersion);
+            setCurrentTrack(nextVersion);
+            setIsPlaying(true);
+            return;
+          }
+        }
+        // No more versions, play the next main track
+        if (parentIndex < currentPlaylist.length - 1) {
+          const nextMainTrack = currentPlaylist[parentIndex + 1];
+          applyPreview(nextMainTrack);
+          setCurrentTrack(nextMainTrack);
+          setIsPlaying(true);
+          return;
+        }
+      }
+    }
+
     const currentIndex = currentPlaylist.findIndex(t => t.id === currentTrack.id);
     
     if (currentIndex >= 0 && currentIndex < currentPlaylist.length - 1) {
@@ -148,7 +208,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else {
       setIsPlaying(false);
     }
-  };
+  }, [currentPlaylist, currentTrack, currentSource, fallbackPlaylist, returnTrackId]);
 
   const playPrevTrack = () => {
     if (!currentPlaylist.length || !currentTrack) return;
@@ -157,6 +217,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setIsCurrentPreviewDormant(true);
       setPendingSeek(0);
       return;
+    }
+
+    // Check if the current track is a version
+    if (currentTrack.parent_track_id) {
+      const parentIndex = currentPlaylist.findIndex(t => t.id === currentTrack.parent_track_id);
+      if (parentIndex !== -1) {
+        const parentTrack = currentPlaylist[parentIndex];
+        if (parentTrack.versions && parentTrack.versions.length > 0) {
+          const versionIndex = parentTrack.versions.findIndex((v: any) => v.id === currentTrack.id);
+          if (versionIndex > 0) {
+            // Play previous version
+            const prevVersion = parentTrack.versions[versionIndex - 1];
+            applyPreview(prevVersion);
+            setCurrentTrack(prevVersion);
+            setIsPlaying(true);
+            return;
+          } else {
+            // Play the parent track
+            applyPreview(parentTrack);
+            setCurrentTrack(parentTrack);
+            setIsPlaying(true);
+            return;
+          }
+        }
+      }
     }
 
     const currentIndex = currentPlaylist.findIndex(t => t.id === currentTrack.id);
@@ -182,6 +267,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       togglePlay,
       playNextTrack,
       playPrevTrack,
+      stopPlayback,
       setPendingSeek,
       setProgress,
       isPreviewMode,
