@@ -26,5 +26,3 @@ dist-ssr
 ffmpeg
 ffmpeg.zip
 ffmpeg-6.0.zip
-batch_gemini_tagger.py
-test_gemini_tagger.py
