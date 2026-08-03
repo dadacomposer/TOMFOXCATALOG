@@ -44,6 +44,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
   const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [enableAutoTag, setEnableAutoTag] = useState(true);
+  const [addToNewMusic, setAddToNewMusic] = useState(true);
 
   // Theatrical Loading States
   const [isPublishing, setIsPublishing] = useState(false);
@@ -128,7 +129,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
           body: JSON.stringify({ action: 'upload', contentType, filePath })
         });
         if (!res.ok) throw new Error("Failed to get upload URL");
-        const { presignedUrl } = await res.json();
+        const { presignedUrl, publicUrl } = await res.json();
 
         const uploadRes = await fetch(presignedUrl, {
           method: 'PUT',
@@ -137,15 +138,24 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
         });
 
         if (!uploadRes.ok) throw new Error(`Upload failed for ${item.format}`);
+        return { format: item.format, publicUrl };
       });
 
-      await Promise.all(uploadPromises);
+      const uploadResults = await Promise.all(uploadPromises);
 
-      const { error: updateError } = await supabase.from('tracks').update({ 
+      let updatePayload: any = {
         has_wav: finalHasWav,
         has_aiff: finalHasAiff,
         has_mp3: finalHasMp3
-      }).eq('id', dbId);
+      };
+      
+      for (const res of uploadResults) {
+        if (res.format === 'wav') updatePayload.wav_url = res.publicUrl;
+        if (res.format === 'aiff') updatePayload.aiff_url = res.publicUrl;
+        if (res.format === 'mp3') updatePayload.r2_url = res.publicUrl;
+      }
+
+      const { error: updateError } = await supabase.from('tracks').update(updatePayload).eq('id', dbId);
       
       if (updateError) throw updateError;
 
@@ -562,6 +572,18 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
           }]);
         }
 
+        if (addToNewMusic && track.type === 'main') {
+          const newMusicPlaylist = playlists.find(p => p.title.toLowerCase().includes('new music'));
+          if (newMusicPlaylist && newMusicPlaylist.id !== realPlaylistId) {
+             const { count: nmCount } = await supabase.from('playlist_tracks').select('*', { count: 'exact', head: true }).eq('playlist_id', newMusicPlaylist.id);
+             await supabase.from('playlist_tracks').insert([{
+               playlist_id: newMusicPlaylist.id,
+               track_id: track.dbId,
+               position: nmCount || 0
+             }]);
+          }
+        }
+
         resolvedParents[track.id] = track.dbId;
 
       } catch (e: any) {
@@ -968,10 +990,24 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
                   className="w-5 h-5 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer" 
                 />
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold uppercase tracking-wider text-black">Enable Auto Tagging</span>
+                  <span className="text-sm font-medium text-black">Enable Auto Tagging</span>
                   {!enableAutoTag && (
                     <span className="text-xs text-orange-500 font-bold mt-1">Later manual tagging required</span>
                   )}
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer p-4 bg-white border border-black/10 rounded-xl hover:border-black/30 transition-colors shadow-sm">
+                <input 
+                  type="checkbox" 
+                  checked={addToNewMusic} 
+                  onChange={e => setAddToNewMusic(e.target.checked)} 
+                  disabled={isPublishing || isSaving}
+                  className="w-5 h-5 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer" 
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-black">Add to New Music</span>
+                  <span className="text-xs text-black/50 font-bold mt-1">Add tracks to the "New Music" playlist</span>
                 </div>
               </label>
 

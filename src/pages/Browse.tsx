@@ -4,14 +4,18 @@ import { fetchTracks, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTrac
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { generateEmbedding, initEmbeddingModel } from '../lib/embedding';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
 import { ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import PlaylistArtwork from '../components/PlaylistArtwork';
+import TrackActionButtons from '../components/TrackActionButtons';
+import FilterSidebar from '../components/FilterSidebar';
 import WaveformView from '../components/WaveformView';
 import { usePlayer } from '../context/PlayerContext';
 import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS, DEFAULT_ARTIST } from '../config';
+import TrackArtwork from '../components/TrackArtwork';
 
 type Track = {
   id: string;
@@ -36,6 +40,7 @@ type Track = {
   artwork_url?: string;
   composers?: string[];
   versions?: Track[];
+  description?: string;
 };
 
 const parseTags = (t: string[] | string | undefined): string[] => {
@@ -82,6 +87,7 @@ export default function Browse() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
 
+
   const FILTER_CATEGORIES = useMemo(() => [
     { title: 'Genre',       key: 'genre',        options: filterOptions?.genre || [] },
     { title: 'Subgenre',    key: 'subgenre',     options: filterOptions?.subgenre || [] },
@@ -93,10 +99,11 @@ export default function Browse() {
     { title: 'Energy',      key: 'energy_level', options: filterOptions?.energy_level || [] },
   ], [filterOptions]);
   
-  const { playTrack, currentTrack, isPlaying, togglePlay, setProgress, progress, setPendingSeek, isPreviewMode, setIsPreviewMode, setFallbackPlaylist, currentSource, setCurrentSource, setIsCurrentPreviewDormant, currentPlaylist, setCurrentPlaylist } = usePlayer();
+  const { playTrack, currentTrack, isPlaying, togglePlay, setProgress, progress, setPendingSeek, isPreviewMode, setIsPreviewMode, setFallbackPlaylist, currentSource, setCurrentSource, setIsCurrentPreviewDormant, currentPlaylist, setCurrentPlaylist, setSelectedTrackForDetails } = usePlayer();
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const { profile } = useAuth();
+  const { settings } = useSettings();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isTypingSearch, setIsTypingSearch] = useState(false);
@@ -533,7 +540,7 @@ export default function Browse() {
                           onClick={() => handlePlayPause(track, 'top')}
                         >
                           <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
-                            <img src={track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
+                            <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
                             <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                               {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
                             </div>
@@ -542,7 +549,12 @@ export default function Browse() {
                             </div>
                           </div>
                           <div className="flex flex-col overflow-hidden w-full">
-                            <div className="font-bold text-[14px] truncate text-black/90">{cleanTitle(track.file_name)}</div>
+                            <div 
+                              className="font-bold text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
+                              onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                            >
+                              {cleanTitle(track.file_name)}
+                            </div>
                             <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5">
                                {DEFAULT_ARTIST}
                             </div>
@@ -939,7 +951,7 @@ export default function Browse() {
               <div 
                 className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
               >
-                <img src={track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
+                <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
                 <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                   {currentTrack?.id === track.id && isPlaying ? (
                     <Pause className="w-4 h-4 fill-white text-white" />
@@ -955,7 +967,12 @@ export default function Browse() {
               </div>
               <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
                 <div className="flex items-center gap-2 overflow-hidden">
-                  <div className="font-bold truncate text-[14px]">{cleanTitle(track.file_name)}</div>
+                  <div 
+                    className="font-bold truncate text-[14px] hover:underline underline-offset-2 cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                  >
+                    {cleanTitle(track.file_name)}
+                  </div>
                   {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 uppercase tracking-widest shrink-0">New</span>
                   )}
@@ -1016,7 +1033,8 @@ export default function Browse() {
                 />
               </div>
 
-              <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[340px]">
+              <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
+                <TrackActionButtons trackId={track.id} />
                 <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-10 text-right mr-2">
                   {track.duration ? formatTime(track.duration) : '0:00'}
                 </div>
@@ -1035,9 +1053,11 @@ export default function Browse() {
                 <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest text-black" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }}>
                   <Download className="w-3.5 h-3.5" /> Download
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>
-                  <ShoppingBag className="w-3.5 h-3.5" /> License
-                </button>
+                {settings.free_watermarks_enabled && (
+                  <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>
+                    <ShoppingBag className="w-3.5 h-3.5" /> License
+                  </button>
+                )}
               </div>
             </div>
             
@@ -1047,11 +1067,11 @@ export default function Browse() {
                 {track.versions.map(version => (
                   <div 
                     key={version.id} 
-                    className="flex items-center gap-4 p-2 hover:bg-black/5 rounded-xl cursor-pointer transition-colors group/version"
+                    className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group/version transition-colors cursor-pointer select-none"
                     onClick={() => handlePlayPause(version, 'browse')}
                   >
-                    <div className="w-8 h-8 rounded bg-black/5 flex items-center justify-center relative overflow-hidden shrink-0">
-                      <img src={version.artwork_url || track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5">
+                      <TrackArtwork track={version} className="absolute inset-0 w-full h-full" />
                       <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === version.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/version:opacity-100'}`}>
                         {currentTrack?.id === version.id && isPlaying ? (
                           <Pause className="w-3 h-3 fill-white text-white" />
@@ -1061,7 +1081,12 @@ export default function Browse() {
                       </div>
                     </div>
                     <div className="flex flex-col w-[20%] shrink-0 pr-4">
-                      <div className="font-bold text-[13px] truncate">{cleanTitle(version.file_name)}</div>
+                      <div 
+                        className="font-bold text-[13px] truncate hover:underline underline-offset-2 cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(version); }}
+                      >
+                        {cleanTitle(version.file_name)}
+                      </div>
                       <div className="font-sans text-[10px] text-black/40 uppercase tracking-widest mt-0.5">Version</div>
                     </div>
                     <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%]" />
@@ -1075,7 +1100,8 @@ export default function Browse() {
                         previewEndPct={isPreviewMode ? getPreviewTimings(version)?.endPct : undefined}
                       />
                     </div>
-                    <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[340px]">
+                    <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
+                      <TrackActionButtons trackId={version.id} />
                       <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-10 text-right mr-2">
                         {version.duration ? formatTime(version.duration) : '0:00'}
                       </div>

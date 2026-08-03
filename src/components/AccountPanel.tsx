@@ -136,14 +136,14 @@ export default function AccountPanel() {
     setIsUploading(true);
     
     try {
-      const { data: { uploadUrl, publicUrl }, error: functionError } = await supabase.functions.invoke('get-r2-upload-url', {
+      const { data: { presignedUrl, publicUrl }, error: functionError } = await supabase.functions.invoke('r2_presigned_url', {
         body: { fileName: file.name, contentType: file.type }
       });
       
       if (functionError) throw functionError;
-      if (!uploadUrl || !publicUrl) throw new Error("Failed to get upload URL");
+      if (!presignedUrl || !publicUrl) throw new Error("Failed to get upload URL");
 
-      const uploadResponse = await fetch(uploadUrl, {
+      const uploadResponse = await fetch(presignedUrl, {
         method: 'PUT',
         body: file,
         headers: {

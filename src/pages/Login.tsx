@@ -53,7 +53,13 @@ export default function Login() {
         // Sign in successful
         setPlayIntro(true);
         setLoginModalOpen(false);
-        navigate('/browse');
+        const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectUrl) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          navigate(redirectUrl);
+        } else {
+          navigate('/browse');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during authentication.');
@@ -65,7 +71,11 @@ export default function Login() {
   const handleOAuth = async (provider: 'google') => {
     try {
       setError(null);
-      if (provider === 'google') await signInWithGoogle();
+      const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectUrl) {
+        sessionStorage.removeItem('redirectAfterLogin');
+      }
+      if (provider === 'google') await signInWithGoogle(redirectUrl ? `${window.location.origin}${redirectUrl}` : undefined);
       setLoginModalOpen(false);
     } catch (err: any) {
       setError(err.message || `Failed to authenticate with ${provider}.`);

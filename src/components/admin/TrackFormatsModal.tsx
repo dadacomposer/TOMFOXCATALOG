@@ -62,10 +62,16 @@ export default function TrackFormatsModal({ track, onClose, onUpdate }: TrackFor
         throw new Error(err.error || "Failed to delete file from R2");
       }
 
+      let updateObj: any = { [format.id]: false };
+      if (format.id === 'has_mp3') updateObj['r2_url'] = null;
+      else if (format.id === 'has_wav') updateObj['wav_url'] = null;
+      else if (format.id === 'has_aiff') updateObj['aiff_url'] = null;
+      else if (format.id === 'has_watermarked') updateObj['watermarked_url'] = null;
+
       // Update Database
       const { error: updateError } = await supabase
         .from('tracks')
-        .update({ [format.id]: false })
+        .update(updateObj)
         .eq('id', track.id);
 
       if (updateError) throw updateError;

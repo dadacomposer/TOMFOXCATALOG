@@ -29,6 +29,32 @@ export default function WaveformView({ data, isPlaying = false, progress = 0, on
     if (previewEndPct !== undefined) setLastEnd(previewEndPct);
   }, [previewStartPct, previewEndPct]);
 
+  const [barCount, setBarCount] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        // 2px bar + 2px gap = 4px per bar
+        const maxBars = Math.floor(width / 4);
+        setBarCount(maxBars);
+      }
+    });
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  const resampledData = React.useMemo(() => {
+    if (!data || data.length === 0 || barCount <= 0) return [];
+    const resampled: number[] = [];
+    for (let i = 0; i < barCount; i++) {
+      const origIdx = Math.floor((i / barCount) * data.length);
+      resampled.push(data[Math.min(origIdx, data.length - 1)]);
+    }
+    return resampled;
+  }, [data, barCount]);
+
   if (!data || data.length === 0) {
     return (
       <div className="w-full h-full flex items-center opacity-30">
@@ -45,40 +71,37 @@ export default function WaveformView({ data, isPlaying = false, progress = 0, on
     <div 
       ref={containerRef}
       onClick={handleClick}
-      className="w-full h-full flex items-center justify-between cursor-pointer group/waveform relative"
+      className="w-full h-full cursor-pointer group/waveform relative"
     >
       <div 
-        className={`absolute h-[150%] top-[-25%] ${isDark ? 'bg-white/10' : 'bg-black/5'} rounded-lg transition-opacity duration-300 pointer-events-none ${isActive ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute h-[140%] top-[-20%] ${isDark ? 'bg-white/10' : 'bg-black/[0.08]'} rounded-xl transition-opacity duration-300 pointer-events-none ${isActive ? 'opacity-100' : 'opacity-0'}`}
         style={{ 
           left: `${renderStart}%`, 
           width: `${Math.max(0, renderEnd - renderStart)}%`,
           zIndex: 0
         }} 
-      >
-        <div className={`absolute inset-0 rounded-lg border-[1.5px] ${isDark ? 'border-white/30' : 'border-black/30'}`} />
-      </div>
-      {data.map((val, idx) => {
-        // val is already 0-100. We ensure a minimum height of 8% for flatlines.
-        const height = Math.max(8, val);
-        
-        // Progress is 0 to 100. idx / data.length is 0 to 1.
-        const isPlayed = progress > 0 && (idx / data.length) * 100 <= progress;
-        
-        let colorClass = '';
-        if (isDark) {
-          colorClass = isPlayed ? 'bg-white opacity-100' : 'bg-white/20 group-hover/waveform:bg-white/40';
-        } else {
-          colorClass = isPlayed ? 'bg-black opacity-100' : 'bg-black/20 group-hover/waveform:bg-black/40';
-        }
+      />
+      <div className="absolute inset-0 flex items-center gap-[2px]">
+        {resampledData.map((val, idx) => {
+          const height = Math.max(8, val);
+          const isPlayed = progress > 0 && (idx / resampledData.length) * 100 <= progress;
+          
+          let colorClass = '';
+          if (isDark) {
+            colorClass = isPlayed ? 'bg-white opacity-100' : 'bg-white/20 group-hover/waveform:bg-white/40';
+          } else {
+            colorClass = isPlayed ? 'bg-black opacity-100' : 'bg-black/20 group-hover/waveform:bg-black/40';
+          }
 
-        return (
-          <div 
-            key={idx}
-            style={{ height: `${height}%`, zIndex: 1 }}
-            className={`w-[2px] rounded-full transition-colors ${colorClass}`}
-          />
-        );
-      })}
+          return (
+            <div 
+              key={idx}
+              style={{ height: `${height}%`, zIndex: 1 }}
+              className={`w-[2px] rounded-full transition-colors shrink-0 ${colorClass}`}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { List, X, PlayCircle } from '@phosphor-icons/react';
+import { useSettings } from '../context/SettingsContext';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { settings } = useSettings();
 
   return (
     <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-5xl px-4">
@@ -16,8 +18,12 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-8 font-bold uppercase text-[11px] tracking-widest text-white/70">
           <a href="#" className="hover:text-white transition-colors">Tracks</a>
           <a href="#" className="hover:text-white transition-colors">Playlists</a>
-          <a href="#" className="hover:text-white transition-colors">Pricing</a>
-          <a href="#" className="hover:text-white transition-colors">Enterprise</a>
+          {settings.subscriptions_enabled && (
+            <>
+              <a href="#" className="hover:text-white transition-colors">Pricing</a>
+              <a href="#" className="hover:text-white transition-colors">Enterprise</a>
+            </>
+          )}
         </div>
         
         <div className="hidden md:block">
@@ -41,8 +47,12 @@ export function Navbar() {
           >
             <a href="#" className="text-white/70 hover:text-white font-bold uppercase text-[11px] tracking-widest">Tracks</a>
             <a href="#" className="text-white/70 hover:text-white font-bold uppercase text-[11px] tracking-widest">Playlists</a>
-            <a href="#" className="text-white/70 hover:text-white font-bold uppercase text-[11px] tracking-widest">Pricing</a>
-            <a href="#" className="text-white/70 hover:text-white font-bold uppercase text-[11px] tracking-widest">Enterprise</a>
+            {settings.subscriptions_enabled && (
+              <>
+                <a href="#" className="text-white/70 hover:text-white font-bold uppercase text-[11px] tracking-widest">Pricing</a>
+                <a href="#" className="text-white/70 hover:text-white font-bold uppercase text-[11px] tracking-widest">Enterprise</a>
+              </>
+            )}
             <hr className="border-white/10" />
             <button className="bg-white text-black py-3 rounded-full text-[11px] font-bold uppercase tracking-widest">Sign In</button>
           </motion.div>

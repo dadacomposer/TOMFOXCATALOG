@@ -5,22 +5,14 @@ import { supabase } from '../../lib/supabase';
 import { Search, EyeOff, Eye, Trash2, Share2, RefreshCw, AlertTriangle, Music, Edit2, X, Save, Link, Upload, UploadCloud, Power, Copy, Play, Pause, FileText, ChevronUp, ChevronDown, Plus, GripVertical, ChevronsUpDown, Download, Layers, ListPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePlayer } from '../../context/PlayerContext';
+import { useAuth } from '../../context/AuthContext';
+import TrackArtwork from '../TrackArtwork';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { DEFAULT_ARTWORK } from '../../config';
 import CopyMetadataModal from './CopyMetadataModal';
 import AdminUploadModal from './AdminUploadModal';
 import TrackFormatsModal from './TrackFormatsModal';
 
-const MACROCATEGORIES = [
-  "Percussion & Rhythm", 
-  "Cinematic & Film", 
-  "Dark & Tension", 
-  "Electronic & Synth", 
-  "Calm & Reflective", 
-  "Documentary & Explainer", 
-  "Jazz & Organic", 
-  "Others"
-];
 
 export type AdminTrack = {
   id: string;
@@ -118,9 +110,53 @@ export default function AdminTracks({ setActiveSection }: AdminTracksProps = {})
   const [draftPlaylist, setDraftPlaylist] = useState<any>(null);
   const [draftPlaylistTracks, setDraftPlaylistTracks] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [playlistCategories, setPlaylistCategories] = useState<string[]>([
+    "Percussion & Rhythm", 
+    "Cinematic & Film", 
+    "Dark & Tension", 
+    "Electronic & Synth", 
+    "Calm & Reflective", 
+    "Documentary & Explainer", 
+    "Jazz & Organic", 
+    "Others"
+  ]);
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [editingCategoriesStr, setEditingCategoriesStr] = useState<string>('');
+
+  const fetchCategories = async () => {
+    try {
+      const { data } = await supabase.from('page_content').select('content').eq('page_id', 'playlists').single();
+      if (data?.content?.categories && Array.isArray(data.content.categories)) {
+        setPlaylistCategories(data.content.categories);
+      }
+    } catch (e) {
+      console.error('Error fetching categories', e);
+    }
+  };
+
+  const handleSaveCategories = async () => {
+    const loadingToast = toast.loading('Saving categories...');
+    try {
+      const cleaned = editingCategoriesStr.split(',').map(c => c.trim()).filter(Boolean);
+      
+      const { data } = await supabase.from('page_content').select('*').eq('page_id', 'playlists').single();
+      const currentContent = data?.content || {};
+      currentContent.categories = cleaned;
+      
+      const { error } = await supabase.from('page_content').upsert({ page_id: 'playlists', content: currentContent });
+      if (error) throw error;
+      
+      setPlaylistCategories(cleaned);
+      setIsCategoryManagerOpen(false);
+      toast.success("Categories updated", { id: loadingToast });
+    } catch (e) {
+      toast.error("Failed to update categories", { id: loadingToast });
+    }
+  };
+
   const fetchPlaylists = async () => {
     try {
-      const { data, error } = await supabase.from('playlists').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('playlists').select('*').is('user_id', null).order('created_at', { ascending: false });
       if (error) throw error;
       setAllPlaylists(data || []);
     } catch (e) {
@@ -170,6 +206,7 @@ export default function AdminTracks({ setActiveSection }: AdminTracksProps = {})
   useEffect(() => {
     if (isPlaylistManagerOpen) {
       fetchPlaylists();
+      fetchCategories();
     }
   }, [isPlaylistManagerOpen]);
 
@@ -887,16 +924,16 @@ toast.success('Track restored successfully');
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full gap-4">
       {/* Top Panels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 shrink-0">
         <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm flex items-center justify-between gap-4 col-span-1 md:col-span-1">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-black/60 mb-2">
               <Link className="w-4 h-4 shrink-0" />
-              <span className="text-[10px] font-bold uppercase tracking-widest break-words">Shared Music</span>
+              <span className="text-[10px] font-medium tracking-widest break-words">Shared Music</span>
             </div>
-            <div className="text-xl font-bold text-black break-words">{sharedLinks.filter(l => l.is_active).length} Active</div>
+            <div className="text-xl font-medium text-black break-words">{sharedLinks.filter(l => l.is_active).length} Active</div>
           </div>
           <button 
             onClick={() => setIsLinkManagerOpen(true)}
@@ -910,9 +947,9 @@ toast.success('Track restored successfully');
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-black/60 mb-2">
               <Upload className="w-4 h-4 shrink-0" />
-              <span className="text-[10px] font-bold uppercase tracking-widest break-words">Upload Tracks</span>
+              <span className="text-[10px] font-medium tracking-widest break-words">Upload Tracks</span>
             </div>
-            <div className="text-xl font-bold text-black break-words">New Release</div>
+            <div className="text-xl font-medium text-black break-words">New Release</div>
           </div>
           <button 
             onClick={() => setIsUploadModalOpen(true)}
@@ -926,9 +963,9 @@ toast.success('Track restored successfully');
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-black/60 mb-2">
               <Music className="w-4 h-4 shrink-0" />
-              <span className="text-[10px] font-bold uppercase tracking-widest break-words">Playlists</span>
+              <span className="text-[10px] font-medium tracking-widest break-words">Playlists</span>
             </div>
-            <div className="text-xl font-bold text-black break-words">{allPlaylists.length || (tracks.length ? 'Manage' : '0')} Playlists</div>
+            <div className="text-xl font-medium text-black break-words">{allPlaylists.length || (tracks.length ? 'Manage' : '0')} Playlists</div>
           </div>
           <button 
             onClick={() => setIsPlaylistManagerOpen(true)}
@@ -942,41 +979,19 @@ toast.success('Track restored successfully');
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-black/60 mb-2">
               <FileText className="w-4 h-4 shrink-0" />
-              <span className="text-[10px] font-bold uppercase tracking-widest break-words">Licensing</span>
+              <span className="text-[10px] font-medium tracking-widest break-words">Licensing</span>
             </div>
-            <div className="text-xl font-bold text-black break-words">Contracts</div>
+            <div className="text-xl font-medium text-black/40 break-words">Contracts</div>
           </div>
           <button 
-            className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold uppercase tracking-wider cursor-not-allowed shrink-0"
+            className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium tracking-wider cursor-not-allowed shrink-0"
           >
             Create
           </button>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 pt-6">
-        <div>
-          <h2 className="text-2xl font-bold text-black mb-1">Tracks Management</h2>
-          <p className="text-black/60 text-sm">Manage your catalog, hide tracks, or move them to the trash.</p>
-        </div>
-        
-        <div className="flex bg-black/5 p-1 rounded-lg">
-          <button
-            onClick={() => setActiveTab('active')}
-            className={`px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === 'active' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black'}`}
-          >
-            Active ({tracks.filter(t => !t.deleted_at).length})
-          </button>
-          <button
-            onClick={() => setActiveTab('trash')}
-            className={`px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-md transition-all flex items-center gap-2 ${activeTab === 'trash' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black'}`}
-          >
-            Trash ({tracks.filter(t => t.deleted_at).length})
-          </button>
-        </div>
-      </div>
-
-      <div className="flex gap-4">
+      <div className="flex gap-4 shrink-0">
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black/40" />
           <input 
@@ -1024,6 +1039,21 @@ toast.success('Track restored successfully');
               ))}
             </div>
           )}
+        </div>
+        <div className="flex items-center bg-black/5 p-1 rounded-xl h-12 shrink-0">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`px-4 text-sm font-medium rounded-lg transition-all h-full flex items-center justify-center ${activeTab === 'active' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black'}`}
+          >
+            Active ({tracks.filter(t => !t.deleted_at).length})
+          </button>
+          <button
+            onClick={() => setActiveTab('trash')}
+            className={`px-4 text-sm rounded-lg transition-all flex items-center justify-center h-full ${activeTab === 'trash' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black'}`}
+            title={`Trash (${tracks.filter(t => t.deleted_at).length})`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -1080,7 +1110,7 @@ toast.success('Track restored successfully');
         {isLoading ? (
           <div className="p-8 text-center text-black/50">Loading tracks...</div>
         ) : (
-          <div className="overflow-auto flex-1 relative">
+          <div className="overflow-auto overscroll-none flex-1 relative">
             <table className="w-full text-left text-sm relative">
               <thead className="bg-[#f8f8f8] border-b border-black/10 text-black/60 uppercase tracking-wider text-xs sticky top-0 z-20 shadow-sm">
                 <tr>
@@ -1120,11 +1150,8 @@ toast.success('Track restored successfully');
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 overflow-hidden relative group/play cursor-pointer"
-                          onClick={() => currentTrack?.id === track.id ? togglePlay() : playTrack(track as any, currentViewList as any[])}
-                        >
-                          <img src={track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className="w-full h-full object-cover" />
+                        <div className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 overflow-hidden relative group/play cursor-pointer" onClick={() => currentTrack?.id === track.id ? togglePlay() : playTrack(track as any, currentViewList as any[])}>
+                          <TrackArtwork track={track as any} className="w-full h-full object-cover" />
                           <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/play:opacity-100'}`}>
                             {currentTrack?.id === track.id && isPlaying ? (
                               <Pause className="w-4 h-4 fill-white text-white" />
@@ -1271,7 +1298,7 @@ toast.success('Track restored successfully');
                                   className="w-8 h-8 rounded bg-black/5 flex items-center justify-center relative overflow-hidden shrink-0"
                                   onClick={() => currentTrack?.id === version.id ? togglePlay() : playTrack(version as any, track.versions as any[])}
                                 >
-                                  <img src={version.artwork_url || track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className="absolute inset-0 w-full h-full object-cover" />
+                                  <TrackArtwork track={version as any} className="absolute inset-0 w-full h-full object-cover" />
                                   <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === version.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/version:opacity-100'}`}>
                                     {currentTrack?.id === version.id && isPlaying ? (
                                       <Pause className="w-3 h-3 fill-white text-white" />
@@ -1568,6 +1595,15 @@ toast.success('Track restored successfully');
             <div className="w-1/3 border-r border-black/10 flex flex-col bg-black/[0.02]">
               <div className="p-6 border-b border-black/5 shrink-0 flex items-center justify-between">
                 <h3 className="text-xl font-bold">Playlists</h3>
+                <button 
+                  onClick={() => {
+                    setEditingCategoriesStr(playlistCategories.join(', '));
+                    setIsCategoryManagerOpen(true);
+                  }}
+                  className="px-3 py-1.5 bg-black/5 hover:bg-black/10 text-black text-[10px] font-bold rounded-lg uppercase tracking-wider transition-colors"
+                >
+                  Manage Categories
+                </button>
               </div>       
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {allPlaylists.map(p => (
@@ -1685,7 +1721,7 @@ toast.success('Track restored successfully');
                               
                               <div className="space-y-4">
                                 <div className="flex flex-wrap gap-2">
-                                  {MACROCATEGORIES.map(cat => {
+                                  {playlistCategories.map(cat => {
                                     const currentCategories = activePlaylist?.categories || [];
                                     const isSelected = currentCategories.includes(cat);
                                     return (
@@ -1897,6 +1933,30 @@ toast.success('Track restored successfully');
             setFormatManagerTrack(updatedTrack);
           }} 
         />
+      )}
+      {/* Category Manager Modal */}
+      {isCategoryManagerOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsCategoryManagerOpen(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl border border-black/10 p-6 animate-slide-in-up" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Manage Categories</h3>
+              <button onClick={() => setIsCategoryManagerOpen(false)} className="p-2 hover:bg-black/5 rounded-full text-black/50 hover:text-black">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-black/50 mb-4">Edit playlist categories below as a comma-separated list.</p>
+            <textarea 
+              value={editingCategoriesStr}
+              onChange={(e) => setEditingCategoriesStr(e.target.value)}
+              className="w-full h-40 p-3 bg-black/[0.02] border border-black/10 rounded-xl focus:outline-none focus:border-black/30 font-sans text-sm leading-relaxed resize-none"
+              placeholder="E.g. Cinematic & Film, Dark & Tension, Electronic & Synth..."
+            />
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setIsCategoryManagerOpen(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider text-black/60 hover:bg-black/5 hover:text-black">Cancel</button>
+              <button onClick={handleSaveCategories} className="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider bg-black text-white hover:scale-105 transition-all">Save</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

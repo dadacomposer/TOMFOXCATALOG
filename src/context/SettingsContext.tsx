@@ -102,7 +102,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ]);
 
       if (settingsRes.data) {
+        console.log("Settings fetched from DB:", settingsRes.data);
         setSettings(settingsRes.data);
+      } else if (settingsRes.error) {
+        console.error("Error fetching settings from DB:", settingsRes.error);
       }
 
       if (contentRes.data) {

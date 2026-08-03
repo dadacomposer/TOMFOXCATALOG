@@ -117,9 +117,9 @@ export default function OnboardingModal() {
         });
         
         if (functionError) throw functionError;
-        if (!data?.uploadUrl || !data?.publicUrl) throw new Error("Failed to get upload URL");
+        if (!data?.presignedUrl || !data?.publicUrl) throw new Error("Failed to get upload URL");
 
-        const uploadResponse = await fetch(data.uploadUrl, {
+        const uploadResponse = await fetch(data.presignedUrl, {
           method: 'PUT',
           body: workspaceAvatar,
           headers: {
@@ -157,14 +157,14 @@ export default function OnboardingModal() {
       let finalAvatarUrl = personalAvatarUrl || null;
       
       if (personalAvatar) {
-        const { data, error: functionError } = await supabase.functions.invoke('get-r2-upload-url', {
+        const { data, error: functionError } = await supabase.functions.invoke('r2_presigned_url', {
           body: { fileName: personalAvatar.name, contentType: personalAvatar.type }
         });
         
         if (functionError) throw functionError;
-        if (!data?.uploadUrl || !data?.publicUrl) throw new Error("Failed to get upload URL");
+        if (!data?.presignedUrl || !data?.publicUrl) throw new Error("Failed to get upload URL");
 
-        const uploadResponse = await fetch(data.uploadUrl, {
+        const uploadResponse = await fetch(data.presignedUrl, {
           method: 'PUT',
           body: personalAvatar,
           headers: {

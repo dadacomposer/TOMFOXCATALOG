@@ -5,7 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { Track } from '../../context/PlayerContext';
 import { fetchTrackVersions } from '../../lib/supabase';
 import CustomSelect from '../CustomSelect';
-import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS } from '../../config';
+import { DEFAULT_COMPOSERS } from '../../config';
+import TrackArtwork from '../TrackArtwork';
 import { extractWaveformFromFile } from '../../utils/audioWaveform';
 
 type TrackEditModalProps = {
@@ -288,12 +289,12 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
       <div className="bg-white rounded-2xl w-full max-w-3xl flex flex-col h-[85vh] overflow-hidden shadow-2xl border border-black/10 animate-slide-in-up" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-black/5 flex items-center justify-between shrink-0">
           <h3 className="text-xl font-bold flex items-center gap-3">
-            <span className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0">
-              <img 
-                src={form.artwork_url || DEFAULT_ARTWORK} 
-                className="w-full h-full rounded-lg object-cover" 
-                alt="" 
-              />
+            <span className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 relative overflow-hidden">
+              {form.artwork_url ? (
+                <img src={form.artwork_url} className="w-full h-full object-cover" alt="" />
+              ) : (
+                <TrackArtwork track={track as any} className="absolute inset-0 w-full h-full object-cover" />
+              )}
             </span>
             {track.file_name}
           </h3>
@@ -362,7 +363,11 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
                 <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">Artwork</label>
                 <div className="flex gap-6 items-center">
                   <div className="w-32 h-32 shrink-0 bg-black/5 rounded-xl overflow-hidden border border-black/10 relative group">
-                    <img src={form.artwork_url || DEFAULT_ARTWORK} className="w-full h-full object-cover" alt="Artwork" />
+                    {form.artwork_url ? (
+                      <img src={form.artwork_url} className="w-full h-full object-cover" alt="Artwork" />
+                    ) : (
+                      <TrackArtwork track={track as any} className="absolute inset-0 w-full h-full object-cover" />
+                    )}
                     <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm">
                       <Upload className="w-6 h-6 mb-1" />
                       <span className="text-xs font-bold uppercase tracking-wider">Change</span>

@@ -34,10 +34,20 @@ export default function AdminFeatures() {
   }, [settings, content]);
 
   const handleToggle = (key: keyof SiteSettings) => {
-    setLocalSettings(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    if (key === 'free_hd_enabled' && localSettings.free_watermarks_enabled) {
+      return;
+    }
+
+    setLocalSettings(prev => {
+      const nextValue = !prev[key];
+      const updates = { ...prev, [key]: nextValue };
+      
+      if (key === 'free_watermarks_enabled' && nextValue === true) {
+        updates.free_hd_enabled = false;
+      }
+      
+      return updates;
+    });
   };
 
   const handleContentChange = (pageId: string, key: string, value: string) => {
@@ -84,15 +94,16 @@ export default function AdminFeatures() {
     }
   };
 
-  const ToggleSwitch = ({ label, desc, active, onClick }: { label: string, desc: string, active: boolean, onClick: () => void }) => (
-    <div className="flex items-center justify-between p-6 bg-white rounded-2xl border border-black/10 shadow-sm">
+  const ToggleSwitch = ({ label, desc, active, disabled = false, onClick }: { label: string, desc: string, active: boolean, disabled?: boolean, onClick: () => void }) => (
+    <div className={`flex items-center justify-between p-6 bg-white rounded-2xl border ${disabled ? 'border-black/5 opacity-50' : 'border-black/10'} shadow-sm transition-all`}>
       <div className="pr-8">
-        <h3 className="font-semibold text-lg mb-1">{label}</h3>
+        <h3 className="font-medium text-lg mb-1">{label}</h3>
         <p className="text-sm text-black/50 leading-relaxed">{desc}</p>
       </div>
       <button 
-        onClick={onClick}
-        className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${active ? 'bg-green-500' : 'bg-black/10'}`}
+        onClick={disabled ? undefined : onClick}
+        disabled={disabled}
+        className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${active ? 'bg-green-500' : 'bg-black/10'} ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
       >
         <div className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${active ? 'translate-x-6' : 'translate-x-0'}`} />
       </button>
@@ -100,17 +111,18 @@ export default function AdminFeatures() {
   );
 
   return (
-    <div className="p-6 md:p-12 w-full max-w-5xl mx-auto space-y-12 animate-fade-in-up">
+    <div className="flex-1 overflow-y-auto h-full w-full -mx-8 px-8 pb-32">
+      <div className="py-6 md:py-12 w-full max-w-5xl mx-auto space-y-12 animate-fade-in-up">
       
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold uppercase tracking-tighter mb-2">Public Content</h2>
+          <h2 className="text-3xl font-medium uppercase tracking-tighter mb-2">Public Content</h2>
           <p className="text-black/50 font-sans">Control public site behavior and modify page copy instantly.</p>
         </div>
         <button 
           onClick={saveSettings}
           disabled={isSaving}
-          className="flex items-center gap-2 px-6 py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-xl hover:bg-black/80 transition-all disabled:opacity-50"
+          className="flex items-center gap-2 px-6 py-3 bg-black text-white font-medium uppercase tracking-widest text-xs rounded-xl hover:bg-black/80 transition-all disabled:opacity-50"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {isSaving ? 'Saving...' : 'Save Changes'}
@@ -121,7 +133,7 @@ export default function AdminFeatures() {
       <div className="space-y-6">
         <div className="flex items-center gap-3 border-b border-black/10 pb-4">
           <Settings2 className="w-5 h-5" />
-          <h3 className="text-xl font-semibold uppercase tracking-tight">Global Toggles</h3>
+          <h3 className="text-xl font-medium uppercase tracking-tight">Global Toggles</h3>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
@@ -141,6 +153,7 @@ export default function AdminFeatures() {
             label="Enable HD Audio (WAV/AIF) for Free Users"
             desc="If ON, non-logged and free users can download uncompressed WAV and AIFF files without a subscription."
             active={localSettings.free_hd_enabled}
+            disabled={localSettings.free_watermarks_enabled}
             onClick={() => handleToggle('free_hd_enabled')}
           />
         </div>
@@ -150,9 +163,9 @@ export default function AdminFeatures() {
       <div className="space-y-6">
         <div className="flex items-center gap-3 border-b border-black/10 pb-4">
           <Edit3 className="w-5 h-5" />
-          <h3 className="text-xl font-semibold uppercase tracking-tight">Content Editor</h3>
+          <h3 className="text-xl font-medium uppercase tracking-tight">Content Editor</h3>
         </div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-black/40">
+        <p className="text-xs font-medium uppercase tracking-widest text-black/40">
           Strict character limits are enforced to prevent layout breaks on the public site.
         </p>
 
@@ -163,8 +176,8 @@ export default function AdminFeatures() {
                 onClick={() => setExpandedPage(expandedPage === pageId ? null : pageId)}
                 className="w-full px-6 py-5 flex items-center justify-between bg-black/5 hover:bg-black/10 transition-colors"
               >
-                <span className="font-bold uppercase tracking-widest text-sm">{pageId} Page</span>
-                <span className="text-xs font-bold text-black/40">{expandedPage === pageId ? 'Close' : 'Edit'}</span>
+                <span className="font-medium uppercase tracking-widest text-sm">{pageId} Page</span>
+                <span className="text-xs font-medium text-black/40">{expandedPage === pageId ? 'Close' : 'Edit'}</span>
               </button>
               
               {expandedPage === pageId && (
@@ -178,10 +191,10 @@ export default function AdminFeatures() {
                     return (
                       <div key={fieldKey} className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <label className="text-xs font-semibold uppercase tracking-widest text-black/60">
+                          <label className="text-xs font-medium uppercase tracking-widest text-black/60">
                             {fieldKey.replace(/_/g, ' ')}
                           </label>
-                          <span className={`text-[10px] font-semibold font-mono ${fieldValue.length >= maxLen ? 'text-red-500' : 'text-black/30'}`}>
+                          <span className={`text-[10px] font-medium font-mono ${fieldValue.length >= maxLen ? 'text-red-500' : 'text-black/30'}`}>
                             {fieldValue.length} / {maxLen}
                           </span>
                         </div>
@@ -212,6 +225,7 @@ export default function AdminFeatures() {
         </div>
       </div>
 
+      </div>
     </div>
   );
 }

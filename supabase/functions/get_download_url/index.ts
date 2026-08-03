@@ -14,33 +14,54 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('Missing Authorization header');
-    const token = authHeader.replace('Bearer ', '');
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
-    // Auth client to verify user token
-    const authSupabase = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: { user }, error: authError } = await authSupabase.auth.getUser(token);
+    // Auth client to verify user token (if present)
+    const authHeader = req.headers.get('Authorization');
+    let token = null;
+    if (authHeader) {
+      token = authHeader.replace('Bearer ', '');
+      // If the token is just the Anon Key, we treat it as unauthenticated
+      if (token === supabaseAnonKey) {
+        token = null;
+      }
+    }
     
-    if (authError || !user) throw new Error('Unauthorized');
+    let user = null;
+    let profile = null;
+    let hasPremiumAccess = false;
+    let isSubscribed = false;
+
+    if (token) {
+      const authSupabase = createClient(supabaseUrl, supabaseAnonKey);
+      const { data: userData, error: authError } = await authSupabase.auth.getUser(token);
+      
+      if (!authError && userData?.user) {
+        user = userData.user;
+        
+        // Use service role to bypass RLS and fetch profile
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const { data: profileData } = await supabaseAdmin
+          .from('profiles')
+          .select('subscription_status, is_admin')
+          .eq('id', user.id)
+          .single();
+          
+        if (profileData) {
+          profile = profileData;
+          isSubscribed = profile.subscription_status === 'active' || profile.subscription_status === 'trialing';
+          hasPremiumAccess = isSubscribed || profile.is_admin;
+        }
+      }
+    }
 
     const { trackId, format } = await req.json();
     if (!trackId || !format) throw new Error('Missing trackId or format');
     
-    // Use service role to bypass RLS and fetch track + profile
+    // Use service role to fetch settings and track
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_status, is_admin')
-      .eq('id', user.id)
-      .single();
-      
-    if (!profile) throw new Error('Profile not found');
     
     // FETCH FEATURE FLAGS
     const { data: settings } = await supabase
@@ -52,22 +73,24 @@ serve(async (req) => {
     const free_watermarks = settings?.free_watermarks_enabled ?? true;
     const free_hd = settings?.free_hd_enabled ?? false;
 
-    const isSubscribed = profile.subscription_status === 'active' || profile.subscription_status === 'trialing';
-    
-    // HD AUDIO CHECK
-    if (!isSubscribed && !profile.is_admin && (format === 'wav' || format === 'aiff')) {
-      if (!free_hd) {
-         throw new Error('Forbidden: Active subscription required for high-quality downloads');
-      }
+    // CHECK PERMISSIONS based on format
+    if (format === 'watermarked') {
+       if (!free_watermarks && !hasPremiumAccess) {
+         throw new Error('Forbidden: Draft downloads are currently disabled for free users');
+       }
+    } else if (format === 'mp3') {
+       if (!hasPremiumAccess && !free_hd) {
+         throw new Error('Forbidden: Clean MP3 downloads require an active subscription');
+       }
+    } else if (format === 'wav' || format === 'aiff') {
+       if (!hasPremiumAccess && !free_hd) {
+         throw new Error('Forbidden: High-quality downloads require an active subscription');
+       }
+    } else {
+       throw new Error(`Invalid format requested: ${format}`);
     }
 
-    // MP3 / WATERMARK CHECK
-    if (!isSubscribed && !profile.is_admin && format === 'mp3') {
-      if (free_watermarks) {
-         throw new Error('Forbidden: Free users must download the watermarked version');
-      }
-    }
-
+    // FETCH TRACK
     const { data: track } = await supabase
       .from('tracks')
       .select('wav_url, aiff_url, r2_url, watermarked_url, file_name')
@@ -86,11 +109,16 @@ serve(async (req) => {
     
     // Extract R2 key from public URL
     // Format: https://pub-[hash].r2.dev/audio/hdaudio/TrackName.wav
-    const urlObj = new URL(dbUrl);
-    let key = urlObj.pathname;
-    if (key.startsWith('/')) key = key.substring(1); // Remove leading slash
+    let key = '';
+    try {
+       const urlObj = new URL(dbUrl);
+       key = decodeURIComponent(urlObj.pathname);
+       if (key.startsWith('/')) key = key.substring(1); // Remove leading slash
+    } catch (e) {
+       throw new Error(`Invalid URL found in database for format ${format}`);
+    }
     
-    const r2AccountId = Deno.env.get('R2_ACCOUNT_ID');
+    const r2AccountId = Deno.env.get('R2_ACCOUNT_ID') || '984e55700d5ab74893ff2cd768b58f8d';
     const r2AccessKey = Deno.env.get('R2_ACCESS_KEY_ID');
     const r2SecretKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
     const bucketName = Deno.env.get('R2_BUCKET_NAME') || 'tom-fox-music';
@@ -110,7 +138,11 @@ serve(async (req) => {
 
     // Provide friendly download filename if downloading (optional, but good UX)
     const baseName = track.file_name.replace(/\.[^/.]+$/, "");
-    const downloadExt = format === 'mp3' ? 'mp3' : format === 'wav' ? 'wav' : format === 'aiff' ? 'aiff' : 'mp3';
+    let downloadExt = 'mp3';
+    if (format === 'wav') downloadExt = 'wav';
+    else if (format === 'aiff') downloadExt = 'aiff';
+    else if (format === 'watermarked' && dbUrl.endsWith('.m4a')) downloadExt = 'm4a';
+    
     let suffix = '';
     if (format === 'watermarked') suffix = '_watermarked';
     
@@ -123,14 +155,14 @@ serve(async (req) => {
     const presignedUrl = await getSignedUrl(S3, command, { expiresIn: 3600 });
     
     // LOGGING TO DOWNLOAD AUDIT LOGS
-    if (format === 'wav' || format === 'aiff' || format === 'mp3') {
+    if (user && (format === 'wav' || format === 'aiff' || format === 'mp3' || format === 'watermarked')) {
       const { error: logError } = await supabase
         .from('download_audit_logs')
         .insert({
           user_id: user.id,
           track_id: trackId,
           format: format,
-          subscription_tier_at_download: profile.subscription_status
+          subscription_tier_at_download: profile?.subscription_status || 'none'
         });
         
       if (logError) {
@@ -145,9 +177,10 @@ serve(async (req) => {
     
   } catch (error: any) {
     console.error("get_download_url Error:", error.message);
+    const isForbidden = error.message.includes('Forbidden') || error.message.includes('Unauthorized');
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: error.message.includes('Forbidden') || error.message.includes('Unauthorized') ? 403 : 400,
+      status: isForbidden ? 403 : 400,
     });
   }
 });

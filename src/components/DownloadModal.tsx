@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useDownload } from '../context/DownloadContext';
+import TrackArtwork from '../components/TrackArtwork';
 import { useLicense } from '../context/LicenseContext';
+import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { X, Download, ShieldCheck, FileAudio, Music, AudioLines } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useSettings } from '../context/SettingsContext';
 
 export default function DownloadModal() {
   const { downloadTrack, buttonRect, closeDownloadModal } = useDownload();
@@ -27,6 +28,7 @@ export default function DownloadModal() {
   const handleTryIt = async () => {
     if (!downloadTrack) return;
     setIsDownloading(true);
+    let url = '';
     
     try {
       const { data, error } = await supabase.functions.invoke('get_download_url', {
@@ -35,24 +37,23 @@ export default function DownloadModal() {
       
       if (error || !data?.url) {
         console.warn("Watermarked URL not found for this track or unauthorized", error);
+        alert("Download failed: " + (error?.message || "URL not found"));
         return;
       }
-      const url = data.url;
+      url = data.url;
     
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      
       const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = draftFormat === 'watermarked' ? `${cleanName}_watermarked.m4a` : `${cleanName}.mp3`;
+      link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("Download failed, falling back to new tab:", error);
-      window.open(url, '_blank');
+      if (url) {
+        window.open(url, '_blank');
+      } else {
+        alert("Failed to generate download link.");
+      }
     } finally {
       setIsDownloading(false);
       closeDownloadModal();
@@ -62,6 +63,7 @@ export default function DownloadModal() {
   const handleDirectDownload = async (format: 'mp3' | 'wav' | 'aiff') => {
     if (!downloadTrack) return;
     setDownloadingFormat(format);
+    let url = '';
     
     try {
       const { data, error } = await supabase.functions.invoke('get_download_url', {
@@ -72,24 +74,19 @@ export default function DownloadModal() {
         throw new Error(error?.message || "URL not found for format");
       }
       
-      const url = data.url;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      
+      url = data.url;
       const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `${cleanName}.${format}`;
+      link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Download failed, falling back to new tab:", error);
-      window.open(url, '_blank');
+      if (url) {
+        window.open(url, '_blank');
+      } else {
+        alert(error.message || "Failed to generate download link.");
+      }
     } finally {
       setDownloadingFormat(null);
       closeDownloadModal();
@@ -152,7 +149,7 @@ export default function DownloadModal() {
                 <span className="text-[11px] font-bold uppercase tracking-widest text-black flex items-center justify-center gap-2">
                   WAV {downloadingFormat === 'wav' && <div className="w-2.5 h-2.5 border border-black/20 border-t-black rounded-full animate-spin" />}
                 </span>
-                <span className="text-[9px] font-sans text-black/50 mt-0.5">44.1kHz</span>
+                <span className="text-[9px] font-sans text-black/50 mt-0.5">Lossless</span>
               </div>
             </button>
           )}
@@ -171,7 +168,7 @@ export default function DownloadModal() {
                 <span className="text-[11px] font-bold uppercase tracking-widest text-black flex items-center justify-center gap-2">
                   AIF {downloadingFormat === 'aiff' && <div className="w-2.5 h-2.5 border border-black/20 border-t-black rounded-full animate-spin" />}
                 </span>
-                <span className="text-[9px] font-sans text-black/50 mt-0.5">48kHz</span>
+                <span className="text-[9px] font-sans text-black/50 mt-0.5">Lossless</span>
               </div>
             </button>
           )}
@@ -190,8 +187,8 @@ export default function DownloadModal() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4 pr-4 overflow-hidden">
-            <div className="w-12 h-12 rounded-lg bg-black/5 shrink-0 overflow-hidden relative">
-              <img src={downloadTrack?.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className="w-full h-full object-cover" />
+            <div className="w-16 h-16 rounded-lg bg-black/5 flex items-center justify-center relative overflow-hidden shrink-0 border border-black/10">
+              <TrackArtwork track={downloadTrack as any} className="absolute inset-0 w-full h-full" />
             </div>
             <h2 className="text-2xl font-semibold uppercase tracking-tighter truncate">
               {cleanName}
@@ -229,7 +226,7 @@ export default function DownloadModal() {
             </div>
           </button>
 
-          {settings.subscriptions_enabled && (
+          {settings.subscriptions_enabled && settings.free_watermarks_enabled && (
             <button 
               onClick={() => {
                 if (downloadTrack) {

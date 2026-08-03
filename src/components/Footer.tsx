@@ -3,6 +3,8 @@ import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { siInstagram, siYoutube } from 'simple-icons';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
+import { DadaLogo } from './shared/DadaLogo';
 
 export default function Footer({ isDark = false }: { isDark?: boolean }) {
   const textColor = isDark ? 'text-white' : 'text-black';
@@ -10,6 +12,7 @@ export default function Footer({ isDark = false }: { isDark?: boolean }) {
   const mutedTextColor = isDark ? 'text-white/50' : 'text-black/50';
   const borderColor = isDark ? 'border-white/10' : 'border-black/10';
   const { setContactModalOpen } = useAuth();
+  const { settings } = useSettings();
 
   return (
     <footer className={`w-full ${bgColor} ${textColor} pt-16 md:pt-24 pb-8 border-t ${borderColor} z-10 relative`}>
@@ -35,8 +38,12 @@ export default function Footer({ isDark = false }: { isDark?: boolean }) {
               <Link to="/browse" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Catalog</Link>
               <Link to="/playlists" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Playlists</Link>
               <Link to="/browse?playlist=new-music" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>New Releases</Link>
-              <Link to="/pricing" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Pricing</Link>
-              <Link to="/enterprise" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Enterprise</Link>
+              {settings.subscriptions_enabled && (
+                <>
+                  <Link to="/pricing" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Pricing</Link>
+                  <Link to="/enterprise" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Enterprise</Link>
+                </>
+              )}
             </div>
 
             <div className="flex flex-col gap-4">
@@ -81,8 +88,10 @@ export default function Footer({ isDark = false }: { isDark?: boolean }) {
           <div className={`font-sans text-[10px] uppercase tracking-widest ${mutedTextColor}`}>
             © {new Date().getFullYear()} Tom Fox Music. All rights reserved.
           </div>
-          <div className={`font-sans text-[10px] uppercase tracking-widest ${mutedTextColor} flex items-center gap-2`}>
-            Created with <Heart className="w-3 h-3" /> by @dadadesign
+          <div className={`font-sans text-[10px] uppercase tracking-widest ${mutedTextColor} flex items-center gap-4`}>
+            <span className="flex items-center gap-2">Created with <Heart className="w-3 h-3" /> by @dadadesign</span>
+            <span className="hidden sm:inline opacity-30">•</span>
+            <span className="flex items-center gap-2">Powered by <DadaLogo className={`w-3 h-3 ${mutedTextColor}`} /> DadaAudio</span>
           </div>
         </div>
 

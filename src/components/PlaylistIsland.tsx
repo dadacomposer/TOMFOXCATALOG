@@ -3,10 +3,14 @@ import { fetchPlaylistTrackIds, fetchTracksByIds, supabase } from '../lib/supaba
 import { Play, Pause, Download, ShoppingBag, X, TrendingUp } from 'lucide-react';
 import WaveformView from './WaveformView';
 import { DEFAULT_ARTIST, DEFAULT_ARTWORK } from '../config';
+import TrackArtwork from './TrackArtwork';
 import { usePlayer } from '../context/PlayerContext';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
+import TrackActionButtons from './TrackActionButtons';
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
+import { useUserPlaylists } from '../context/UserPlaylistsContext';
+import { useSettings } from '../context/SettingsContext';
 
 type Track = any;
 
@@ -33,16 +37,21 @@ interface PlaylistIslandProps {
   formatTime: (seconds: number) => string;
   newMusicTrackIds: Set<string>;
   trendingTrackIds: Set<string>;
+  isOwner?: boolean;
+  inline?: boolean;
+  initialTrackCount?: number;
 }
 
 export default function PlaylistIsland(props: PlaylistIslandProps) {
-  const { id, onClose, progress, handleSeek, formatTime, newMusicTrackIds, trendingTrackIds } = props;
-  const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode } = usePlayer();
+  const { id, onClose, progress, handleSeek, formatTime, newMusicTrackIds, trendingTrackIds, isOwner, inline, initialTrackCount } = props;
+  const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, setSelectedTrackForDetails } = usePlayer();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [playlistTitle, setPlaylistTitle] = useState('Playlist');
   const { openDownloadModal } = useDownload();
+  const { removeTrackFromPlaylist, favoritesPlaylist } = useUserPlaylists();
   const { openLicenseModal } = useLicense();
+  const { settings } = useSettings();
 
   useEffect(() => {
     async function load() {
@@ -83,10 +92,14 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
+      {!inline && <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />}
       
       {/* Island Panel */}
-      <div className="fixed inset-x-6 top-24 bottom-[100px] bg-[#fafafa] z-50 rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10">
+      <div className={
+        inline 
+        ? "w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6"
+        : "fixed inset-x-6 top-24 bottom-[100px] bg-[#fafafa] z-50 rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10"
+      }>
         <div className="px-8 py-8 border-b-2 border-black/5 flex items-center justify-between shrink-0 bg-[#fafafa]">
           <div className="min-h-[50px] flex flex-col justify-center">
             {loading ? (
@@ -110,14 +123,16 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
               </div>
             </div>
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5 transition-colors text-black/40 hover:text-black">
-              <X className="w-6 h-6" />
-            </button>
+            {!inline && (
+              <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5 transition-colors text-black/40 hover:text-black">
+                <X className="w-6 h-6" />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="flex-grow overflow-y-auto px-8 py-6 bg-[#fafafa]">
-          {loading ? (
+        <div className={inline ? "px-8 py-6 bg-[#fafafa]" : "flex-grow overflow-y-auto px-8 py-6 bg-[#fafafa]"}>
+          {loading && initialTrackCount !== 0 ? (
             <div className="flex flex-col gap-1 pb-16">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-2 rounded-xl">
@@ -143,29 +158,45 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
             </div>
           ) : (
             <div className="flex flex-col gap-1 pb-16">
-              {tracks.map((track) => (
-                <div 
-                  key={track.id}
-                  className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none"
-                  onClick={() => handlePlayPauseIsland(track)}
-                >
-                  <div className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}>
-                    <img src={track.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      {currentTrack?.id === track.id && isPlaying ? (
-                        <Pause className="w-4 h-4 fill-white text-white" />
-                      ) : (
-                        <Play className="w-4 h-4 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />
+              {tracks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-6 py-20 text-black/40">
+                  <img src="/search-for-documents.svg" alt="Empty playlist" className="w-80 h-80" />
+                  <span className="font-bold uppercase tracking-widest text-sm text-center">This playlist is empty.<br/>Add tracks to start listening.</span>
+                  <a href="/browse" className="px-6 py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-full hover:bg-black/90 transition-colors">
+                    Browse Music
+                  </a>
+                </div>
+              ) : tracks.map((track) => (
+                  <div 
+                    key={track.id}
+                    className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none"
+                    onClick={() => setSelectedTrackForDetails(track)}
+                  >
+                    <div 
+                      className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
+                      onClick={(e) => { e.stopPropagation(); handlePlayPauseIsland(track); }}
+                    >
+                      <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
+                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <Pause className="w-4 h-4 fill-white text-white" />
+                        ) : (
+                          <Play className="w-4 h-4 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />
+                        )}
+                      </div>
+                      {trendingTrackIds.has(track.id) && (
+                        <div className="absolute bottom-0 right-0 bg-[#facc15] text-black w-3 h-3 rounded-tl flex items-center justify-center z-10 pointer-events-none">
+                          <TrendingUp className="w-2 h-2" strokeWidth={3} />
+                        </div>
                       )}
                     </div>
-                    {trendingTrackIds.has(track.id) && (
-                      <div className="absolute bottom-0 right-0 bg-[#facc15] text-black w-3 h-3 rounded-tl flex items-center justify-center z-10 pointer-events-none">
-                        <TrendingUp className="w-2 h-2" strokeWidth={3} />
-                      </div>
-                    )}
-                  </div>
                   <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
-                    <div className="font-bold truncate text-[14px]">{cleanTitle(track.file_name)}</div>
+                    <div 
+                      className="font-bold truncate text-[14px] group-hover:underline cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                    >
+                      {cleanTitle(track.file_name)}
+                    </div>
                     <div className="font-sans text-[12px] text-black/50 mt-0.5">{DEFAULT_ARTIST}</div>
                   </div>
                   
@@ -203,16 +234,37 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                     />
                   </div>
 
-                  <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[280px]">
+                  <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
+                    <TrackActionButtons trackId={track.id} hideHeart={favoritesPlaylist?.id === id} />
                     <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-10 text-right mr-2">
                       {track.duration ? formatTime(track.duration) : '0:00'}
                     </div>
-                    <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest text-black" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }}>
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>
-                      <ShoppingBag className="w-3.5 h-3.5" /> License
-                    </button>
+                    {isOwner ? (
+                      <button 
+                        className="flex items-center justify-center p-2 hover:bg-red-500/10 text-red-500 rounded transition-colors"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const ok = await removeTrackFromPlaylist(id, track.id);
+                          if (ok) {
+                            setTracks(prev => prev.filter(t => t.id !== track.id));
+                          }
+                        }}
+                        title="Remove from Playlist"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <>
+                        <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest text-black" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }}>
+                          <Download className="w-3.5 h-3.5" /> Download
+                        </button>
+                        {settings.free_watermarks_enabled && (
+                          <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>
+                            <ShoppingBag className="w-3.5 h-3.5" /> License
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

@@ -58,6 +58,8 @@ const AuthContext = createContext<AuthContextType>({
   setLoginModalOpen: () => {},
   isContactModalOpen: false,
   setContactModalOpen: () => {},
+  customMusicIntent: false,
+  setCustomMusicIntent: () => {},
   signOut: async () => {},
   refreshProfile: async () => {},
   setWorkspaces: () => {},

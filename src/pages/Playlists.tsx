@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { fetchPlaylists } from '../lib/supabase';
+import { fetchPlaylists, supabase } from '../lib/supabase';
 import { ChevronRight } from 'lucide-react';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import PlaylistIsland from '../components/PlaylistIsland';
@@ -24,6 +24,15 @@ export default function Playlists() {
   const playlistUrlId = searchParams.get('playlist');
   
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [playlistCategories, setPlaylistCategories] = useState<string[]>([
+    "Percussion & Rhythm", 
+    "Cinematic & Film", 
+    "Dark & Tension", 
+    "Electronic & Synth", 
+    "Calm & Reflective", 
+    "Documentary & Explainer", 
+    "Jazz & Organic"
+  ]);
   const [loading, setLoading] = useState(true);
   
   const { playTrack, currentSource, audioRef, setIsCurrentPreviewDormant, setPendingSeek, progress } = usePlayer();
@@ -49,10 +58,18 @@ export default function Playlists() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await fetchPlaylists();
+        const [data, contentData] = await Promise.all([
+          fetchPlaylists(),
+          supabase.from('page_content').select('content').eq('page_id', 'playlists').single()
+        ]);
+        
         setPlaylists(data || []);
+        
+        if (contentData.data?.content?.categories && Array.isArray(contentData.data.content.categories)) {
+          setPlaylistCategories(contentData.data.content.categories);
+        }
       } catch (err) {
-        console.error('Error fetching playlists:', err);
+        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
@@ -63,15 +80,7 @@ export default function Playlists() {
   const getCategories = (allPlaylists: Playlist[]) => {
     if (!allPlaylists.length) return [];
     
-    const MACROCATEGORIES = [
-      "Percussion & Rhythm", 
-      "Cinematic & Film", 
-      "Dark & Tension", 
-      "Electronic & Synth", 
-      "Calm & Reflective", 
-      "Documentary & Explainer", 
-      "Jazz & Organic"
-    ];
+    const MACROCATEGORIES = playlistCategories;
 
     const categoriesData: { title: string, playlists: Playlist[] }[] = [];
     const assignedIds = new Set<string>();

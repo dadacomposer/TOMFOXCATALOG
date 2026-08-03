@@ -52,6 +52,8 @@ type PlayerContextType = {
   setCurrentPlaylist: (playlist: Track[]) => void;
   returnTrackId: string | null;
   setReturnTrackId: (id: string | null) => void;
+  selectedTrackForDetails: Track | null;
+  setSelectedTrackForDetails: (track: Track | null) => void;
 };
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -67,6 +69,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [fallbackPlaylist, setFallbackPlaylist] = useState<Track[]>([]);
   const [currentSource, setCurrentSource] = useState<'top' | 'browse' | 'playlist' | null>(null);
   const [returnTrackId, setReturnTrackId] = useState<string | null>(null);
+  const [selectedTrackForDetails, setSelectedTrackForDetails] = useState<Track | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -280,7 +283,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setCurrentSource,
       setCurrentPlaylist,
       returnTrackId,
-      setReturnTrackId
+      setReturnTrackId,
+      selectedTrackForDetails,
+      setSelectedTrackForDetails
     }}>
       {children}
     </PlayerContext.Provider>

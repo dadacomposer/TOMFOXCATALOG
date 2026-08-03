@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -16,21 +16,26 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Admin from './pages/Admin';
 import SharedPlayer from './pages/SharedPlayer';
+import TomFoxStudio from './pages/TomFoxStudio';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { DownloadProvider } from './context/DownloadContext';
 import { LicenseProvider } from './context/LicenseContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { UserPlaylistsProvider } from './context/UserPlaylistsContext';
 import { SettingsProvider } from './context/SettingsContext';
 import GlobalPlayer from './components/GlobalPlayer';
 import DownloadModal from './components/DownloadModal';
 import LicenseModal from './components/LicenseModal';
-import OnboardingModal from './components/OnboardingModal';
 import GlobalLoader from './components/GlobalLoader';
 import AccountPanel from './components/AccountPanel';
 import ContactSalesModal from './components/ContactSalesModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 import UnderConstruction from './components/UnderConstruction';
+
+import MyMusic from './pages/MyMusic';
+import TrackDetailsModal from './components/shared/TrackDetailsModal';
+import OnboardingModal from './components/OnboardingModal';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -52,16 +57,20 @@ function ScrollToTop() {
 function AppLayout() {
   const { currentTrack } = usePlayer();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   return (
     <div className={`w-full min-h-screen bg-[#fafafa] text-black font-sans selection:bg-black selection:text-white flex flex-col transition-all duration-500 ease-out ${currentTrack ? 'pb-[90px]' : ''}`}>
       <ScrollToTop />
-      {location.pathname !== '/admin' && !location.pathname.startsWith('/share') && <Header />}
+      {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <Header />}
       
       <div className="flex-grow flex flex-col">
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/browse" element={<Browse />} />
+            <Route path="/my-music" element={<MyMusic />} />
             <Route path="/playlists" element={<Playlists />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/enterprise" element={<Enterprise />} />
@@ -71,14 +80,15 @@ function AppLayout() {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/studio/:project_id" element={<TomFoxStudio />} />
             <Route path="/share/:slug" element={<SharedPlayer />} />
           </Routes>
         </ErrorBoundary>
       </div>
 
-      {location.pathname !== '/admin' && !location.pathname.startsWith('/share') && <Footer isDark={location.pathname === '/'} />}
-      {!location.pathname.startsWith('/share') && <GlobalPlayer />}
-      {!['/checkout-resume', '/checkout-success', '/checkout-cancel', '/admin'].includes(location.pathname) && <OnboardingModal />}
+      {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <Footer isDark={location.pathname === '/'} />}
+      {!location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <GlobalPlayer />}
+      {!['/checkout-resume', '/checkout-success', '/checkout-cancel', '/custom-music'].includes(location.pathname) && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/studio') && <OnboardingModal />}
       <AccountPanel />
       <Login />
       <ContactSalesModal />
@@ -110,6 +120,7 @@ function AppLayout() {
           },
         }}
       />
+      <TrackDetailsModal />
     </div>
   );
 }
@@ -119,17 +130,19 @@ export default function App() {
     <UnderConstruction>
       <SettingsProvider>
         <AuthProvider>
-          <Router>
-            <PlayerProvider>
-              <DownloadProvider>
-                <LicenseProvider>
-                  <AppLayout />
-                  <DownloadModal />
-                  <LicenseModal />
-                </LicenseProvider>
-              </DownloadProvider>
-            </PlayerProvider>
-          </Router>
+          <UserPlaylistsProvider>
+            <Router>
+              <PlayerProvider>
+                <DownloadProvider>
+                  <LicenseProvider>
+                    <AppLayout />
+                    <DownloadModal />
+                    <LicenseModal />
+                  </LicenseProvider>
+                </DownloadProvider>
+              </PlayerProvider>
+            </Router>
+          </UserPlaylistsProvider>
         </AuthProvider>
       </SettingsProvider>
     </UnderConstruction>

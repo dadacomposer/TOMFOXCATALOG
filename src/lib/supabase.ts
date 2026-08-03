@@ -430,10 +430,25 @@ export async function fetchPlaylists() {
   const { data, error } = await supabase
     .from('playlists')
     .select('*')
+    .is('user_id', null)
     .order('created_at', { ascending: true });
     
   if (error) {
     console.error('Error fetching playlists:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function fetchUserPlaylists(userId: string) {
+  const { data, error } = await supabase
+    .from('playlists')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+    
+  if (error) {
+    console.error('Error fetching user playlists:', error);
     return [];
   }
   return data || [];
@@ -467,11 +482,11 @@ export async function fetchPlaylistTracks(playlistId: string) {
 // AUTHENTICATION HELPERS
 // -----------------------------------------------------------------------------
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(redirectTo?: string) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/browse`,
+      redirectTo: redirectTo || `${window.location.origin}/browse`,
     },
   });
   if (error) throw error;

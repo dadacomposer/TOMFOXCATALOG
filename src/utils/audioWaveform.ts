@@ -1,4 +1,4 @@
-export const extractWaveformFromFile = async (file: File, numPoints: number = 100): Promise<{ waveform: number[], duration: number }> => {
+export const extractWaveformFromFile = async (file: File, numPoints: number = 100): Promise<{ waveform: number[], duration: number, audioBuffer?: AudioBuffer }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
@@ -33,7 +33,7 @@ export const extractWaveformFromFile = async (file: File, numPoints: number = 10
         // Chunk and find max peak per chunk
         const chunkSize = Math.floor(length / numPoints);
         if (chunkSize === 0) {
-          resolve({ waveform: [], duration: audioBuffer.duration });
+          resolve({ waveform: [], duration: audioBuffer.duration, audioBuffer });
           return;
         }
         
@@ -63,7 +63,7 @@ export const extractWaveformFromFile = async (file: File, numPoints: number = 10
           return Math.floor((p / maxGlobalPeak) * 100);
         });
         
-        resolve({ waveform: normalizedPeaks, duration: audioBuffer.duration });
+        resolve({ waveform: normalizedPeaks, duration: audioBuffer.duration, audioBuffer });
       } catch (err) {
         console.error('Error decoding audio:', err);
         reject(err);

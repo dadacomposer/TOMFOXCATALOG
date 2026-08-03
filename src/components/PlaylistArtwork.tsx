@@ -7,7 +7,7 @@ type PlaylistArtworkProps = {
 
 export default function PlaylistArtwork({ playlist, className = '' }: PlaylistArtworkProps) {
   return (
-    <div className={`@container flex flex-col bg-white border border-black/5 overflow-hidden no-radius ${className}`}>
+    <div className={`@container isolate flex flex-col bg-white border border-black/5 overflow-hidden no-radius select-none pointer-events-none ${className}`}>
       
       {/* Top Header Section */}
       <div className="flex-none px-[3cqw] pt-[3cqw] pb-[4cqw] bg-white z-10 w-full">
@@ -18,16 +18,16 @@ export default function PlaylistArtwork({ playlist, className = '' }: PlaylistAr
              </div>
              {/* Right: Text Block */}
              <div className="flex flex-col text-right w-fit max-w-[60%] justify-end pb-[0.5cqw]">
-                <div className="text-[1.8cqw] text-black/70 pb-[0.3cqw] whitespace-nowrap">
+                <div className="text-[1.8cqw] text-black/70 pb-[0.3cqw] whitespace-nowrap uppercase">
                    TOM FOX
                 </div>
-                <div className="border-t-[max(1px,0.1cqw)] border-black/20 pt-[0.3cqw] pb-[0.3cqw] text-[1.8cqw] text-black/70 whitespace-nowrap">
+                <div className="border-t-[max(1px,0.1cqw)] border-black/20 pt-[0.3cqw] pb-[0.3cqw] text-[1.8cqw] text-black/70 whitespace-nowrap uppercase">
                    HELLO@TOMFOX.SITE
                 </div>
-                <div className="border-t-[max(1px,0.1cqw)] border-black/20 pt-[0.3cqw] pb-[0.3cqw] text-[1.8cqw] text-black/70 whitespace-nowrap">
+                <div className="border-t-[max(1px,0.1cqw)] border-black/20 pt-[0.3cqw] pb-[0.3cqw] text-[1.8cqw] text-black/70 whitespace-nowrap uppercase">
                    TOMFOX.SITE
                 </div>
-                <div className="border-t-[max(1px,0.1cqw)] border-black/20 pt-[0.3cqw] text-[1.8cqw] text-black/70 whitespace-nowrap">
+                <div className="border-t-[max(1px,0.1cqw)] border-black/20 pt-[0.3cqw] text-[1.8cqw] text-black/70 whitespace-nowrap uppercase">
                    ARLINGTON, VIRGINIA, USA
                 </div>
              </div>

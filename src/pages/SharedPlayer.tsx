@@ -7,6 +7,8 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import toast from 'react-hot-toast';
 import WaveformView from '../components/WaveformView';
+import TrackActionButtons from '../components/TrackActionButtons';
+import TrackArtwork from '../components/TrackArtwork';
 import Footer from '../components/Footer';
 import { getPreviewTimings, parseWaveform } from '../lib/audioUtils';
 import { DEFAULT_ARTIST, DEFAULT_ARTWORK } from '../config';
@@ -158,18 +160,18 @@ export default function SharedPlayer() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111111] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#fafafa] flex flex-col font-sans">
       {/* Minimal Header */}
-      <header className="w-full py-6 md:py-8 px-6 md:px-12 flex items-center justify-between border-b border-white/10 bg-[#111111] sticky top-0 z-50 shadow-sm">
+      <header className="w-full py-6 md:py-8 px-6 md:px-12 flex items-center justify-between border-b border-black/10 bg-[#fafafa] sticky top-0 z-50 shadow-sm">
         <a href="/" className="block hover:opacity-70 transition-opacity">
           <img 
             src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
             alt="Tom Fox" 
-            className="h-7 md:h-9 object-contain invert opacity-90" 
+            className="h-7 md:h-9 object-contain opacity-90" 
           />
         </a>
         <div className="flex items-center gap-3 shrink-0 cursor-pointer group/preview z-10" onClick={() => setIsPreviewMode(!isPreviewMode)}>
-          <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-white group-hover/preview:text-white/70' : 'text-white/40 group-hover/preview:text-white/60'}`}>Preview</span>
+          <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/40 group-hover/preview:text-black/60'}`}>Preview</span>
           <div 
             className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-white group-hover/preview:bg-[#eee]' : 'bg-[#333] group-hover/preview:bg-[#444]'}`}
           >
@@ -181,11 +183,11 @@ export default function SharedPlayer() {
       <div className="flex-1 flex flex-col items-center pt-16 pb-48 px-6 md:px-12 w-full">
         <div className="w-full max-w-[1440px]">
           <div className="mb-12 text-center max-w-3xl mx-auto">
-            <h2 className="text-[22px] font-bold uppercase tracking-tighter mb-6 text-white">
+            <h2 className="text-[22px] font-bold uppercase tracking-tighter mb-6 text-black">
               The following track{tracks.length !== 1 && 's'} {tracks.length === 1 ? 'has' : 'have'} been shared with you
             </h2>
             {linkData?.notes && (
-              <p className="text-white/60 font-sans text-sm max-w-2xl mx-auto whitespace-pre-wrap">{linkData.notes}</p>
+              <p className="text-black/60 font-sans text-sm max-w-2xl mx-auto whitespace-pre-wrap">{linkData.notes}</p>
             )}
           </div>
 
@@ -210,10 +212,8 @@ export default function SharedPlayer() {
                 className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none border border-transparent hover:border-black/5"
                 onClick={() => handlePlayPause(track)}
               >
-                <div 
-                  className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
-                >
-                  <img src={track.artwork_url || DEFAULT_ARTWORK} alt="Artwork" className={`absolute inset-0 w-full h-full object-cover`} />
+                <div className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}>
+                  <TrackArtwork track={track} className="absolute inset-0 w-full h-full object-cover" />
                   <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                     {currentTrack?.id === track.id && isPlaying ? (
                       <Pause className="w-4 h-4 fill-white text-white" />
@@ -260,8 +260,9 @@ export default function SharedPlayer() {
                   />
                 </div>
 
-                <div className="hidden md:flex items-center justify-end pr-4 shrink-0 w-[60px]">
-                  <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider text-right">
+                <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
+                  <TrackActionButtons trackId={track.id} />
+                  <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider text-right w-10 ml-2">
                     {track.duration ? formatTime(track.duration) : '0:00'}
                   </div>
                 </div>

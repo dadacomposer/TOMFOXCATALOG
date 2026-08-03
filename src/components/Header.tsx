@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 export default function Header() {
   const [isHeaderDark, setIsHeaderDark] = useState(false);
   const [isTransparent, setIsTransparent] = useState(false);
   const location = useLocation();
   const { user, profile, setAccountPanelOpen, setLoginModalOpen } = useAuth();
+  const { settings } = useSettings();
 
   useEffect(() => {
 
@@ -66,7 +68,12 @@ export default function Header() {
       <nav className="hidden md:flex items-center gap-10 font-bold uppercase text-xs tracking-widest">
         <Link to="/browse" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Browse</Link>
         <Link to="/playlists" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Playlists</Link>
-        {(!user || profile?.subscription_status !== 'active') && (
+        {user && (
+          <>
+            <Link to="/my-music" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>My Music</Link>
+          </>
+        )}
+        {(!user || profile?.subscription_status !== 'active') && settings.subscriptions_enabled && (
           <>
             <Link to="/pricing" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Pricing</Link>
             <Link to="/enterprise" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Enterprise</Link>

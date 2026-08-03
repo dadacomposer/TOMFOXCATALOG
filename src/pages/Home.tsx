@@ -17,12 +17,12 @@ export default function Home() {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
+  const { user, loading, setLoginModalOpen, setContactModalOpen, setCustomMusicIntent } = useAuth();
+  const { content } = useSettings();
+  const homeContent = content['home'] || {};
 
   const [realPlaylists, setRealPlaylists] = useState<any[]>([]);
   const { isPlaying, togglePlay, playPlaylist, currentTrack } = usePlayer();
-  const { user, loading, setLoginModalOpen, setContactModalOpen } = useAuth();
-  const { content } = useSettings();
-  const homeContent = content['home'] || {};
 
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
 
@@ -375,12 +375,14 @@ export default function Home() {
         <p className="font-sans text-sm md:text-base uppercase leading-relaxed tracking-wide text-white/50 max-w-2xl mb-12 px-6">
           {homeContent.beyond_desc || 'Some projects demand a completely original sound. We craft bespoke scores and custom sound design for high-stakes campaigns.'}
         </p>
-        <button 
-          onClick={() => setContactModalOpen(true)}
+        <a 
+          href="https://calendly.com/dadaaudio"
+          target="_blank"
+          rel="noopener noreferrer"
           className="px-10 py-5 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-white/90 transition-colors rounded-full"
         >
-          Get in Touch
-        </button>
+          Book a Call
+        </a>
       </div>
 
     </div>

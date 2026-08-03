@@ -7,8 +7,10 @@ import { getPreviewTimings, parseWaveform } from '../lib/audioUtils';
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import { fetchSimilarTracks } from '../lib/supabase';
+import TrackArtwork from './TrackArtwork';
 import { Track } from '../context/PlayerContext';
 import { DEFAULT_ARTWORK, DEFAULT_ARTIST } from '../config';
+import { useSettings } from '../context/SettingsContext';
 
 const formatTime = (seconds: number) => {
   const m = Math.floor(seconds / 60);
@@ -39,9 +41,10 @@ export default function GlobalPlayer() {
   const location = useLocation();
   const isSharedPage = location.pathname.startsWith('/share');
   
-  const { currentTrack, currentPlaylist, isPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId } = usePlayer();
+  const { currentTrack, currentPlaylist, isPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId, setSelectedTrackForDetails } = usePlayer();
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
+  const { settings } = useSettings();
   const [isSimilarExpanded, setIsSimilarExpanded] = React.useState(false);
   const [referenceTrack, setReferenceTrack] = React.useState<Track | null>(null);
   const [similarTracks, setSimilarTracks] = React.useState<Track[]>([]);
@@ -250,11 +253,19 @@ export default function GlobalPlayer() {
         />
       )}
       <div className="flex items-center gap-4 w-auto md:w-[240px] shrink-0">
-        <div className={`w-12 h-12 rounded overflow-hidden flex items-center justify-center relative hidden sm:flex border ${baseBorder} ${isSharedPage ? 'bg-white/5' : 'bg-black/5'}`}>
-          <img src={currentTrack?.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className={`w-full h-full object-cover`} />
+        <div 
+          className={`w-12 h-12 rounded overflow-hidden flex items-center justify-center relative hidden sm:flex border ${baseBorder} ${isSharedPage ? 'bg-white/5' : 'bg-black/5'} cursor-pointer group`}
+          onClick={() => currentTrack && setSelectedTrackForDetails(currentTrack)}
+        >
+          {currentTrack && <TrackArtwork track={currentTrack} className="w-full h-full group-hover:scale-105 transition-transform" />}
         </div>
         <div className="flex flex-col overflow-hidden">
-          <div className="font-bold truncate text-[14px]">{currentTrack ? cleanTitle(currentTrack.file_name) : ''}</div>
+          <div 
+            className="font-bold truncate text-[14px] cursor-pointer hover:underline underline-offset-2"
+            onClick={() => currentTrack && setSelectedTrackForDetails(currentTrack)}
+          >
+            {currentTrack ? cleanTitle(currentTrack.file_name) : ''}
+          </div>
           <div className={`font-sans text-[11px] ${secondaryText} truncate`}>
             {currentTrack?.composers 
               ? currentTrack.composers.filter(c => c.trim() !== '').join(', ')
@@ -326,7 +337,7 @@ export default function GlobalPlayer() {
             <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
               <Download className="w-3.5 h-3.5" /> Download
             </button>
-            {location.pathname !== '/admin' && (
+            {location.pathname !== '/admin' && settings.free_watermarks_enabled && (
               <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={() => { if (currentTrack) { openLicenseModal(currentTrack); } }}>
                 <ShoppingBag className="w-3.5 h-3.5" /> License
               </button>
@@ -341,7 +352,7 @@ export default function GlobalPlayer() {
         {referenceTrack && (
           <div className="flex items-center gap-6 px-6 py-6 border-b border-black/10 shrink-0 bg-black/5">
             <div className="w-24 h-24 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-black/10 shadow-sm relative bg-white">
-              <img src={currentTrack?.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className="w-full h-full object-cover" />
+              <TrackArtwork track={referenceTrack} className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
               <div className="font-sans text-[10px] text-black/50 uppercase tracking-widest mb-1">Based on track</div>
@@ -377,13 +388,13 @@ export default function GlobalPlayer() {
                   className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none mb-1"
                   onClick={() => handlePlaySimilar(track)}
                 >
-                  <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5">
-                    <img src={track?.artwork_url || "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/default_artwork.png"} alt="Artwork" className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="w-12 h-12 rounded bg-black/5 overflow-hidden flex items-center justify-center relative shrink-0">
+                    <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
                     <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       {currentTrack?.id === track.id && isPlaying ? (
-                        <Pause className="w-4 h-4 fill-white text-white" />
+                        <Pause className="w-5 h-5 fill-white text-white" />
                       ) : (
-                        <Play className="w-4 h-4 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />
+                        <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />
                       )}
                     </div>
                   </div>
@@ -435,9 +446,11 @@ export default function GlobalPlayer() {
                     <button className="flex items-center gap-2 px-3 py-1.5 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[10px] uppercase tracking-widest" onClick={(e) => { e.stopPropagation(); openDownloadModal(track, e); }}>
                       <Download className="w-3 h-3" /> Download
                     </button>
-                    <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] uppercase tracking-widest" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>
-                      <ShoppingBag className="w-3 h-3" /> License
-                    </button>
+                    {settings.free_watermarks_enabled && (
+                      <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] uppercase tracking-widest" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>
+                        <ShoppingBag className="w-3 h-3" /> License
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
