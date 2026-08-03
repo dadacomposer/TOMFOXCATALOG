@@ -111,14 +111,10 @@ export default function AdminTracks({ setActiveSection }: AdminTracksProps = {})
   const [draftPlaylistTracks, setDraftPlaylistTracks] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [playlistCategories, setPlaylistCategories] = useState<string[]>([
-    "Percussion & Rhythm", 
-    "Cinematic & Film", 
-    "Dark & Tension", 
-    "Electronic & Synth", 
-    "Calm & Reflective", 
-    "Documentary & Explainer", 
-    "Jazz & Organic", 
-    "Others"
+    "Journalism", "Explainer", "Lifestyle", 
+    "Drum and Percussion Energy", "Science and Innovation", 
+    "Corporate Minimal", "Dramatic Strings", "Global Rhythms", 
+    "Epic Trailers", "Dark Forces", "Future Tech", "Human Stories"
   ]);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [editingCategoriesStr, setEditingCategoriesStr] = useState<string>('');

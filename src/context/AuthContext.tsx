@@ -41,6 +41,8 @@ type AuthContextType = {
   fetchWorkspaces: (userId: string) => Promise<void>;
   customMusicIntent: boolean;
   setCustomMusicIntent: (val: boolean) => void;
+  isUpdatePasswordModalOpen: boolean;
+  setUpdatePasswordModalOpen: (val: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -62,6 +64,8 @@ const AuthContext = createContext<AuthContextType>({
   setContactModalOpen: () => {},
   customMusicIntent: false,
   setCustomMusicIntent: () => {},
+  isUpdatePasswordModalOpen: false,
+  setUpdatePasswordModalOpen: () => {},
   signOut: async () => {},
   refreshProfile: async () => {},
   setWorkspaces: () => {},
@@ -84,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [isContactModalOpen, setContactModalOpen] = useState(false);
   const [customMusicIntent, setCustomMusicIntent] = useState(false);
+  const [isUpdatePasswordModalOpen, setUpdatePasswordModalOpen] = useState(false);
 
   const fetchWorkspaces = async (userId: string) => {
     try {
@@ -138,6 +143,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
+      if (event === 'PASSWORD_RECOVERY') {
+        if (mounted) {
+          setUpdatePasswordModalOpen(true);
+        }
+      }
+
       if (mounted) {
         setSession(session);
         if (session?.user) {
@@ -179,6 +190,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoginModalOpen,
       isContactModalOpen,
       setContactModalOpen,
+      isUpdatePasswordModalOpen,
+      setUpdatePasswordModalOpen,
       signOut,
       refreshProfile, setWorkspaces, fetchWorkspaces,
       customMusicIntent, setCustomMusicIntent

@@ -356,6 +356,7 @@ export async function searchTracksByTags(query: string) {
     `subgenre.ilike.%${q}%`,
     `description.ilike.%${q}%`,
     `energy_level.ilike.%${q}%`,
+    `movement.ilike.%${q}%`,
   ].join(',');
   
   const { data: textData } = await supabase
@@ -393,7 +394,7 @@ export async function fetchFilterOptions() {
     scenarios: { value: string; count: number }[];
     human_tags: { value: string; count: number }[];
     energy_level: { value: string; count: number }[];
-    bpm_range: { min: number; max: number };
+    movement: { value: string; count: number }[];
   };
 }
 

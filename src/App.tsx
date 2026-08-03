@@ -32,6 +32,7 @@ import ContactSalesModal from './components/ContactSalesModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 import UnderConstruction from './components/UnderConstruction';
+import UpdatePasswordModal from './components/UpdatePasswordModal';
 
 import MyMusic from './pages/MyMusic';
 import TrackDetailsModal from './components/shared/TrackDetailsModal';
@@ -91,6 +92,7 @@ function AppLayout() {
       {!['/checkout-resume', '/checkout-success', '/checkout-cancel', '/custom-music'].includes(location.pathname) && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/studio') && <OnboardingModal />}
       <AccountPanel />
       <Login />
+      <UpdatePasswordModal />
       <ContactSalesModal />
       <GlobalLoader />
       <Toaster 

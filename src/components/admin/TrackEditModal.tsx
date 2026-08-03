@@ -85,7 +85,6 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
       ? track.composers.filter(c => c.trim() !== '') 
       : (track.composers ? [] : DEFAULT_COMPOSERS),
     album: track.album || '',
-    bpm: track.bpm || '',
     key: track.key || '',
     subgenre: toArray(track.subgenre),
     moods: toArray(track.moods),
@@ -93,6 +92,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
     instruments: toArray(track.instruments),
     textures: toArray(track.textures),
     human_tags: toArray(track.human_tags),
+    movement: toArray(track.movement),
   });
 
   // Version Upload State
@@ -101,7 +101,6 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
     file: null as File | null,
     title: '',
     track_type: 'version' as 'version' | 'stem',
-    bpm: '',
   });
   const [versionToDelete, setVersionToDelete] = useState<string | null>(null);
 
@@ -163,8 +162,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         file_name: form.file_name,
         artwork_url: form.artwork_url || null,
         album: form.album,
-        composers: form.composers.filter(c => c.trim() !== ''),
-        bpm: form.bpm ? parseFloat(form.bpm.toString()) : 0,
+        composers: form.composers,
         key: form.key,
         subgenre: JSON.stringify(form.subgenre),
         moods: form.moods,
@@ -172,6 +170,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         instruments: form.instruments,
         textures: form.textures,
         human_tags: form.human_tags,
+        movement: form.movement,
       };
 
       const { error } = await supabase
@@ -250,7 +249,6 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         r2_url: presignData.publicUrl,
         parent_track_id: track.id,
         track_type: versionForm.track_type,
-        bpm: versionForm.bpm ? parseFloat(versionForm.bpm) : 0,
         // Inherit artwork from parent
         artwork_url: track.artwork_url,
         waveform_data: waveform_data ? JSON.stringify(waveform_data) : null,
@@ -261,7 +259,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
       if (insertError) throw insertError;
 
       toast.success('Version uploaded successfully', { id: loadingToast });
-      setVersionForm({ file: null, title: '', track_type: 'version', bpm: '' });
+      setVersionForm({ file: null, title: '', track_type: 'version' });
       loadVersions();
     } catch (error: any) {
       console.error(error);
@@ -405,15 +403,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
           {activeTab === 'metadata' && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">BPM</label>
-                  <input
-                    type="number"
-                    value={form.bpm}
-                    onChange={e => setForm({ ...form, bpm: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-black/10 focus:border-black/30 rounded-xl outline-none transition-all shadow-sm"
-                  />
-                </div>
+
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">Key</label>
                   <input
@@ -426,12 +416,13 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
               </div>
 
               {[
-                { label: 'Subgenre', field: 'subgenre', placeholder: 'e.g. Ambient Piano, Neoclassical' },
-                { label: 'Moods', field: 'moods', placeholder: 'e.g. Peaceful, Melancholic' },
-                { label: 'Scenarios', field: 'scenarios', placeholder: 'e.g. Late Night Listening, Focus' },
-                { label: 'Instruments', field: 'instruments', placeholder: 'e.g. Piano, Synth Pad' },
-                { label: 'Textures', field: 'textures', placeholder: 'e.g. Delicate, Organic' },
-                { label: 'Human Tags', field: 'human_tags', placeholder: 'Add custom tags...' },
+                { label: 'Arrangement', field: 'subgenre', placeholder: 'e.g. Ambient Piano, Neoclassical' },
+                { label: 'Mood', field: 'moods', placeholder: 'e.g. Peaceful, Melancholic' },
+                { label: 'Usage', field: 'scenarios', placeholder: 'e.g. Late Night Listening, Focus' },
+                { label: 'Instrumentation', field: 'instruments', placeholder: 'e.g. Piano, Synth Pad' },
+                { label: 'Texture', field: 'textures', placeholder: 'e.g. Delicate, Organic' },
+                { label: 'Keywords', field: 'human_tags', placeholder: 'Add custom tags...' },
+                { label: 'Movement', field: 'movement', placeholder: 'e.g. Building, Flowing' },
               ].map(item => (
                 <div key={item.field}>
                   <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">
@@ -474,17 +465,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
                       ]}
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">BPM (optional)</label>
-                    <input
-                      type="number"
-                      value={versionForm.bpm}
-                      onChange={e => setVersionForm({ ...versionForm, bpm: e.target.value })}
-                      className="w-full px-4 py-3 bg-black/5 border border-transparent focus:bg-white focus:border-black/20 rounded-xl outline-none transition-all"
-                      placeholder="Same as main if empty"
-                    />
-                  </div>
-                  <div>
+                  <div className="col-span-2">
                     <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">Audio File</label>
                     <label className="flex flex-col items-center justify-center w-full px-4 py-8 bg-black/5 border-2 border-dashed border-black/10 hover:border-black/30 rounded-xl cursor-pointer transition-all group">
                       <div className="flex flex-col items-center justify-center pt-1 pb-2 text-center px-4">
@@ -528,7 +509,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
                             <span className="px-2 py-0.5 bg-black/5 text-black/60 rounded text-[10px] uppercase tracking-wider">{v.track_type}</span>
                           </div>
                           <div className="text-xs text-black/50 mt-1">
-                            {v.bpm ? `${v.bpm} BPM` : 'BPM inherited'}
+                            {v.duration ? `${Math.floor(v.duration / 60)}:${Math.floor(v.duration % 60).toString().padStart(2, '0')}` : 'Unknown duration'}
                           </div>
                         </div>
                         <button 

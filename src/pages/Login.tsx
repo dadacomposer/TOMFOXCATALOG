@@ -13,6 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   
   const navigate = useNavigate();
 
@@ -25,6 +26,15 @@ export default function Login() {
     setMessage(null);
 
     try {
+      if (isForgotPassword) {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/`,
+        });
+        if (resetError) throw resetError;
+        setMessage('Password reset link sent! Please check your email.');
+        return;
+      }
+
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -82,6 +92,13 @@ export default function Login() {
     }
   };
 
+  const toggleForgotPassword = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsForgotPassword(!isForgotPassword);
+    setError(null);
+    setMessage(null);
+  };
+
   return (
     <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isLoginModalOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isLoginModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100 pointer-events-auto' : 'bg-black/0 backdrop-blur-none opacity-0 pointer-events-none'}`} onClick={() => setLoginModalOpen(false)} />
@@ -99,7 +116,7 @@ export default function Login() {
           Welcome.
         </h1>
         <p className="font-sans text-black/50 text-xs uppercase tracking-widest mb-8">
-          Sign up to get started
+          {isForgotPassword ? 'Reset your password' : 'Sign up to get started'}
         </p>
 
         {error && (
@@ -114,23 +131,27 @@ export default function Login() {
           </div>
         )}
 
-        <div className="flex flex-col gap-4 mb-8">
-          <button
-            onClick={() => handleOAuth('google')}
-            className="flex items-center justify-center gap-3 w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-transform hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-              <path d={siGoogle.path} />
-            </svg>
-            Continue with Google
-          </button>
-        </div>
+        {!isForgotPassword && (
+          <>
+            <div className="flex flex-col gap-4 mb-8">
+              <button
+                onClick={() => handleOAuth('google')}
+                className="flex items-center justify-center gap-3 w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                  <path d={siGoogle.path} />
+                </svg>
+                Continue with Google
+              </button>
+            </div>
 
-        <div className="flex items-center gap-4 mb-8">
-          <div className="h-[1px] flex-1 bg-black/10"></div>
-          <span className="font-sans text-black/40 text-[10px] uppercase tracking-widest">Or email</span>
-          <div className="h-[1px] flex-1 bg-black/10"></div>
-        </div>
+            <div className="flex items-center gap-4 mb-8">
+              <div className="h-[1px] flex-1 bg-black/10"></div>
+              <span className="font-sans text-black/40 text-[10px] uppercase tracking-widest">Or email</span>
+              <div className="h-[1px] flex-1 bg-black/10"></div>
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
           <div className="relative">
@@ -147,18 +168,31 @@ export default function Login() {
             />
           </div>
           
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Lock className="w-5 h-5 text-black/40" />
+          
+          {!isForgotPassword && (
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Lock className="w-5 h-5 text-black/40" />
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="PASSWORD"
+                required
+                className={`relative z-20 w-full bg-black/5 border border-transparent focus:border-black/20 focus:bg-white rounded-xl py-4 pl-12 pr-4 text-sm font-sans placeholder:text-black/30 outline-none transition-all ${isLoginModalOpen ? 'pointer-events-auto select-auto' : 'pointer-events-none select-none'}`}
+              />
             </div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="PASSWORD"
-              required
-              className={`relative z-20 w-full bg-black/5 border border-transparent focus:border-black/20 focus:bg-white rounded-xl py-4 pl-12 pr-4 text-sm font-sans placeholder:text-black/30 outline-none transition-all ${isLoginModalOpen ? 'pointer-events-auto select-auto' : 'pointer-events-none select-none'}`}
-            />
+          )}
+
+          <div className="flex justify-between items-center mt-2">
+            <button 
+              type="button" 
+              onClick={toggleForgotPassword}
+              className="text-[10px] uppercase tracking-widest font-bold text-black/40 hover:text-black transition-colors"
+            >
+              {isForgotPassword ? 'Back to login' : 'Forgot password?'}
+            </button>
           </div>
 
           <button
@@ -169,10 +203,9 @@ export default function Login() {
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin mx-auto" />
             ) : (
-              <>
-                <span>Continue</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
+              <span className="flex items-center justify-center gap-2">
+                {isForgotPassword ? 'Send Reset Link' : 'Sign In / Sign Up'} <ArrowRight className="w-4 h-4" />
+              </span>
             )}
           </button>
         </form>

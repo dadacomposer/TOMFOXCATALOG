@@ -59,7 +59,7 @@ type FilterOptions = {
   scenarios: FilterOption[];
   human_tags: FilterOption[];
   energy_level: FilterOption[];
-  bpm_range: { min: number; max: number };
+  movement: FilterOption[];
 };
 
 export default function Browse() {
@@ -79,7 +79,7 @@ export default function Browse() {
   const [hasMoreTracks, setHasMoreTracks] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({
-    genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], bpm_range: [0, 0], shadow_tags: []
+    genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: []
   });
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [filterSearch, setFilterSearch] = useState(''); // search within filter panel
@@ -90,13 +90,14 @@ export default function Browse() {
 
   const FILTER_CATEGORIES = useMemo(() => [
     { title: 'Genre',       key: 'genre',        options: filterOptions?.genre || [] },
-    { title: 'Subgenre',    key: 'subgenre',     options: filterOptions?.subgenre || [] },
-    { title: 'Moods',       key: 'moods',        options: filterOptions?.moods || [] },
+    { title: 'Arrangement', key: 'subgenre',     options: filterOptions?.subgenre || [] },
+    { title: 'Mood',        key: 'moods',        options: filterOptions?.moods || [] },
     { title: 'Instruments', key: 'instruments',  options: filterOptions?.instruments || [] },
-    { title: 'Texture',     key: 'textures',     options: filterOptions?.textures || [] },
-    { title: 'Scenarios',   key: 'scenarios',    options: filterOptions?.scenarios || [] },
-    { title: 'Tags',        key: 'human_tags',   options: filterOptions?.human_tags || [] },
-    { title: 'Energy',      key: 'energy_level', options: filterOptions?.energy_level || [] },
+    { title: 'Function',    key: 'textures',     options: filterOptions?.textures || [] },
+    { title: 'Music For',   key: 'scenarios',    options: filterOptions?.scenarios || [] },
+    { title: 'Character',   key: 'human_tags',   options: filterOptions?.human_tags || [] },
+    { title: 'Movement',    key: 'movement',     options: filterOptions?.movement || [] },
+    { title: 'Tempo',       key: 'energy_level', options: filterOptions?.energy_level || [] },
   ], [filterOptions]);
   
   const { playTrack, currentTrack, isPlaying, togglePlay, setProgress, progress, setPendingSeek, isPreviewMode, setIsPreviewMode, setFallbackPlaylist, currentSource, setCurrentSource, setIsCurrentPreviewDormant, currentPlaylist, setCurrentPlaylist, setSelectedTrackForDetails } = usePlayer();
@@ -355,7 +356,7 @@ export default function Browse() {
   };
 
   const clearAllFilters = () => {
-    setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], bpm_range: [0, 0] });
+    setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [] });
     if (filterOptions?.bpm_range) setBpmRange([filterOptions.bpm_range.min, filterOptions.bpm_range.max]);
     setExpandedCategory(null);
   };
@@ -651,7 +652,7 @@ export default function Browse() {
                 setSearchQuery(e.target.value);
                 setIsTypingSearch(true);
                 if (e.target.value.trim() !== '') {
-                  setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], bpm_range: [0, 0], shadow_tags: [] });
+                  setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] });
                   setExpandedCategory(null);
                 }
               }}
@@ -748,16 +749,7 @@ export default function Browse() {
                 <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             ))}
-            {activeFilters.bpm_range?.[1] > 0 && filterOptions?.bpm_range && (activeFilters.bpm_range[0] > filterOptions.bpm_range.min || activeFilters.bpm_range[1] < filterOptions.bpm_range.max) && (
-              <button
-                onClick={() => { setActiveFilters(prev => ({ ...prev, bpm_range: [0, 0] })); if (filterOptions?.bpm_range) setBpmRange([filterOptions.bpm_range.min, filterOptions.bpm_range.max]); }}
-                className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
-              >
-                BPM {activeFilters.bpm_range[0]}–{activeFilters.bpm_range[1]}
-                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            )}
-            <button onClick={() => setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], bpm_range: [0, 0], shadow_tags: [] })} className="text-[10px] font-bold uppercase tracking-wider text-black/40 hover:text-black underline ml-2 transition-colors">Clear all</button>
+            <button onClick={() => setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] })} className="text-[10px] font-bold uppercase tracking-wider text-black/40 hover:text-black underline ml-2 transition-colors">Clear all</button>
           </div>
         )}
       </div>
@@ -792,23 +784,6 @@ export default function Browse() {
                     </button>
                   );
                 })}
-
-                {/* BPM slider button */}
-                {filterOptions?.bpm_range && (
-                  <button
-                    onClick={() => { setExpandedCategory(expandedCategory === 'bpm_range' ? null : 'bpm_range'); setFilterSearch(''); }}
-                    className={`w-full text-left px-3 h-[38px] shrink-0 rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center justify-between transition-colors ${
-                      expandedCategory === 'bpm_range' ? 'bg-black text-white' : 'hover:bg-black/5 text-black/60 hover:text-black'
-                    }`}
-                  >
-                    <span>BPM</span>
-                    {activeFilters.bpm_range?.[1] > 0 && filterOptions?.bpm_range && (activeFilters.bpm_range[0] > filterOptions.bpm_range.min || activeFilters.bpm_range[1] < filterOptions.bpm_range.max) ? (
-                      <span className={`w-[18px] h-[18px] shrink-0 flex items-center justify-center rounded-full text-[9px] transition-colors ${ expandedCategory === 'bpm_range' ? 'bg-white text-black' : 'bg-black text-white'}`}>1</span>
-                    ) : (
-                      <span className="w-[18px] h-[18px] shrink-0 opacity-0 pointer-events-none" />
-                    )}
-                  </button>
-                )}
                 
                 <button 
                   onClick={clearAllFilters}
@@ -823,7 +798,7 @@ export default function Browse() {
               </div>
 
               <div className={`absolute left-[130px] top-0 bottom-0 w-[250px] pl-6 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
-                {expandedCategory && expandedCategory !== 'bpm_range' && (() => {
+                {expandedCategory && (() => {
                   const cat = FILTER_CATEGORIES.find(c => c.key === expandedCategory);
                   if (!cat) return null;
                   const filteredOpts = filterSearch
@@ -861,57 +836,6 @@ export default function Browse() {
                     </div>
                   );
                 })()}
-
-                {/* BPM Slider Panel */}
-                {expandedCategory === 'bpm_range' && filterOptions?.bpm_range && (
-                  <div className="flex flex-col h-full w-full">
-                    <div className="text-black/40 text-[10px] font-bold uppercase tracking-widest mb-4 shrink-0">BPM Range</div>
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[13px] font-bold">{bpmRange[0]}</span>
-                        <span className="text-[10px] text-black/40 uppercase tracking-widest">to</span>
-                        <span className="text-[13px] font-bold">{bpmRange[1]}</span>
-                      </div>
-                      <div className="flex flex-col gap-3">
-                        <div>
-                          <label className="text-[10px] text-black/40 uppercase tracking-widest font-bold">Min</label>
-                          <input
-                            type="range"
-                            min={filterOptions.bpm_range.min}
-                            max={filterOptions.bpm_range.max}
-                            value={bpmRange[0]}
-                            onChange={e => {
-                              const v = Number(e.target.value);
-                              const newRange: [number, number] = [v, Math.max(v, bpmRange[1])];
-                              setBpmRange(newRange);
-                              setActiveFilters(prev => ({ ...prev, bpm_range: newRange }));
-                            }}
-                            className="w-full accent-black"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-black/40 uppercase tracking-widest font-bold">Max</label>
-                          <input
-                            type="range"
-                            min={filterOptions.bpm_range.min}
-                            max={filterOptions.bpm_range.max}
-                            value={bpmRange[1]}
-                            onChange={e => {
-                              const v = Number(e.target.value);
-                              const newRange: [number, number] = [Math.min(bpmRange[0], v), v];
-                              setBpmRange(newRange);
-                              setActiveFilters(prev => ({ ...prev, bpm_range: newRange }));
-                            }}
-                            className="w-full accent-black"
-                          />
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-black/40">
-                        Catalog range: {filterOptions.bpm_range.min}–{filterOptions.bpm_range.max} BPM
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
             </div>

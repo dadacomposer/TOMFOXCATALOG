@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { Wrench } from 'lucide-react';
 
 export default function Header() {
   const [isHeaderDark, setIsHeaderDark] = useState(false);
@@ -31,6 +32,7 @@ export default function Header() {
   }, [location]);
 
   const isHomePage = location.pathname === '/';
+  const isAdmin = user && (user.email === 'dadacomposer@gmail.com' || user.email === 'licensing@tomfoxcatalog.com');
   
   let headerBgClass = '';
   let borderClass = 'border-b-2 border-black/10';
@@ -79,10 +81,19 @@ export default function Header() {
             <Link to="/enterprise" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Enterprise</Link>
           </>
         )}
+        {isAdmin && (
+          <Link 
+            to="/admin" 
+            className={`flex items-center justify-center ml-4 w-8 h-8 rounded-full transition-colors ${isHeaderDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-black'}`}
+            title="Admin Panel"
+          >
+            <Wrench className="w-4 h-4" />
+          </Link>
+        )}
         {user ? (
         <button 
           onClick={() => setAccountPanelOpen(true)}
-          className="is-avatar ml-4 w-8 h-8 aspect-square flex items-center justify-center shrink-0 bg-black/5 border border-black/10 hover:border-black/30 transition-all overflow-hidden"
+          className="is-avatar ml-2 w-8 h-8 aspect-square flex items-center justify-center shrink-0 bg-black/5 border border-black/10 hover:border-black/30 transition-all overflow-hidden"
         >
           {profile?.avatar_url || user.user_metadata?.avatar_url ? (
             <img 

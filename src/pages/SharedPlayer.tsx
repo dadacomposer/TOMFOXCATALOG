@@ -233,8 +233,9 @@ export default function SharedPlayer() {
                     const subgenres = parseTags(track.subgenre);
                     const moods = parseTags(track.moods);
                     const scenarios = parseTags(track.scenarios);
+                    const movement = parseTags(track.movement);
                     
-                    const all = [...human, ...subgenres, ...moods, ...scenarios];
+                    const all = [...human, ...subgenres, ...moods, ...scenarios, ...movement];
                     const unique = Array.from(new Set(all));
                     const tags = unique.slice(0, 2);
                     

@@ -111,16 +111,21 @@ export default function ProfileSettings() {
       if (profileError) throw profileError;
 
       // 2. Update Email (Auth level) if changed
+      let emailChanged = false;
       if (email !== user.email) {
         const { error: emailError } = await supabase.auth.updateUser({ email });
         if (emailError) throw emailError;
         // Optionally update email in profiles table as well, though it's typically synced via triggers
         await supabase.from('profiles').update({ email }).eq('id', user.id);
+        emailChanged = true;
       }
 
       await refreshProfile();
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+      if (emailChanged) {
+        toast.success("Confirmation emails sent. Please check your inboxes to verify the change.", { duration: 6000 });
+      }
     } catch (err: any) {
       console.error("Failed to save changes", err);
       alert(err.message || "Failed to save changes.");

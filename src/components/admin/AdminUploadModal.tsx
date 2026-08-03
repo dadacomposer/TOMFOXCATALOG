@@ -393,8 +393,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
         key_strength: 0,
         danceability: 0,
         average_loudness: 0,
-        integrated_loudness: 0,
-        bpm: 0
+        integrated_loudness: 0
       }]).select().single();
       
       if (dbError) throw new Error(dbError.message);
@@ -545,6 +544,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
             updatePayload.textures = parentTrack.textures;
             updatePayload.scenarios = parentTrack.scenarios;
             updatePayload.human_tags = parentTrack.human_tags;
+            updatePayload.movement = parentTrack.movement;
             updatePayload.description = parentTrack.description;
           }
         }
@@ -557,6 +557,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
           updatePayload.textures = [];
           updatePayload.scenarios = [];
           updatePayload.human_tags = [];
+          updatePayload.movement = [];
           updatePayload.description = null;
         }
 
