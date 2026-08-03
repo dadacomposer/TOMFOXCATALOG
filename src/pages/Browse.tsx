@@ -11,7 +11,7 @@ import { ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, S
 import PlaylistIsland from '../components/PlaylistIsland';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import TrackActionButtons from '../components/TrackActionButtons';
-import FilterSidebar from '../components/FilterSidebar';
+
 import WaveformView from '../components/WaveformView';
 import { usePlayer } from '../context/PlayerContext';
 import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS, DEFAULT_ARTIST } from '../config';

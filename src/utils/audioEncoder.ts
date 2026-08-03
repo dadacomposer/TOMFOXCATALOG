@@ -13,7 +13,7 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
   const result = interleave(buffer);
   const dataView = encodeWAV(result, format, sampleRate, numChannels, bitDepth);
   
-  return new Blob([dataView], { type: 'audio/wav' });
+  return new Blob([dataView as any], { type: 'audio/wav' });
 }
 
 function interleave(buffer: AudioBuffer): Float32Array {

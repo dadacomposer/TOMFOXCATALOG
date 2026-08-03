@@ -53,7 +53,7 @@ export type AdminTrack = {
 
 
 type AdminTracksProps = {
-  setActiveSection?: (section: 'tracks' | 'users' | 'licenses' | 'tickets' | 'analytics' | 'settings') => void;
+  setActiveSection?: React.Dispatch<React.SetStateAction<"tracks" | "settings" | "users" | "licenses" | "tickets" | "features" | "studio">>;
 };
 
 export default function AdminTracks({ setActiveSection }: AdminTracksProps = {}) {

@@ -262,12 +262,12 @@ export default function TrackFormatsModal({ track, onClose, onUpdate }: TrackFor
                       )}
                     </div>
                   </div>
-                  {exists && format.id === 'aiff' && (
+                  {exists && format.id === 'has_aiff' && (
                     <div className="w-full mt-2 flex items-center justify-center h-8 bg-black/5 rounded-lg border border-black/10">
                        <span className="text-[10px] font-bold text-black/40 uppercase tracking-wider">Preview not supported by browser</span>
                     </div>
                   )}
-                  {exists && format.id !== 'aiff' && (
+                  {exists && format.id !== 'has_aiff' && (
                     <div className="w-full mt-2">
                       <audio 
                         controls 

@@ -923,7 +923,12 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
                                       parentTrackId: track.id,
                                       playlistId: track.playlistId,
                                       status: 'pending',
-                                      progress: 0
+                                      progress: 0,
+                                      hasWav: file.name.toLowerCase().endsWith('.wav'),
+                                      hasAiff: file.name.toLowerCase().endsWith('.aiff') || file.name.toLowerCase().endsWith('.aif'),
+                                      hasMp3: file.name.toLowerCase().endsWith('.mp3'),
+                                      hasWatermarked: false,
+                                      allFiles: [file]
                                     }));
                                     setStagedTracks(prev => [...prev, ...newChildren]);
                                     newChildren.forEach(child => startOptimisticUpload(child));

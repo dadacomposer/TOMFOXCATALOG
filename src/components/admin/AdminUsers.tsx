@@ -17,9 +17,10 @@ export type ProfileData = {
   is_admin: boolean;
   banned_at: string | null;
   current_period_end: string | null;
+  billing_interval?: string | null;
 };
 
-export default function AdminUsers({ setActiveSection }: { setActiveSection: (s: any) => void }) {
+export default function AdminUsers({ setActiveSection }: { setActiveSection: React.Dispatch<React.SetStateAction<"tracks" | "settings" | "users" | "licenses" | "tickets" | "features" | "studio">> }) {
   const [users, setUsers] = useState<ProfileData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

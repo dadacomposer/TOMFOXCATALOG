@@ -92,7 +92,7 @@ async function _processAudioFormatsCore(
     const wavName = 'output.wav';
     await ffmpeg.exec(['-y', '-i', inputName, wavName]);
     const wavData = await ffmpeg.readFile(wavName);
-    const wavBlob = new Blob([wavData], { type: 'audio/wav' });
+    const wavBlob = new Blob([wavData as any], { type: 'audio/wav' });
     results.wavFile = new File([wavBlob], `${originalBaseName}.wav`, { type: 'audio/wav' });
     await ffmpeg.deleteFile(wavName);
   }
@@ -103,7 +103,7 @@ async function _processAudioFormatsCore(
     const aiffName = 'output.aiff';
     await ffmpeg.exec(['-y', '-i', inputName, aiffName]);
     const aiffData = await ffmpeg.readFile(aiffName);
-    const aiffBlob = new Blob([aiffData], { type: 'audio/aiff' });
+    const aiffBlob = new Blob([aiffData as any], { type: 'audio/aiff' });
     results.aiffFile = new File([aiffBlob], `${originalBaseName}.aiff`, { type: 'audio/aiff' });
     await ffmpeg.deleteFile(aiffName);
   }
@@ -121,7 +121,7 @@ async function _processAudioFormatsCore(
     await ffmpeg.exec(['-y', '-i', inputName, '-c:a', 'libmp3lame', '-b:a', '192k', mp3Name]);
     
     const mp3Data = await ffmpeg.readFile(mp3Name);
-    const mp3Blob = new Blob([mp3Data], { type: 'audio/mpeg' });
+    const mp3Blob = new Blob([mp3Data as any], { type: 'audio/mpeg' });
     results.mp3File = new File([mp3Blob], `${originalBaseName}.mp3`, { type: 'audio/mpeg' });
   } else if (inputExt === 'mp3') {
     // If it's already an MP3 and we don't need to generate one, just use the input name
@@ -175,10 +175,10 @@ async function _processAudioFormatsCore(
       watermarkedName
     ]);
 
-    const wmFileData = await ffmpeg.readFile(watermarkedName);
-    const wmBlob = new Blob([wmFileData], { type: 'audio/mpeg' });
+    const watermarkedData = await ffmpeg.readFile(watermarkedName);
+    const watermarkedBlob = new Blob([watermarkedData as any], { type: 'audio/mpeg' });
     const originalBaseName = mainFile.name.replace(/\.[^/.]+$/, "");
-    results.watermarkedFile = new File([wmBlob], `${originalBaseName}.mp3`, { type: 'audio/mpeg' }); // use .mp3 extension for standard audio preview
+    results.watermarkedFile = new File([watermarkedBlob], `${originalBaseName}.mp3`, { type: 'audio/mpeg' }); // use .mp3 extension for standard audio preview
   }
 
   // Cleanup memory

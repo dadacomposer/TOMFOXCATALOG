@@ -39,6 +39,8 @@ type AuthContextType = {
   refreshProfile: () => Promise<void>;
   setWorkspaces: (ws: any[]) => void;
   fetchWorkspaces: (userId: string) => Promise<void>;
+  customMusicIntent: boolean;
+  setCustomMusicIntent: (val: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -81,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAccountPanelOpen, setAccountPanelOpen] = useState(false);
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [isContactModalOpen, setContactModalOpen] = useState(false);
+  const [customMusicIntent, setCustomMusicIntent] = useState(false);
 
   const fetchWorkspaces = async (userId: string) => {
     try {
@@ -177,7 +180,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isContactModalOpen,
       setContactModalOpen,
       signOut,
-      refreshProfile, setWorkspaces, fetchWorkspaces
+      refreshProfile, setWorkspaces, fetchWorkspaces,
+      customMusicIntent, setCustomMusicIntent
     }}>
       {children}
     </AuthContext.Provider>
