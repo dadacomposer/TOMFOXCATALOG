@@ -112,9 +112,9 @@ export default function AdminFeatures() {
 
   return (
     <div className="flex-1 overflow-y-auto h-full w-full -mx-8 px-8 pb-32">
-      <div className="py-6 md:py-12 w-full max-w-5xl mx-auto space-y-12 animate-fade-in-up">
+      <div className="w-full max-w-5xl mx-auto space-y-12 animate-fade-in-up">
       
-      <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-10 bg-[#fafafa]/80 backdrop-blur-md pt-6 md:pt-12 pb-6 border-b border-black/5 -mx-8 px-8 mb-8 flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-medium uppercase tracking-tighter mb-2">Public Content</h2>
           <p className="text-black/50 font-sans">Control public site behavior and modify page copy instantly.</p>
@@ -122,7 +122,7 @@ export default function AdminFeatures() {
         <button 
           onClick={saveSettings}
           disabled={isSaving}
-          className="flex items-center gap-2 px-6 py-3 bg-black text-white font-medium uppercase tracking-widest text-xs rounded-xl hover:bg-black/80 transition-all disabled:opacity-50"
+          className="flex items-center gap-2 px-6 py-3 bg-black text-white font-medium uppercase tracking-widest text-xs rounded-xl hover:bg-black/80 transition-all disabled:opacity-50 shadow-sm"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {isSaving ? 'Saving...' : 'Save Changes'}

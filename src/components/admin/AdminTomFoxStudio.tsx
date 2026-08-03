@@ -207,7 +207,7 @@ export default function AdminTomFoxStudio() {
           projectTitle,
           amount: numericAmount,
           currency,
-          daysUntilDue: parseInt(daysUntilDue),
+          daysUntilDue: parseInt(daysUntilDue) || 7,
           projectType,
           createInvoice,
           requiresAuth
@@ -230,7 +230,18 @@ export default function AdminTomFoxStudio() {
       resetForm();
     } catch (e: any) {
       console.error(e);
-      toast.error(e.message || "Failed to create project");
+      let errorMessage = e.message || "Failed to create project";
+      if (e.context && typeof e.context.json === 'function') {
+        try {
+          const errorBody = await e.context.json();
+          if (errorBody && errorBody.error) {
+            errorMessage = errorBody.error;
+          }
+        } catch (parseError) {
+          console.error("Failed to parse error body", parseError);
+        }
+      }
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

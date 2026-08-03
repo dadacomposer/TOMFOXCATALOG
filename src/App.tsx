@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -72,8 +72,8 @@ function AppLayout() {
             <Route path="/browse" element={<Browse />} />
             <Route path="/my-music" element={<MyMusic />} />
             <Route path="/playlists" element={<Playlists />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/enterprise" element={<Enterprise />} />
+            <Route path="/pricing" element={settings?.subscriptions_enabled ? <Pricing /> : <Navigate to="/" replace />} />
+            <Route path="/enterprise" element={settings?.subscriptions_enabled ? <Enterprise /> : <Navigate to="/" replace />} />
             <Route path="/checkout-resume" element={<CheckoutResume />} />
             <Route path="/checkout-success" element={<CheckoutSuccess />} />
             <Route path="/checkout-cancel" element={<CheckoutCancel />} />
