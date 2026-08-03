@@ -22,7 +22,7 @@ import { DownloadProvider } from './context/DownloadContext';
 import { LicenseProvider } from './context/LicenseContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { UserPlaylistsProvider } from './context/UserPlaylistsContext';
-import { SettingsProvider } from './context/SettingsContext';
+import { SettingsProvider, useSettings } from './context/SettingsContext';
 import GlobalPlayer from './components/GlobalPlayer';
 import DownloadModal from './components/DownloadModal';
 import LicenseModal from './components/LicenseModal';
@@ -60,6 +60,7 @@ function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { settings } = useSettings();
 
   return (
     <div className={`w-full min-h-screen bg-[#fafafa] text-black font-sans selection:bg-black selection:text-white flex flex-col transition-all duration-500 ease-out ${currentTrack ? 'pb-[90px]' : ''}`}>

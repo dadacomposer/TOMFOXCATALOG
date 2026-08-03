@@ -83,7 +83,7 @@ export default function Browse() {
   });
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [filterSearch, setFilterSearch] = useState(''); // search within filter panel
-  const [bpmRange, setBpmRange] = useState<[number, number]>([0, 0]);
+
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
 
@@ -150,9 +150,9 @@ export default function Browse() {
       setDefaultTrackIds(ids);
       if (fOpts) {
         setFilterOptions(fOpts);
-        if (fOpts.bpm_range) setBpmRange([fOpts.bpm_range.min, fOpts.bpm_range.max]);
+      } else {
+        setFilterOptions(null);
       }
-      
       setLoading(false);
     }
     loadData();
@@ -228,13 +228,10 @@ export default function Browse() {
   const totalActiveFilterCount = useMemo(() => {
     let count = 0;
     Object.entries(activeFilters).forEach(([k, v]) => {
-      if (k === 'bpm_range') return;
       if (Array.isArray(v)) count += v.length;
     });
-    // Count BPM range as active if changed from defaults
-    if (filterOptions?.bpm_range && (activeFilters.bpm_range[0] > filterOptions.bpm_range.min || activeFilters.bpm_range[1] > 0 && activeFilters.bpm_range[1] < filterOptions.bpm_range.max)) count++;
     return count;
-  }, [activeFilters, filterOptions]);
+  }, [activeFilters]);
 
   useEffect(() => {
     if (loading) return;
@@ -356,8 +353,7 @@ export default function Browse() {
   };
 
   const clearAllFilters = () => {
-    setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [] });
-    if (filterOptions?.bpm_range) setBpmRange([filterOptions.bpm_range.min, filterOptions.bpm_range.max]);
+    setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] });
     setExpandedCategory(null);
   };
 
