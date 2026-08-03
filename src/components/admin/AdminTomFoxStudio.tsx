@@ -644,6 +644,20 @@ export default function AdminTomFoxStudio() {
 
             </div>
 
+            <div className="bg-black/5 p-4 rounded-2xl flex items-center justify-between">
+              <div>
+                <label className="text-xs uppercase font-bold tracking-widest block mb-1">Requires Authentication</label>
+                <p className="text-[10px] text-black/50 font-sans pr-4">If disabled, anyone with the link can access this project without logging in.</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setRequiresAuth(!requiresAuth)}
+                className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${requiresAuth ? 'bg-black' : 'bg-black/20'}`}
+              >
+                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${requiresAuth ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
             <button 
               onClick={handleCreateProject}
               disabled={isSubmitting}

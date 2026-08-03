@@ -59,7 +59,8 @@ serve(async (req) => {
       amount,
       currency = 'usd',
       daysUntilDue = 7,
-      createInvoice = true
+      createInvoice = true,
+      requiresAuth = true
     } = await req.json();
 
     if (!projectTitle || !projectType || (createInvoice && !amount)) {
@@ -156,6 +157,7 @@ serve(async (req) => {
         project_type: projectType,
         status: 'accepted',
         budget: amount.toString(),
+        requires_auth: requiresAuth,
       })
       .select()
       .single();
