@@ -72,7 +72,13 @@ export default function Login() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication.');
+      let errorMessage = err?.message || 'An error occurred during authentication.';
+      if (typeof errorMessage === 'string' && (errorMessage === '{}' || errorMessage.trim() === '')) {
+        errorMessage = 'An error occurred. Please try again later.';
+      } else if (typeof err === 'object' && !err.message) {
+        errorMessage = 'An unexpected error occurred.';
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
