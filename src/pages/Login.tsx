@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { siGoogle } from 'simple-icons';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function Login() {
   const { isLoginModalOpen, setLoginModalOpen, setPlayIntro } = useAuth();
@@ -14,6 +15,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isVerifyEmailModalOpen, setIsVerifyEmailModalOpen] = useState(false);
   
   const navigate = useNavigate();
 
@@ -41,12 +43,19 @@ export default function Login() {
       });
 
       if (signInError) {
-        // If signIn fails, attempt to sign up
-        const { error: signUpError } = await supabase.auth.signUp({
+        if (signInError.message.toLowerCase().includes('email not confirmed')) {
+          setIsVerifyEmailModalOpen(true);
+          setLoading(false);
+          return;
+        }
+
+        // If signIn fails for another reason, attempt to sign up
+        const redirectUrlPath = sessionStorage.getItem('redirectAfterLogin') || '/';
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${window.location.origin}${redirectUrlPath}`,
           },
         });
 
@@ -56,8 +65,19 @@ export default function Login() {
             throw new Error('Invalid password for existing account. Please try again.');
           }
           throw signUpError;
+        } else if (signUpData?.session) {
+          // If session exists, email confirmation is disabled and user is logged in
+          setPlayIntro(true);
+          setLoginModalOpen(false);
+          const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
+          if (redirectUrl) {
+            sessionStorage.removeItem('redirectAfterLogin');
+            navigate(redirectUrl);
+          } else {
+            navigate('/browse');
+          }
         } else {
-          setMessage('Account created successfully! Please check your email for confirmation.');
+          setIsVerifyEmailModalOpen(true);
         }
       } else {
         // Sign in successful
@@ -72,6 +92,7 @@ export default function Login() {
         }
       }
     } catch (err: any) {
+      console.error("Auth error details:", err);
       let errorMessage = err?.message || 'An error occurred during authentication.';
       if (typeof errorMessage === 'string' && (errorMessage === '{}' || errorMessage.trim() === '')) {
         errorMessage = 'An error occurred. Please try again later.';
@@ -105,6 +126,26 @@ export default function Login() {
     setMessage(null);
   };
 
+  const handleResendEmail = async () => {
+    setLoading(true);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}${sessionStorage.getItem('redirectAfterLogin') || '/'}`,
+        },
+      });
+      if (resendError) throw resendError;
+      toast.success('Verification email resent successfully.');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to resend verification email.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isLoginModalOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isLoginModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100 pointer-events-auto' : 'bg-black/0 backdrop-blur-none opacity-0 pointer-events-none'}`} onClick={() => setLoginModalOpen(false)} />
@@ -112,109 +153,155 @@ export default function Login() {
       <div className={`relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isLoginModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
         {/* Close Button */}
         <button 
-          onClick={() => setLoginModalOpen(false)} 
+          onClick={() => {
+            setLoginModalOpen(false);
+            setTimeout(() => {
+              setIsVerifyEmailModalOpen(false);
+              setEmail('');
+              setPassword('');
+              setError(null);
+              setMessage(null);
+            }, 500); // Reset after closing animation
+          }} 
           className="absolute top-6 right-6 p-2 rounded-full hover:bg-black/5 text-black/40 hover:text-black transition-colors"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter leading-[0.9] text-black mb-2">
-          Welcome.
-        </h1>
-        <p className="font-sans text-black/50 text-xs uppercase tracking-widest mb-8">
-          {isForgotPassword ? 'Reset your password' : 'Sign up to get started'}
-        </p>
-
-        {error && (
-          <div className="mb-6 p-4 border border-red-500/20 bg-red-50 text-red-600 rounded-xl text-sm font-sans tracking-wide">
-            {error}
-          </div>
-        )}
-
-        {message && (
-          <div className="mb-6 p-4 border border-green-500/20 bg-green-50 text-green-600 rounded-xl text-sm font-sans tracking-wide">
-            {message}
-          </div>
-        )}
-
-        {!isForgotPassword && (
-          <>
-            <div className="flex flex-col gap-4 mb-8">
-              <button
-                onClick={() => handleOAuth('google')}
-                className="flex items-center justify-center gap-3 w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-transform hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                  <path d={siGoogle.path} />
-                </svg>
-                Continue with Google
-              </button>
+        {isVerifyEmailModalOpen ? (
+          <div className="flex flex-col items-center justify-center text-center animate-in fade-in duration-500 py-8">
+            <div className="w-20 h-20 rounded-full bg-black/5 flex items-center justify-center mb-6">
+              <Mail className="w-8 h-8 text-black" />
             </div>
-
-            <div className="flex items-center gap-4 mb-8">
-              <div className="h-[1px] flex-1 bg-black/10"></div>
-              <span className="font-sans text-black/40 text-[10px] uppercase tracking-widest">Or email</span>
-              <div className="h-[1px] flex-1 bg-black/10"></div>
-            </div>
-          </>
-        )}
-
-        <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Mail className="w-5 h-5 text-black/40" />
-            </div>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="EMAIL ADDRESS"
-              required
-              className={`relative z-20 w-full bg-black/5 border border-transparent focus:border-black/20 focus:bg-white rounded-xl py-4 pl-12 pr-4 text-sm font-sans placeholder:text-black/30 outline-none transition-all ${isLoginModalOpen ? 'pointer-events-auto select-auto' : 'pointer-events-none select-none'}`}
-            />
-          </div>
-          
-          
-          {!isForgotPassword && (
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Lock className="w-5 h-5 text-black/40" />
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="PASSWORD"
-                required
-                className={`relative z-20 w-full bg-black/5 border border-transparent focus:border-black/20 focus:bg-white rounded-xl py-4 pl-12 pr-4 text-sm font-sans placeholder:text-black/30 outline-none transition-all ${isLoginModalOpen ? 'pointer-events-auto select-auto' : 'pointer-events-none select-none'}`}
-              />
-            </div>
-          )}
-
-          <div className="flex justify-between items-center mt-2">
-            <button 
-              type="button" 
-              onClick={toggleForgotPassword}
-              className="text-[10px] uppercase tracking-widest font-bold text-black/40 hover:text-black transition-colors"
+            <h2 className="text-3xl font-bold uppercase tracking-tighter mb-4">Check your email</h2>
+            <p className="text-sm text-black/60 font-sans mb-8 leading-relaxed px-4">
+              We've sent a verification link to <span className="font-bold text-black">{email}</span>. Please click the link to verify your account and get started.
+            </p>
+            <button
+              onClick={() => {
+                setLoginModalOpen(false);
+                setTimeout(() => setIsVerifyEmailModalOpen(false), 500);
+              }}
+              className="w-full bg-black text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-black/90 transition-transform hover:scale-[1.02] active:scale-[0.98] mb-3"
             >
-              {isForgotPassword ? 'Back to login' : 'Forgot password?'}
+              Got it
+            </button>
+            <button
+              onClick={handleResendEmail}
+              disabled={loading}
+              className="w-full bg-black/5 text-black py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-black/10 transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            >
+              {loading ? 'Sending...' : 'Resend Email'}
             </button>
           </div>
+        ) : (
+          <>
+            <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter leading-[0.9] text-black mb-2">
+              Welcome.
+            </h1>
+            <p className="font-sans text-black/50 text-xs uppercase tracking-widest mb-8">
+              {isForgotPassword ? 'Reset your password' : 'Sign up to get started'}
+            </p>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-between w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 mt-2"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                {isForgotPassword ? 'Send Reset Link' : 'Sign In / Sign Up'} <ArrowRight className="w-4 h-4" />
-              </span>
+            {error && (
+              <div className="mb-6 p-4 border border-red-500/20 bg-red-50 text-red-600 rounded-xl text-sm font-sans tracking-wide">
+                {error}
+              </div>
             )}
-          </button>
-        </form>
+
+            {message && (
+              <div className="mb-6 p-4 border border-green-500/20 bg-green-50 text-green-600 rounded-xl text-sm font-sans tracking-wide">
+                {message}
+              </div>
+            )}
+
+            {!isForgotPassword && (
+              <>
+                <div className="flex flex-col gap-4 mb-8">
+                  <button
+                    onClick={() => handleOAuth('google')}
+                    className="flex items-center justify-center gap-3 w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                      <path d={siGoogle.path} />
+                    </svg>
+                    Continue with Google
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="h-[1px] flex-1 bg-black/10"></div>
+                  <span className="font-sans text-black/40 text-[10px] uppercase tracking-widest">Or email</span>
+                  <div className="h-[1px] flex-1 bg-black/10"></div>
+                </div>
+              </>
+            )}
+
+            <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="w-5 h-5 text-black/40" />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="EMAIL ADDRESS"
+                  required
+                  className={`relative z-20 w-full bg-black/5 border border-transparent focus:border-black/20 focus:bg-white rounded-xl py-4 pl-12 pr-4 text-sm font-sans placeholder:text-black/30 outline-none transition-all ${isLoginModalOpen ? 'pointer-events-auto select-auto' : 'pointer-events-none select-none'}`}
+                />
+              </div>
+              
+              
+              {!isForgotPassword && (
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="w-5 h-5 text-black/40" />
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="PASSWORD"
+                    required
+                    className={`relative z-20 w-full bg-black/5 border border-transparent focus:border-black/20 focus:bg-white rounded-xl py-4 pl-12 pr-4 text-sm font-sans placeholder:text-black/30 outline-none transition-all ${isLoginModalOpen ? 'pointer-events-auto select-auto' : 'pointer-events-none select-none'}`}
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-between items-center mt-2">
+                <button 
+                  type="button" 
+                  onClick={toggleForgotPassword}
+                  className="text-[10px] uppercase tracking-widest font-bold text-black/40 hover:text-black transition-colors"
+                >
+                  {isForgotPassword ? 'Back to sign in' : 'Forgot Password?'}
+                </button>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="group relative flex items-center justify-center gap-2 w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-all mt-4 disabled:opacity-50 overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                <span className="relative z-10 flex items-center gap-2">
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {isForgotPassword ? 'Sending...' : 'Authenticating...'}
+                    </>
+                  ) : (
+                    <>
+                      {isForgotPassword ? 'Send Reset Link' : 'Continue'}
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </span>
+              </button>
+            </form>
+          </>
+        )}
 
         <div className="mt-8 text-center">
           <p className="font-sans text-black/50 text-[10px] uppercase tracking-widest">

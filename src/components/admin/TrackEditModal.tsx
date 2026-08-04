@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Plus, Trash2, Music, Tag, FileAudio, ChevronDown } from 'lucide-react';
+import { X, Save, Upload, Plus, Trash2, Music, Tag, FileAudio, ChevronDown, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { Track } from '../../context/PlayerContext';
@@ -18,29 +18,27 @@ type TrackEditModalProps = {
 const TagInput = ({ tags, onChange, placeholder }: { tags: string[], onChange: (tags: string[]) => void, placeholder?: string }) => {
   const [input, setInput] = useState('');
   
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      const newTag = input.trim().replace(/^,+|,+$/g, '');
-      if (newTag && !tags.includes(newTag)) {
-        onChange([...tags, newTag]);
+      const value = input.trim();
+      if (value && !tags.includes(value)) {
+        onChange([...tags, value]);
+        setInput('');
       }
-      setInput('');
-    } else if (e.key === 'Backspace' && !input && tags.length > 0) {
-      onChange(tags.slice(0, -1));
     }
   };
-  
+
   const removeTag = (indexToRemove: number) => {
     onChange(tags.filter((_, index) => index !== indexToRemove));
   };
-  
+
   return (
-    <div className="flex flex-wrap items-center gap-2 w-full px-4 py-3 bg-white border border-black/10 focus-within:border-black/30 rounded-xl transition-all shadow-sm">
+    <div className="flex flex-wrap items-center gap-1.5 p-2 bg-white border border-black/10 focus-within:border-black/30 rounded-xl min-h-[46px] shadow-sm transition-all">
       {tags.map((tag, index) => (
-        <span key={index} className="flex items-center gap-1 px-2.5 py-1 bg-black/5 rounded-md text-xs font-bold tracking-wider uppercase text-black/70">
+        <span key={index} className="inline-flex items-center gap-1 px-2.5 py-1 bg-black/5 rounded-lg text-xs font-medium text-black">
           {tag}
-          <button type="button" onClick={() => removeTag(index)} className="p-0.5 hover:bg-black/10 rounded-full transition-colors text-black/40 hover:text-black">
+          <button type="button" onClick={() => removeTag(index)} className="hover:text-red-500">
             <X className="w-3 h-3" />
           </button>
         </span>
@@ -51,7 +49,7 @@ const TagInput = ({ tags, onChange, placeholder }: { tags: string[], onChange: (
         onChange={e => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={tags.length === 0 ? placeholder : ''}
-        className="flex-1 min-w-[120px] bg-transparent outline-none text-sm"
+        className="flex-1 min-w-[120px] bg-transparent outline-none text-sm px-1"
       />
     </div>
   );
@@ -60,66 +58,48 @@ const TagInput = ({ tags, onChange, placeholder }: { tags: string[], onChange: (
 export default function TrackEditModal({ track, onClose, onSave }: TrackEditModalProps) {
   const [activeTab, setActiveTab] = useState<'main' | 'metadata' | 'versions'>('main');
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const [versions, setVersions] = useState<Track[]>([]);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+  
+  // New version state
+  const [versionForm, setVersionForm] = useState<{
+    file: File | null;
+    title: string;
+    version_type: string;
+  }>({
+    file: null,
+    title: '',
+    version_type: 'Alt Version'
+  });
+  const [isUploadingVersion, setIsUploadingVersion] = useState(false);
 
-  const toArray = (val: any) => {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string') {
-      try {
-        const parsed = JSON.parse(val);
-        if (Array.isArray(parsed)) return parsed.map(s => String(s).trim());
-      } catch (e) {}
-      return val.split(',').map((s: string) => s.trim().replace(/^["'\[\]]+|["'\[\]]+$/g, '')).filter(Boolean);
-    }
-    return [];
-  };
-  const safeJoin = (val: any) => Array.isArray(val) ? val.join(', ') : (val || '');
-
-  // Main & Metadata Form State
+  // Main track form
   const [form, setForm] = useState({
     file_name: track.file_name || '',
     artwork_url: track.artwork_url || '',
-    composers: Array.isArray(track.composers)
-      ? track.composers.filter(c => c.trim() !== '') 
-      : (track.composers ? [] : DEFAULT_COMPOSERS),
     album: track.album || '',
+    composers: Array.isArray(track.composers) ? track.composers : (track.composers ? [track.composers] : DEFAULT_COMPOSERS),
     key: track.key || '',
-    subgenre: toArray(track.subgenre),
-    moods: toArray(track.moods),
-    scenarios: toArray(track.scenarios),
-    instruments: toArray(track.instruments),
-    textures: toArray(track.textures),
-    human_tags: toArray(track.human_tags),
-    movement: toArray(track.movement),
+    subgenre: (() => {
+      if (!track.subgenre) return [];
+      if (Array.isArray(track.subgenre)) return track.subgenre;
+      try { return JSON.parse(track.subgenre); } catch(e) { return [track.subgenre]; }
+    })(),
+    moods: Array.isArray(track.moods) ? track.moods : (track.moods ? [track.moods] : []),
+    scenarios: Array.isArray(track.scenarios) ? track.scenarios : (track.scenarios ? [track.scenarios] : []),
+    instruments: Array.isArray(track.instruments) ? track.instruments : (track.instruments ? [track.instruments] : []),
+    textures: Array.isArray(track.textures) ? track.textures : (track.textures ? [track.textures] : []),
+    human_tags: Array.isArray(track.human_tags) ? track.human_tags : (track.human_tags ? [track.human_tags] : []),
+    movement: Array.isArray(track.movement) ? track.movement : (track.movement ? [track.movement] : []),
   });
 
-  // Version Upload State
-  const [isUploadingVersion, setIsUploadingVersion] = useState(false);
-  const [versionForm, setVersionForm] = useState({
-    file: null as File | null,
-    title: '',
-    track_type: 'version' as 'version' | 'stem',
-  });
   const [versionToDelete, setVersionToDelete] = useState<string | null>(null);
-
-  const [initialForm] = useState(form);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
-
-  const handleClose = () => {
-    if (JSON.stringify(form) !== JSON.stringify(initialForm)) {
-      setShowExitConfirm(true);
-    } else {
-      onClose();
-    }
-  };
 
   useEffect(() => {
     if (activeTab === 'versions') {
       loadVersions();
     }
-  }, [activeTab]);
+  }, [activeTab, track.id]);
 
   const loadVersions = async () => {
     setIsLoadingVersions(true);
@@ -128,7 +108,6 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
       setVersions(data);
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load versions');
     } finally {
       setIsLoadingVersions(false);
     }
@@ -160,7 +139,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
     try {
       const updateData = {
         file_name: form.file_name,
-        artwork_url: form.artwork_url || null,
+        artwork_url: form.artwork_url ? form.artwork_url : null,
         album: form.album,
         composers: form.composers,
         key: form.key,
@@ -198,7 +177,6 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
     const loadingToast = toast.loading('Uploading version to R2...');
 
     try {
-      // 1. Get Presigned URL
       const { data: presignData, error: presignError } = await supabase.functions.invoke('r2_presigned_url', {
         body: {
           fileName: versionForm.file.name,
@@ -210,7 +188,6 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         throw new Error(presignError?.message || 'Failed to get upload URL');
       }
 
-      // 2. Upload file directly to R2
       const uploadRes = await fetch(presignData.presignedUrl, {
         method: 'PUT',
         body: versionForm.file,
@@ -223,7 +200,6 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         throw new Error('Failed to upload file to storage');
       }
 
-      // Extract waveform before saving
       let waveform_data: number[] | null = null;
       let extracted_duration = 0;
       try {
@@ -234,22 +210,20 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         console.error("Failed to extract waveform in browser", err);
       }
 
-      // 3. Insert into tracks table
       const newTrackData = {
         file_name: versionForm.title,
-        file_path: presignData.publicUrl, // fallback for not-null constraint
-        folder: 'versions', // fallback for not-null constraint
+        file_path: presignData.publicUrl,
+        folder: 'versions',
         duration: Math.round(extracted_duration) || 0,
-        key: track.key || '', // inherit key or fallback
-        scale: '', // fallback
-        key_strength: 0, // fallback
-        danceability: 0, // fallback
-        average_loudness: 0, // fallback
-        integrated_loudness: 0, // fallback
+        key: track.key || '',
+        scale: '',
+        key_strength: 0,
+        danceability: 0,
+        average_loudness: 0,
+        integrated_loudness: 0,
         r2_url: presignData.publicUrl,
         parent_track_id: track.id,
-        track_type: versionForm.track_type,
-        // Inherit artwork from parent
+        track_type: versionForm.version_type === 'Stem' ? 'stem' : 'version',
         artwork_url: track.artwork_url,
         waveform_data: waveform_data ? JSON.stringify(waveform_data) : null,
       };
@@ -259,7 +233,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
       if (insertError) throw insertError;
 
       toast.success('Version uploaded successfully', { id: loadingToast });
-      setVersionForm({ file: null, title: '', track_type: 'version' });
+      setVersionForm({ file: null, title: '', version_type: 'Alt Version' });
       loadVersions();
     } catch (error: any) {
       console.error(error);
@@ -282,17 +256,17 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
     }
   };
 
+  const handleClose = () => {
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
       <div className="bg-white rounded-2xl w-full max-w-3xl flex flex-col h-[85vh] overflow-hidden shadow-2xl border border-black/10 animate-slide-in-up" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-black/5 flex items-center justify-between shrink-0">
           <h3 className="text-xl font-bold flex items-center gap-3">
-            <span className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 relative overflow-hidden">
-              {form.artwork_url ? (
-                <img src={form.artwork_url} className="w-full h-full object-cover" alt="" />
-              ) : (
-                <TrackArtwork track={track as any} className="absolute inset-0 w-full h-full object-cover" />
-              )}
+            <span className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 relative overflow-hidden border border-black/10">
+              <TrackArtwork track={{ ...track, artwork_url: form.artwork_url }} className="absolute inset-0 w-full h-full object-cover" />
             </span>
             {track.file_name}
           </h3>
@@ -360,12 +334,8 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">Artwork</label>
                 <div className="flex gap-6 items-center">
-                  <div className="w-32 h-32 shrink-0 bg-black/5 rounded-xl overflow-hidden border border-black/10 relative group">
-                    {form.artwork_url ? (
-                      <img src={form.artwork_url} className="w-full h-full object-cover" alt="Artwork" />
-                    ) : (
-                      <TrackArtwork track={track as any} className="absolute inset-0 w-full h-full object-cover" />
-                    )}
+                  <div className="w-32 h-32 shrink-0 bg-black/5 rounded-xl overflow-hidden border border-black/10 relative group shadow-inner">
+                    <TrackArtwork track={{ ...track, artwork_url: form.artwork_url }} className="absolute inset-0 w-full h-full object-cover" />
                     <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm">
                       <Upload className="w-6 h-6 mb-1" />
                       <span className="text-xs font-bold uppercase tracking-wider">Change</span>
@@ -385,12 +355,15 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
                         className="flex-1 px-3 py-2 bg-white border border-black/10 focus:border-black/30 rounded-lg outline-none transition-all shadow-sm text-sm"
                         placeholder="https://..."
                       />
-                      {form.artwork_url && (
+                      {(form.artwork_url || track.artwork_url) && (
                         <button
+                          type="button"
                           onClick={() => setForm({ ...form, artwork_url: '' })}
-                          className="px-3 py-2 bg-black/5 hover:bg-black/10 text-black/60 hover:text-black rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shrink-0"
+                          className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shrink-0 flex items-center gap-1.5"
+                          title="Restore default procedural artwork"
                         >
-                          Reset Default
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Restore Default
                         </button>
                       )}
                     </div>
@@ -456,8 +429,8 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">Type</label>
                     <CustomSelect
-                      value={versionForm.track_type}
-                      onChange={(val) => setVersionForm({ ...versionForm, track_type: val as any })}
+                      value={versionForm.version_type}
+                      onChange={(val) => setVersionForm({ ...versionForm, version_type: val as any })}
                       className="!bg-black/5 !border-transparent hover:!border-black/20 focus:!bg-white"
                       options={[
                         { value: 'version', label: 'Alternative Version' },
@@ -568,28 +541,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
           </div>
         )}
 
-        {showExitConfirm && (
-          <div className="absolute inset-0 z-[110] bg-white/80 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
-            <div className="bg-white p-6 rounded-2xl shadow-xl border border-black/10 max-w-sm w-full text-center">
-              <h4 className="text-lg font-bold mb-2">Unsaved Changes</h4>
-              <p className="text-black/60 text-sm mb-6">You have unsaved changes. Are you sure you want to discard them?</p>
-              <div className="flex gap-3 justify-center">
-                <button 
-                  onClick={() => setShowExitConfirm(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-wider text-black/60 hover:bg-black/5 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-wider bg-red-500 text-white hover:bg-red-600 transition-colors"
-                >
-                  Discard
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );

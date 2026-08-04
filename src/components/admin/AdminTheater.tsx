@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { extractWaveformFromFile } from '../../utils/audioWaveform';
 import WaveformView from '../WaveformView';
 import { supabase } from '../../lib/supabase';
+import { useParams, useNavigate } from 'react-router-dom';
 import { DadaLogo } from '../shared/DadaLogo';
 import { useAsyncTheater } from '../../hooks/useAsyncTheater';
 import { Play, Pause, MessageCircle, ChevronLeft, Send, CheckCircle2, Lock, UploadCloud, Loader2 } from 'lucide-react';
@@ -12,7 +13,10 @@ import StudioOnboardingModal from '../studio/StudioOnboardingModal';
 import UploadVersionModal from './UploadVersionModal';
 import ProjectFilesPanel from '../studio/ProjectFilesPanel';
 
-export default function AdminTheater({ projectId, onBack }: { projectId: string; onBack: () => void }) {
+export default function AdminTheater() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
+  const onBack = () => navigate('/admin/studio');
 
   const [project, setProject] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
@@ -651,7 +655,7 @@ export default function AdminTheater({ projectId, onBack }: { projectId: string;
             </div>
 
             <ProjectFilesPanel 
-              projectId={projectId} 
+              projectId={projectId!} 
               project={project} 
               onRefresh={fetchStudioData} 
             />
@@ -672,7 +676,7 @@ export default function AdminTheater({ projectId, onBack }: { projectId: string;
 
         {isUploadModalOpen && (
           <UploadVersionModal 
-            projectId={projectId}
+            projectId={projectId!}
             originalDuration={duration}
             existingAssets={audioAssets}
             onComplete={() => {

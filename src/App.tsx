@@ -15,8 +15,16 @@ import CheckoutCancel from './pages/CheckoutCancel';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Admin from './pages/Admin';
+import AdminTracks from './components/admin/AdminTracks';
+import AdminUsers from './components/admin/AdminUsers';
+import AdminTickets from './components/admin/AdminTickets';
+import AdminSettings from './components/admin/AdminSettings';
+import AdminFeatures from './components/admin/AdminFeatures';
+import AdminTomFoxStudio from './components/admin/AdminTomFoxStudio';
+import AdminTheater from './components/admin/AdminTheater';
 import SharedPlayer from './pages/SharedPlayer';
 import TomFoxStudio from './pages/TomFoxStudio';
+import NotFound from './pages/NotFound';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { DownloadProvider } from './context/DownloadContext';
 import { LicenseProvider } from './context/LicenseContext';
@@ -37,6 +45,7 @@ import UpdatePasswordModal from './components/UpdatePasswordModal';
 import MyMusic from './pages/MyMusic';
 import TrackDetailsModal from './components/shared/TrackDetailsModal';
 import OnboardingModal from './components/OnboardingModal';
+import InviteManager from './components/InviteManager';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -81,9 +90,20 @@ function AppLayout() {
             <Route path="/checkout-cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin" element={<Admin />}>
+              <Route index element={<Navigate to="tracks" replace />} />
+              <Route path="tracks" element={<AdminTracks />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="licenses" element={<div className="p-8 text-center text-black/50">Licenses Management - Coming soon</div>} />
+              <Route path="tickets" element={<AdminTickets />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="features" element={<AdminFeatures />} />
+              <Route path="studio" element={<AdminTomFoxStudio />} />
+              <Route path="studio/:projectId" element={<AdminTheater />} />
+            </Route>
             <Route path="/studio/:project_id" element={<TomFoxStudio />} />
             <Route path="/share/:slug" element={<SharedPlayer />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </ErrorBoundary>
       </div>
@@ -124,6 +144,7 @@ function AppLayout() {
         }}
       />
       <TrackDetailsModal />
+      <InviteManager />
     </div>
   );
 }

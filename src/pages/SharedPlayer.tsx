@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { usePlayer } from '../context/PlayerContext';
+import { useDownload } from '../context/DownloadContext';
 import { Play, Pause, Download, Music, Loader2, ShoppingBag } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import toast from 'react-hot-toast';
 import WaveformView from '../components/WaveformView';
-import TrackActionButtons from '../components/TrackActionButtons';
 import TrackArtwork from '../components/TrackArtwork';
 import Footer from '../components/Footer';
 import { getPreviewTimings, parseWaveform } from '../lib/audioUtils';
@@ -42,6 +42,7 @@ export default function SharedPlayer() {
   const [error, setError] = useState<string | null>(null);
 
   const { currentTrack, isPlaying, playTrack, togglePlay, progress, setPendingSeek, setIsCurrentPreviewDormant, isPreviewMode, setIsPreviewMode } = usePlayer();
+  const { openDownloadModal } = useDownload();
 
   useEffect(() => {
     async function fetchSharedLink() {
@@ -69,8 +70,13 @@ export default function SharedPlayer() {
 
         if (tracksError) throw tracksError;
         
-        // Reorder tracks to match original selection order if needed, but for now just set them
-        setTracks(tracksData || []);
+        // Reorder tracks to match original selection order
+        if (tracksData && Array.isArray(linkResult.track_ids)) {
+          const ordered = linkResult.track_ids.map((id: string) => tracksData.find(t => t.id === id)).filter(Boolean);
+          setTracks(ordered);
+        } else {
+          setTracks(tracksData || []);
+        }
       } catch (err) {
         console.error('Error fetching shared link:', err);
         setError('This link is invalid or has expired.');
@@ -110,10 +116,18 @@ export default function SharedPlayer() {
     try {
       const zip = new JSZip();
       
+      let idx = 0;
       for (const track of tracks) {
-        const format = track.has_wav ? 'wav' : 'mp3';
+        idx++;
+        let format = 'mp3';
+        if (track.has_wav || track.wav_url) {
+          format = 'wav';
+        } else if (track.has_aiff || track.aiff_url) {
+          format = 'aiff';
+        }
+
         const { data, error } = await supabase.functions.invoke('get_download_url', {
-          body: { trackId: track.id, format }
+          body: { trackId: track.id, format, sharedSlug: slug }
         });
         if (error || !data?.url) continue;
         const url = data.url;
@@ -123,14 +137,15 @@ export default function SharedPlayer() {
         if (!response.ok) throw new Error(`Failed to fetch ${track.file_name}`);
         const blob = await response.blob();
         
-        // Add to zip
-        // Ensure the file has an extension, fallback to .wav
-        const ext = url.split('.').pop()?.toLowerCase() || 'wav';
-        const safeName = track.file_name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        zip.file(`${safeName}.${ext}`, blob);
+        // Add to zip with clean name and exact format extension
+        const baseTitle = cleanTitle(track.file_name).replace(/[^a-zA-Z0-9_\-\s]/g, '_').trim();
+        const numStr = tracks.length > 1 ? `${idx}. ` : '';
+        const fileNameInZip = `${numStr}${baseTitle || 'track'}.${format}`;
+        
+        zip.file(fileNameInZip, blob);
       }
       
-      const content = await zip.generateAsync({ type: 'blob' });
+      const content = await zip.generateAsync({ type: 'blob', mimeType: 'application/zip' });
       saveAs(content, 'tom_fox_tracks.zip');
       toast.success('Download complete!', { id: toastId });
     } catch (err) {
@@ -261,37 +276,25 @@ export default function SharedPlayer() {
                   />
                 </div>
 
-                <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
-                  <TrackActionButtons trackId={track.id} />
-                  <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider text-right w-10 ml-2">
+                <div className="flex items-center justify-end gap-3 shrink-0 ml-auto">
+                  <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider text-right w-10">
                     {track.duration ? formatTime(track.duration) : '0:00'}
                   </div>
-                </div>
-                
-                {canDownload && (
-                  <div className="shrink-0 flex items-center justify-center w-10 pr-2">
+                  
+                  {canDownload && (
                     <button 
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        const toastId = toast.loading('Generating secure link...');
-                        const format = track.has_wav ? 'wav' : 'mp3';
-                        const { data, error } = await supabase.functions.invoke('get_download_url', {
-                          body: { trackId: track.id, format }
-                        });
-                        toast.dismiss(toastId);
-                        if (!error && data?.url) {
-                          window.open(data.url, '_blank');
-                        } else {
-                          toast.error('Could not generate download link');
-                        }
+                        openDownloadModal(track, e, { forceUnrestricted: true, sharedSlug: slug });
                       }}
-                      className="w-7 h-7 flex items-center justify-center rounded bg-[#111111] hover:bg-[#333333] text-white transition-all shadow-sm"
+                      className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded-lg hover:border-black/30 transition-colors bg-white font-sans text-[11px] font-bold uppercase tracking-widest text-black shadow-sm shrink-0"
                       title="Download Track"
                     >
                       <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })}

@@ -112,7 +112,7 @@ export default function AdminFeatures() {
 
   return (
     <div className="flex-1 overflow-y-auto h-full w-full -mx-8 px-8 pb-32">
-      <div className="w-full max-w-5xl mx-auto space-y-12 animate-fade-in-up">
+      <div className="w-full max-w-5xl mx-auto space-y-12">
       
       <div className="sticky top-0 z-10 bg-[#fafafa]/80 backdrop-blur-md pt-6 md:pt-12 pb-6 border-b border-black/5 -mx-8 px-8 mb-8 flex items-center justify-between">
         <div>

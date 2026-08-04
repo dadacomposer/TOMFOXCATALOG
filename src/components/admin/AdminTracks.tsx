@@ -52,11 +52,7 @@ export type AdminTrack = {
 };
 
 
-type AdminTracksProps = {
-  setActiveSection?: React.Dispatch<React.SetStateAction<"tracks" | "settings" | "users" | "licenses" | "tickets" | "features" | "studio">>;
-};
-
-export default function AdminTracks({ setActiveSection }: AdminTracksProps = {}) {
+export default function AdminTracks() {
   const { currentTrack, isPlaying, playTrack, togglePlay, stopPlayback } = usePlayer();
   const [allFetchedTracks, setAllFetchedTracks] = useState<AdminTrack[]>([]);
   const [tracks, setTracks] = useState<AdminTrack[]>([]);
@@ -75,7 +71,7 @@ export default function AdminTracks({ setActiveSection }: AdminTracksProps = {})
     human_tags: '', artwork_url: '' 
   });
   const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<'none' | 'artwork' | 'playlist' | 'share' | 'trash' | 'delete' | 'restore'>('none');
+  const [bulkAction, setBulkAction] = useState<'none' | 'playlist' | 'share' | 'trash' | 'delete' | 'restore' | 'artwork'>('none');
   const [bulkForm, setBulkForm] = useState({ artwork_url: '', playlist_name: '', playlist_cover: '', can_download: false, shared_with: '', notes: '' });
   const [isLinkManagerOpen, setIsLinkManagerOpen] = useState(false);
   const [sharedLinks, setSharedLinks] = useState<any[]>([]);
@@ -679,19 +675,6 @@ toast.success('Track restored successfully');
   const currentViewList = activeTab === 'active' ? activeTracks : trashTracks;
   const displayedTracks = currentViewList.slice(0, visibleCount);
 
-  const handleBulkArtworkSubmit = async () => {
-    if (!bulkForm.artwork_url) return;
-    try {
-      const ids = Array.from(selectedTracks);
-      const { error } = await supabase.from('tracks').update({ artwork_url: bulkForm.artwork_url }).in('id', ids);
-      if (error) throw error;
-      setAllFetchedTracks(prev => prev.map(t => ids.includes(t.id) ? { ...t, artwork_url: bulkForm.artwork_url } : t));
-      setBulkAction('none');
-      setSelectedTracks(new Set());
-      toast.success('Artwork updated for selected tracks');
-    } catch (e) { toast.error('Failed to update artwork'); }
-  };
-
   const handleBulkPlaylistSubmit = async () => {
     if (!bulkForm.playlist_name) return;
     try {
@@ -1065,9 +1048,6 @@ toast.success('Track restored successfully');
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setBulkAction('artwork')} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
-              Set Artwork
-            </button>
             <button onClick={() => setBulkAction('playlist')} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
               Create Playlist
             </button>
@@ -1411,18 +1391,7 @@ toast.success('Track restored successfully');
             </div>
             
             <div className="p-6 space-y-5">
-              {bulkAction === 'artwork' && (
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">Artwork</label>
-                  <div className="flex gap-2">
-                    <input type="text" value={bulkForm.artwork_url} onChange={e => setBulkForm({...bulkForm, artwork_url: e.target.value})} className="flex-1 px-4 py-3 bg-black/5 border border-transparent focus:border-black/20 focus:bg-white rounded-xl outline-none" placeholder="https://..." />
-                    <label className="flex items-center justify-center px-4 py-3 bg-black/5 rounded-xl cursor-pointer hover:bg-black/10 transition-colors shrink-0">
-                      <span className="text-xs font-bold uppercase tracking-wider text-black">Upload</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'bulkForm.artwork_url')} />
-                    </label>
-                  </div>
-                </div>
-              )}
+
 
               {bulkAction === 'playlist' && (
                 <>
@@ -1485,7 +1454,6 @@ toast.success('Track restored successfully');
               <button onClick={() => setBulkAction('none')} className="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider text-black/60 hover:bg-black/5 hover:text-black">Cancel</button>
               <button 
                 onClick={
-                  bulkAction === 'artwork' ? handleBulkArtworkSubmit : 
                   bulkAction === 'playlist' ? handleBulkPlaylistSubmit : 
                   bulkAction === 'share' ? handleBulkShareSubmit :
                   bulkAction === 'trash' ? handleBulkTrash :

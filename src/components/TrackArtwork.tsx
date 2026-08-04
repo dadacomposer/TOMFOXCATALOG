@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Track } from '../context/PlayerContext';
 
 interface TrackArtworkProps {
@@ -7,7 +7,20 @@ interface TrackArtworkProps {
 }
 
 export default function TrackArtwork({ track, className = '' }: TrackArtworkProps) {
+  const [hasError, setHasError] = useState(false);
+
   if (!track) return null;
+
+  if (track.artwork_url && !hasError) {
+    return (
+      <img 
+        src={track.artwork_url} 
+        alt={track.file_name || 'Artwork'} 
+        className={`object-cover select-none pointer-events-none ${className}`}
+        onError={() => setHasError(true)}
+      />
+    );
+  }
 
   return (
     <div className={`@container isolate flex flex-col bg-white border border-black/5 overflow-hidden no-radius select-none pointer-events-none ${className}`}>

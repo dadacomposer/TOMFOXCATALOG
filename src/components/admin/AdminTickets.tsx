@@ -23,6 +23,7 @@ export default function AdminTickets() {
   const [isLoading, setIsLoading] = useState(true);
   
   const [activeTicket, setActiveTicket] = useState<DeveloperTicket | null>(null);
+  const [deleteTicketId, setDeleteTicketId] = useState<string | null>(null);
 
   
   const [showNewModal, setShowNewModal] = useState(false);
@@ -122,19 +123,24 @@ export default function AdminTickets() {
   };
 
   const handleDelete = async (ticketId: string) => {
-    if (!confirm('Are you sure you want to permanently delete this ticket?')) return;
+    setDeleteTicketId(ticketId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTicketId) return;
     
     const { error } = await supabase
       .from('developer_tickets')
       .delete()
-      .eq('id', ticketId);
+      .eq('id', deleteTicketId);
       
     if (!error) {
-      setTickets(tickets.filter(t => t.id !== ticketId));
-      if (activeTicket?.id === ticketId) {
+      setTickets(tickets.filter(t => t.id !== deleteTicketId));
+      if (activeTicket?.id === deleteTicketId) {
         setActiveTicket(null);
       }
     }
+    setDeleteTicketId(null);
   };
 
   const priorityColors = {
@@ -319,6 +325,35 @@ export default function AdminTickets() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTicketId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-95 fade-in duration-300 flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-6">
+              <Trash2 className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-2xl font-bold uppercase tracking-tighter mb-2">Delete Ticket</h3>
+            <p className="text-sm text-black/60 font-sans mb-8">
+              Are you sure you want to permanently delete this ticket? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button 
+                onClick={() => setDeleteTicketId(null)}
+                className="flex-1 bg-black/5 text-black py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-black/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 bg-red-500 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

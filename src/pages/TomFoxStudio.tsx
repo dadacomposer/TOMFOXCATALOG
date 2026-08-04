@@ -11,6 +11,7 @@ import { DadaLogo } from '../components/shared/DadaLogo';
 import toast from 'react-hot-toast';
 import StudioOnboardingModal from '../components/studio/StudioOnboardingModal';
 import ProjectFilesPanel from '../components/studio/ProjectFilesPanel';
+import InviteCollaboratorModal from '../components/studio/InviteCollaboratorModal';
 
 export default function TomFoxStudio() {
   const { project_id } = useParams();
@@ -23,6 +24,8 @@ export default function TomFoxStudio() {
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Sync Hook
   const {
@@ -103,19 +106,24 @@ export default function TomFoxStudio() {
         .eq('id', project_id)
         .single();
       
-      let isAdmin = false;
+      let userIsAdmin = false;
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('is_admin')
           .eq('id', user.id)
           .single();
-        isAdmin = profile?.is_admin || false;
+        userIsAdmin = profile?.is_admin || false;
+        setIsAdmin(userIsAdmin);
       }
 
       if (pErr || !pData) {
         setUnauthorized(true);
         setLoading(false);
+        if (!user) {
+          sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+          setLoginModalOpen(true);
+        }
         return;
       }
 
@@ -128,12 +136,6 @@ export default function TomFoxStudio() {
           return;
         }
         setLoginModalOpen(false);
-
-        if (pData.user_id !== user.id && !isAdmin) {
-          setUnauthorized(true);
-          setLoading(false);
-          return;
-        }
       }
 
       setProject(pData);
@@ -312,15 +314,50 @@ export default function TomFoxStudio() {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-3xl p-8 text-center shadow-xl border border-black/5">
-          {/* Using a simple SVG since Lock might not be imported if we move it up, wait, Lock is imported from lucide-react */}
           <div className="w-12 h-12 text-black/20 mx-auto mb-4 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
           </div>
-          <h2 className="text-2xl font-bold uppercase tracking-tighter mb-2">Access Denied</h2>
-          <p className="text-black/50 mb-8">You don't have permission to view this project. If you believe this is an error, please make sure you are logged into the correct account.</p>
+          <h2 className="text-2xl font-bold uppercase tracking-tighter mb-2">
+            {user ? 'Access Denied' : 'Authentication Required'}
+          </h2>
+          
+          {user ? (
+             <p className="text-black/50 mb-8">
+               It appears you're trying to access this project with the wrong account (<b>{user.email}</b>). 
+               Please log in with the correct account to continue.
+             </p>
+          ) : (
+             <p className="text-black/50 mb-8">
+               You must be logged in to view this project. If you received an invitation link, please log in or sign up to access it.
+             </p>
+          )}
+
+          {user ? (
+            <button 
+              onClick={async () => {
+                await supabase.auth.signOut();
+                sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+                setLoginModalOpen(true);
+              }}
+              className="w-full bg-black text-white py-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-colors mb-2"
+            >
+              Switch Account
+            </button>
+          ) : (
+            <button 
+              onClick={() => {
+                sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+                setLoginModalOpen(true);
+              }}
+              className="w-full bg-black text-white py-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-colors mb-2"
+            >
+              Log In
+            </button>
+          )}
+
           <button 
             onClick={() => navigate('/browse')}
-            className="w-full bg-black text-white py-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-colors"
+            className={`w-full bg-black/5 text-black hover:bg-black/10 py-4 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors`}
           >
             Go to Browse
           </button>
@@ -359,8 +396,15 @@ export default function TomFoxStudio() {
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 animate-in fade-in duration-300">
           <span className="text-sm font-bold uppercase tracking-widest text-black/80">{project.title}</span>
         </div>
-        <div className="flex-1 flex justify-end">
-          {/* Spazio vuoto per bilanciare il flex */}
+        <div className="flex-1 flex justify-end gap-4 items-center">
+          {(user?.id === project.user_id || isAdmin) && (
+            <button
+              onClick={() => setIsInviteModalOpen(true)}
+              className="text-xs font-bold uppercase tracking-widest text-black/40 hover:text-black transition-colors"
+            >
+              Share
+            </button>
+          )}
         </div>
       </header>
 
@@ -700,10 +744,17 @@ export default function TomFoxStudio() {
                      </div>
                   </div>
                 </motion.div>
-              )}
-            </AnimatePresence>
+                )}
+              </AnimatePresence>
 
             </div>
+            
+            <InviteCollaboratorModal 
+              isOpen={isInviteModalOpen}
+              onClose={() => setIsInviteModalOpen(false)}
+              projectId={project_id!}
+              isAdmin={user?.id === project.user_id || isAdmin}
+            />
 
             <ProjectFilesPanel 
               projectId={project_id!} 

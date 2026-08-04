@@ -79,9 +79,6 @@ export default function OnboardingModal() {
             handleNextStep3();
           }
           break;
-        case 4:
-          handleTrialDecision(false);
-          break;
         case 5:
           finishOnboarding();
           break;
@@ -223,25 +220,6 @@ export default function OnboardingModal() {
           await inviteTeamMember(workspaceId, email);
         }
       }
-      if (justPaid || localStorage.getItem('checkoutCompleted') === 'true') {
-        setStep(5);
-      } else {
-        setStep(4);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleTrialDecision = async (accepted: boolean) => {
-    setIsSubmitting(true);
-    try {
-      const status = accepted ? 'trialing' : 'none';
-      await updateProfile(user.id, {
-        subscription_status: status
-      });
       setStep(5);
     } catch (e) {
       console.error(e);
@@ -267,18 +245,13 @@ export default function OnboardingModal() {
     }
   };
 
-  // 7 days from now formatting
-  const trialEndDate = new Date();
-  trialEndDate.setDate(trialEndDate.getDate() + 7);
-  const formattedDate = trialEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
       <div 
         className="relative bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] transition-all"
         style={{ 
-          width: step === 4 ? '800px' : '480px',
-          height: step === 4 ? '500px' : (step === 5 || step === 0) ? '400px' : step === 2 ? '740px' : '600px',
+          width: '480px',
+          height: (step === 5 || step === 0) ? '400px' : step === 2 ? '740px' : '600px',
         }}
       >
         
@@ -573,53 +546,6 @@ export default function OnboardingModal() {
                 </div>
               </div>
             )}
-
-            {/* STEP 4: UPSELL (RIGHT SIDE) */}
-            {step === 4 && (
-              <div className="flex flex-col h-full">
-                
-                <div className="flex-1 flex flex-col justify-center">
-                  <div className="mb-8">
-                    <h3 className="text-sm font-bold uppercase tracking-widest mb-6">Payment Timeline</h3>
-                    
-                    <div className="relative pl-6 border-l border-black/10 flex flex-col gap-8">
-                      {/* Today */}
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-black ring-4 ring-white"></div>
-                        <div className="text-xs text-black/50 mb-1">Today</div>
-                        <div className="font-bold text-xl">$0.00</div>
-                      </div>
-                      
-                      {/* In 7 Days */}
-                      <div className="relative">
-                        <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-black/20 ring-4 ring-white"></div>
-                        <div className="text-xs text-black/50 mb-1">{formattedDate}</div>
-                        <div className="font-bold text-xl">$19.00 <span className="text-sm font-normal text-black/50">/month</span></div>
-                        <div className="text-xs text-black/50 mt-1">Personal plan (No add-ons)</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex gap-3 mt-auto">
-                  <button 
-                    onClick={() => handleTrialDecision(false)}
-                    disabled={isSubmitting}
-                    className="w-1/3 bg-black/5 text-black p-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-black/10 active:scale-[0.98] transition-all disabled:opacity-50 text-center"
-                  >
-                    No Thanks
-                  </button>
-                  <button 
-                    onClick={() => handleTrialDecision(true)}
-                    disabled={isSubmitting}
-                    className="flex-1 bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-black/90 active:scale-[0.98] transition-all disabled:opacity-50 text-center"
-                  >
-                    Start Trial
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* STEP 5: SUCCESS */}
             {step === 5 && (
               <div className="flex flex-col h-full items-center justify-center text-center">

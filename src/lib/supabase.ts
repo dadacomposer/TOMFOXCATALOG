@@ -602,14 +602,28 @@ export async function updateWorkspaceMember(workspaceId: string, userId: string,
 }
 
 export async function inviteTeamMember(workspaceId: string, email: string) {
-  const { data, error } = await supabase
-    .from('workspace_invites')
-    .insert([{ workspace_id: workspaceId, email }])
-    .select()
-    .single();
+  const { data, error } = await supabase.functions.invoke('invite-team-member', {
+    body: { workspaceId, email }
+  });
     
   if (error) throw error;
   return data;
+}
+
+export async function getMyWorkspaceInvites() {
+  const { data, error } = await supabase.rpc('get_my_workspace_invites');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function acceptWorkspaceInvite(inviteId: string) {
+  const { error } = await supabase.rpc('accept_workspace_invite', { p_invite_id: inviteId });
+  if (error) throw error;
+}
+
+export async function declineWorkspaceInvite(inviteId: string) {
+  const { error } = await supabase.rpc('decline_workspace_invite', { p_invite_id: inviteId });
+  if (error) throw error;
 }
 
 

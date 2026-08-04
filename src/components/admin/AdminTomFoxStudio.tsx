@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabase';
-import { Play, Plus, Search, ExternalLink, Settings2, UploadCloud, MonitorPlay, MessageCircle, ChevronDown, UserPlus, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Play, Plus, Search, ExternalLink, Settings2, UploadCloud, MonitorPlay, MessageCircle, ChevronDown, UserPlus, Lock, Unlock, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
-import AdminTheater from './AdminTheater';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminTomFoxStudio() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -26,10 +27,12 @@ export default function AdminTomFoxStudio() {
   const [projectType, setProjectType] = useState('');
   const [createInvoice, setCreateInvoice] = useState(false);
   const [requiresAuth, setRequiresAuth] = useState(true);
+  const [collaboratorEmails, setCollaboratorEmails] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [theaterProjectId, setTheaterProjectId] = useState<string | null>(null);
+  const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
   // Combobox state
   const [clientSearch, setClientSearch] = useState('');
@@ -153,6 +156,7 @@ export default function AdminTomFoxStudio() {
     setClientSearch('');
     setIsNewUser(false);
     setRequiresAuth(true);
+    setCollaboratorEmails([]);
   };
 
   const handleToggleAuth = async (projectId: string, currentVal: boolean) => {
@@ -210,7 +214,8 @@ export default function AdminTomFoxStudio() {
           daysUntilDue: parseInt(daysUntilDue) || 7,
           projectType,
           createInvoice,
-          requiresAuth
+          requiresAuth,
+          collaboratorEmails: collaboratorEmails.filter(e => e.trim() !== '')
         }
       }); if (error) throw error;
       
@@ -258,7 +263,7 @@ export default function AdminTomFoxStudio() {
       setProjects(prev => prev.filter(p => p.id !== projectToDelete));
       setSelectedProject(null);
       setProjectToDelete(null);
-      toast.success("Project deleted successfully");
+      toast.success("Project, client links, and R2 assets permanently deleted");
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "Failed to delete project");
@@ -267,12 +272,9 @@ export default function AdminTomFoxStudio() {
     }
   };
 
-  if (theaterProjectId) {
-    return <AdminTheater projectId={theaterProjectId} onBack={() => setTheaterProjectId(null)} />;
-  }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden animate-fade-in font-outfit">
+    <div className="flex flex-col h-full overflow-hidden font-outfit">
       
       {/* Header with DadaAudio Branding */}
       <div className="flex justify-between items-center mb-8 shrink-0">
@@ -304,9 +306,42 @@ export default function AdminTomFoxStudio() {
             <h3 className="font-bold text-sm uppercase tracking-widest text-black/40 flex items-center justify-between">
               Accepted <span className="bg-black/5 text-black px-2 py-0.5 rounded-full">{acceptedProjects.length}</span>
             </h3>
-            <div className="flex-grow bg-blue-50/50 rounded-[24px] p-4 flex flex-col gap-3 overflow-y-auto border border-blue-100">
+            <div 
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDragEnter={(e) => { e.preventDefault(); setDragOverColumn('accepted'); }}
+              onDragLeave={(e) => {
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                setDragOverColumn(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverColumn(null);
+                const id = e.dataTransfer.getData('text/plain') || draggedProjectId;
+                if (id) updateStatus(id, 'accepted');
+              }}
+              className={`flex-grow rounded-[24px] p-4 flex flex-col gap-3 overflow-y-auto border transition-all ${
+                dragOverColumn === 'accepted' ? 'bg-blue-100/80 border-blue-400 ring-2 ring-blue-400/30 scale-[1.01]' : 'bg-blue-50/50 border-blue-100'
+              }`}
+            >
               {acceptedProjects.map(p => (
-                <ProjectCard key={p.id} project={p} onClick={() => setSelectedProject(p)} onEnterTheater={() => setTheaterProjectId(p.id)} onToggleAuth={handleToggleAuth} />
+                <ProjectCard 
+                  key={p.id} 
+                  project={p} 
+                  onClick={() => setSelectedProject(p)} 
+                  onEnterTheater={() => navigate(`/admin/studio/${p.id}`)} 
+                  onToggleAuth={handleToggleAuth}
+                  onDelete={(id) => setProjectToDelete(id)}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', p.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    setDraggedProjectId(p.id);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedProjectId(null);
+                    setDragOverColumn(null);
+                  }}
+                  isDragging={draggedProjectId === p.id}
+                />
               ))}
               {acceptedProjects.length === 0 && (
                 <div className="text-center text-black/30 mt-10 text-sm font-medium">No accepted projects</div>
@@ -319,9 +354,42 @@ export default function AdminTomFoxStudio() {
             <h3 className="font-bold text-sm uppercase tracking-widest text-black/40 flex items-center justify-between">
               In Production <span className="bg-black/5 text-black px-2 py-0.5 rounded-full">{inProductionProjects.length}</span>
             </h3>
-            <div className="flex-grow bg-purple-50/50 rounded-[24px] p-4 flex flex-col gap-3 overflow-y-auto border border-purple-100">
+            <div 
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDragEnter={(e) => { e.preventDefault(); setDragOverColumn('in production'); }}
+              onDragLeave={(e) => {
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                setDragOverColumn(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverColumn(null);
+                const id = e.dataTransfer.getData('text/plain') || draggedProjectId;
+                if (id) updateStatus(id, 'in production');
+              }}
+              className={`flex-grow rounded-[24px] p-4 flex flex-col gap-3 overflow-y-auto border transition-all ${
+                dragOverColumn === 'in production' ? 'bg-purple-100/80 border-purple-400 ring-2 ring-purple-400/30 scale-[1.01]' : 'bg-purple-50/50 border-purple-100'
+              }`}
+            >
               {inProductionProjects.map(p => (
-                <ProjectCard key={p.id} project={p} onClick={() => setSelectedProject(p)} onEnterTheater={() => setTheaterProjectId(p.id)} onToggleAuth={handleToggleAuth} />
+                <ProjectCard 
+                  key={p.id} 
+                  project={p} 
+                  onClick={() => setSelectedProject(p)} 
+                  onEnterTheater={() => navigate(`/admin/studio/${p.id}`)} 
+                  onToggleAuth={handleToggleAuth}
+                  onDelete={(id) => setProjectToDelete(id)}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', p.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    setDraggedProjectId(p.id);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedProjectId(null);
+                    setDragOverColumn(null);
+                  }}
+                  isDragging={draggedProjectId === p.id}
+                />
               ))}
               {inProductionProjects.length === 0 && (
                 <div className="text-center text-black/30 mt-10 text-sm font-medium">No active production</div>
@@ -334,10 +402,46 @@ export default function AdminTomFoxStudio() {
             <h3 className="font-bold text-sm uppercase tracking-widest text-black/40 flex items-center justify-between">
               Completed <span className="bg-black/5 text-black px-2 py-0.5 rounded-full">{completedProjects.length}</span>
             </h3>
-            <div className="flex-grow bg-[#fafafa] rounded-[24px] p-4 flex flex-col gap-3 overflow-y-auto border border-black/5">
+            <div 
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDragEnter={(e) => { e.preventDefault(); setDragOverColumn('completed'); }}
+              onDragLeave={(e) => {
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                setDragOverColumn(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverColumn(null);
+                const id = e.dataTransfer.getData('text/plain') || draggedProjectId;
+                if (id) updateStatus(id, 'completed');
+              }}
+              className={`flex-grow rounded-[24px] p-4 flex flex-col gap-3 overflow-y-auto border transition-all ${
+                dragOverColumn === 'completed' ? 'bg-emerald-100/80 border-emerald-400 ring-2 ring-emerald-400/30 scale-[1.01]' : 'bg-[#fafafa] border-black/5'
+              }`}
+            >
               {completedProjects.map(p => (
-                <ProjectCard key={p.id} project={p} onClick={() => setSelectedProject(p)} onEnterTheater={() => setTheaterProjectId(p.id)} onToggleAuth={handleToggleAuth} />
+                <ProjectCard 
+                  key={p.id} 
+                  project={p} 
+                  onClick={() => setSelectedProject(p)} 
+                  onEnterTheater={() => navigate(`/admin/studio/${p.id}`)} 
+                  onToggleAuth={handleToggleAuth}
+                  onDelete={(id) => setProjectToDelete(id)}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', p.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    setDraggedProjectId(p.id);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedProjectId(null);
+                    setDragOverColumn(null);
+                  }}
+                  isDragging={draggedProjectId === p.id}
+                />
               ))}
+              {completedProjects.length === 0 && (
+                <div className="text-center text-black/30 mt-10 text-sm font-medium">No completed projects</div>
+              )}
             </div>
           </div>
 
@@ -346,8 +450,17 @@ export default function AdminTomFoxStudio() {
 
       {/* Create Project Modal */}
       {isCreateModalOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-[32px] w-full max-w-2xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto">
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto"
+          onClick={() => {
+            setCreateModalOpen(false);
+            resetForm();
+          }}
+        >
+          <div 
+            className="bg-white rounded-[32px] w-full max-w-2xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto"
+            onClick={e => e.stopPropagation()}
+          >
             <button 
               onClick={() => {
                 setCreateModalOpen(false);
@@ -531,7 +644,44 @@ export default function AdminTomFoxStudio() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 bg-[#fafafa] p-4 rounded-[20px] border border-black/5 mt-2">
+                {/* Collaborators */}
+                <div className="flex flex-col gap-2 mt-4 animate-fade-in">
+                  <label className="text-xs text-black/50 px-2 uppercase font-bold tracking-widest">Collaborators (Optional)</label>
+                  {collaboratorEmails.map((colEmail, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input 
+                        type="email" 
+                        value={colEmail}
+                        onChange={e => {
+                          const newEmails = [...collaboratorEmails];
+                          newEmails[index] = e.target.value;
+                          setCollaboratorEmails(newEmails);
+                        }}
+                        placeholder="collaborator@example.com"
+                        className="w-full bg-black/5 border border-transparent focus:border-black/20 focus:bg-white rounded-2xl p-4 text-sm font-sans outline-none transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newEmails = collaboratorEmails.filter((_, i) => i !== index);
+                          setCollaboratorEmails(newEmails);
+                        }}
+                        className="bg-black/5 hover:bg-black/10 text-black/50 hover:text-black p-4 rounded-2xl transition-colors shrink-0"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCollaboratorEmails([...collaboratorEmails, ''])}
+                    className="text-left text-xs font-bold uppercase tracking-widest text-black/50 hover:text-black transition-colors px-2 mt-1"
+                  >
+                    + Add Collaborator
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-2 bg-[#fafafa] p-4 rounded-[20px] border border-black/5 mt-4">
                   <label className="flex items-start gap-3 cursor-pointer group">
                     <div className={`mt-0.5 w-5 h-5 shrink-0 rounded flex items-center justify-center transition-colors ${requiresAuth ? 'bg-black text-white' : 'bg-black/10 text-transparent group-hover:bg-black/20'}`}>
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -749,7 +899,7 @@ export default function AdminTomFoxStudio() {
                 
                 <button 
                   onClick={() => {
-                    setTheaterProjectId(selectedProject.id);
+                    navigate('/admin/studio/' + selectedProject.id);
                   }}
                   className="w-full bg-black text-white p-4 rounded-2xl font-bold uppercase tracking-widest text-sm hover:bg-black/90 transition-colors flex items-center justify-center gap-2"
                 >
@@ -781,9 +931,9 @@ export default function AdminTomFoxStudio() {
             </div>
             
             <div>
-              <h3 className="text-2xl font-bold uppercase tracking-tighter mb-2">Delete Project?</h3>
+              <h3 className="text-2xl font-bold uppercase tracking-tighter mb-2">Delete Project Permanently?</h3>
               <p className="text-black/50 font-sans text-sm">
-                Are you sure you want to delete this project? All assets, invoices, and comments will be permanently removed. This action cannot be undone.
+                This will permanently deactivate all client theater links and irreversibly delete all video, audio, and project files stored on Cloudflare R2. This action cannot be undone.
               </p>
             </div>
 
@@ -812,11 +962,34 @@ export default function AdminTomFoxStudio() {
   );
 }
 
-function ProjectCard({ project, onClick, onEnterTheater, onToggleAuth }: { project: any, onClick: () => void, onEnterTheater: () => void, onToggleAuth: (id: string, current: boolean) => void }) {
+function ProjectCard({ 
+  project, 
+  onClick, 
+  onEnterTheater, 
+  onToggleAuth, 
+  onDelete,
+  onDragStart,
+  onDragEnd,
+  isDragging
+}: { 
+  project: any, 
+  onClick: () => void, 
+  onEnterTheater: () => void, 
+  onToggleAuth: (id: string, current: boolean) => void,
+  onDelete: (id: string) => void,
+  onDragStart: (e: React.DragEvent) => void,
+  onDragEnd: () => void,
+  isDragging: boolean
+}) {
   return (
     <div 
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={onClick}
-      className="bg-white p-4 rounded-[20px] shadow-sm border border-black/5 flex flex-col gap-3 group hover:border-black/20 hover:shadow-md transition-all cursor-pointer relative"
+      className={`bg-white p-4 rounded-[20px] shadow-sm border flex flex-col gap-3 group hover:border-black/20 hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative select-none ${
+        isDragging ? 'opacity-40 scale-95 border-dashed border-black/30' : 'border-black/5'
+      }`}
     >
       <div className="flex justify-between items-start">
         <h4 className="font-bold truncate pr-2">{project.title}</h4>
@@ -841,10 +1014,23 @@ function ProjectCard({ project, onClick, onEnterTheater, onToggleAuth }: { proje
           >
             <MonitorPlay className="w-4 h-4 ml-0.5" />
           </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(project.id);
+            }}
+            className="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors shrink-0"
+            title="Delete Project"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
       <div className="flex items-center justify-between text-xs text-black/50 font-medium">
         <span>{new Date(project.created_at).toLocaleDateString()}</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/5 text-black/60">
+          {project.project_type || 'project'}
+        </span>
       </div>
     </div>
   );

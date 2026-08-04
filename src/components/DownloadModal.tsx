@@ -8,7 +8,7 @@ import { X, Download, ShieldCheck, FileAudio, Music, AudioLines } from 'lucide-r
 import { supabase } from '../lib/supabase';
 
 export default function DownloadModal() {
-  const { downloadTrack, buttonRect, closeDownloadModal } = useDownload();
+  const { downloadTrack, buttonRect, forceUnrestricted, sharedSlug, closeDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const { profile } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -20,7 +20,7 @@ export default function DownloadModal() {
   const { settings } = useSettings();
   const isSubscriber = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
   
-  const showDropdown = isSubscriber || settings.free_hd_enabled;
+  const showDropdown = forceUnrestricted || isSubscriber || settings.free_hd_enabled;
   const draftFormat = settings.free_watermarks_enabled ? 'watermarked' : 'mp3';
   const draftTitle = settings.free_watermarks_enabled ? 'Draft' : 'Download MP3';
   const draftSub = settings.free_watermarks_enabled ? 'Watermarked Audio' : 'Clean Audio File';
@@ -32,7 +32,7 @@ export default function DownloadModal() {
     
     try {
       const { data, error } = await supabase.functions.invoke('get_download_url', {
-        body: { trackId: downloadTrack.id, format: draftFormat }
+        body: { trackId: downloadTrack.id, format: draftFormat, sharedSlug }
       });
       
       if (error || !data?.url) {
@@ -67,7 +67,7 @@ export default function DownloadModal() {
     
     try {
       const { data, error } = await supabase.functions.invoke('get_download_url', {
-        body: { trackId: downloadTrack.id, format }
+        body: { trackId: downloadTrack.id, format, sharedSlug }
       });
       
       if (error || !data?.url) {
@@ -97,10 +97,11 @@ export default function DownloadModal() {
 
   useEffect(() => {
     if (isOpen && buttonRect && showDropdown) {
+      const minW = Math.max(buttonRect.width, 160);
       setDropdownStyle({
         bottom: `${window.innerHeight - buttonRect.top + 8}px`,
         left: `${buttonRect.left}px`,
-        width: `${buttonRect.width}px`
+        minWidth: `${minW}px`
       });
     }
   }, [isOpen, buttonRect, showDropdown]);

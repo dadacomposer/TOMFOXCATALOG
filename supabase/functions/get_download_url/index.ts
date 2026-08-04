@@ -57,12 +57,31 @@ serve(async (req) => {
       }
     }
 
-    const { trackId, format } = await req.json();
+    const { trackId, format, sharedSlug } = await req.json();
     if (!trackId || !format) throw new Error('Missing trackId or format');
     
     // Use service role to fetch settings and track
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
+    let hasSharedLinkAccess = false;
+    if (sharedSlug) {
+      const { data: sharedLink } = await supabase
+        .from('shared_links')
+        .select('is_active, can_download, track_ids')
+        .eq('slug', sharedSlug)
+        .single();
+
+      if (
+        sharedLink &&
+        sharedLink.is_active &&
+        sharedLink.can_download &&
+        Array.isArray(sharedLink.track_ids) &&
+        sharedLink.track_ids.includes(trackId)
+      ) {
+        hasSharedLinkAccess = true;
+      }
+    }
+
     // FETCH FEATURE FLAGS
     const { data: settings } = await supabase
       .from('site_settings')
@@ -75,15 +94,15 @@ serve(async (req) => {
 
     // CHECK PERMISSIONS based on format
     if (format === 'watermarked') {
-       if (!free_watermarks && !hasPremiumAccess) {
+       if (!free_watermarks && !hasPremiumAccess && !hasSharedLinkAccess) {
          throw new Error('Forbidden: Draft downloads are currently disabled for free users');
        }
     } else if (format === 'mp3') {
-       if (!hasPremiumAccess && !free_hd) {
+       if (!hasPremiumAccess && !free_hd && !hasSharedLinkAccess) {
          throw new Error('Forbidden: Clean MP3 downloads require an active subscription');
        }
     } else if (format === 'wav' || format === 'aiff') {
-       if (!hasPremiumAccess && !free_hd) {
+       if (!hasPremiumAccess && !free_hd && !hasSharedLinkAccess) {
          throw new Error('Forbidden: High-quality downloads require an active subscription');
        }
     } else {

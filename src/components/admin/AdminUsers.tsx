@@ -20,7 +20,7 @@ export type ProfileData = {
   billing_interval?: string | null;
 };
 
-export default function AdminUsers({ setActiveSection }: { setActiveSection: React.Dispatch<React.SetStateAction<"tracks" | "settings" | "users" | "licenses" | "tickets" | "features" | "studio">> }) {
+export default function AdminUsers() {
   const [users, setUsers] = useState<ProfileData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
