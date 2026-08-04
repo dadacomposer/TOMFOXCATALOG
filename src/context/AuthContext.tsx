@@ -88,7 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [isContactModalOpen, setContactModalOpen] = useState(false);
   const [customMusicIntent, setCustomMusicIntent] = useState(false);
-  const [isUpdatePasswordModalOpen, setUpdatePasswordModalOpen] = useState(false);
+  const [isUpdatePasswordModalOpen, setUpdatePasswordModalOpen] = useState(() => {
+    return typeof window !== 'undefined' && window.location.hash.includes('type=invite');
+  });
 
   const fetchWorkspaces = async (userId: string) => {
     try {

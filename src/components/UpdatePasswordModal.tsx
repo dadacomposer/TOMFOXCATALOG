@@ -59,10 +59,10 @@ export default function UpdatePasswordModal() {
         </button>
 
         <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter leading-[0.9] text-black mb-2">
-          New Password
+          Set Password
         </h1>
         <p className="font-sans text-black/50 text-xs uppercase tracking-widest mb-8">
-          Enter your new password below
+          Enter a secure password for your account
         </p>
 
         {error && (
