@@ -7,6 +7,7 @@ import { extractWaveformFromFile } from '../../utils/audioWaveform';
 import { AdminTrack } from './AdminTracks';
 import CustomSelect from '../CustomSelect';
 import { processAudioFormats } from '../../utils/audioProcessor';
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 
 type StagedTrack = {
   id: string;

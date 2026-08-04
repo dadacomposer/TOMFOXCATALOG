@@ -13,8 +13,9 @@ type AdminTrack = {
   moods: string;
   scenarios: string;
   instruments: string;
-  textures: string;
-  human_tags: string;
+  textures: string | string[];
+  human_tags: string | string[];
+  movement?: string | string[];
   genre: string;
   humanly_reviewed: boolean;
   pro_registered: boolean;

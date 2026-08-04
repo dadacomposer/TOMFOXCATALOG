@@ -27,6 +27,7 @@ export type AdminTrack = {
   instruments?: string | string[];
   textures?: string | string[];
   human_tags?: string | string[];
+  movement?: string | string[];
   artwork_url?: string | null;
   r2_url?: string;
   wav_url?: string;
