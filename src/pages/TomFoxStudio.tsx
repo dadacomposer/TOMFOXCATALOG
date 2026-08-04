@@ -98,7 +98,6 @@ export default function TomFoxStudio() {
   }, [user, authLoading, project_id, setLoginModalOpen]);
 
   const fetchStudioData = async () => {
-    if (!project) setLoading(true);
     setUnauthorized(false);
     try {
       const { data: pData, error: pErr } = await supabase

@@ -94,7 +94,6 @@ export default function AdminTheater() {
   }, [projectId]);
 
   const fetchStudioData = async () => {
-    if (!project) setLoading(true);
     try {
       const { data: pData, error: pErr } = await supabase
         .from('tf_studio_projects')
