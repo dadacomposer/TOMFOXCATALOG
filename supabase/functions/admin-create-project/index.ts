@@ -223,16 +223,21 @@ serve(async (req) => {
     }
 
     // Prepare and send custom email
-    if (actionLink) {
+    let finalLinkToEmail = actionLink;
+
+    if (!requiresAuth) {
+      finalLinkToEmail = `${origin}/studio/${newProject.id}`;
+    } else if (actionLink) {
       try {
         const url = new URL(actionLink);
         url.searchParams.set('redirect_to', `${origin}/studio/${newProject.id}`);
-        actionLink = url.toString();
+        finalLinkToEmail = url.toString();
       } catch (e) {
         console.warn("Could not parse actionLink", e);
+        finalLinkToEmail = `${origin}/studio/${newProject.id}`;
       }
     } else {
-      actionLink = `${origin}/studio/${newProject.id}`;
+      finalLinkToEmail = `${origin}/studio/${newProject.id}`;
     }
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -295,7 +300,7 @@ serve(async (req) => {
     }
 
     // Send email to primary client
-    await sendProjectEmail(customerEmail, actionLink, createInvoice ? invoiceUrl : null);
+    await sendProjectEmail(customerEmail, finalLinkToEmail, createInvoice ? invoiceUrl : null);
 
     // Process collaborators
     if (Array.isArray(collaboratorEmails) && collaboratorEmails.length > 0) {
@@ -323,14 +328,18 @@ serve(async (req) => {
            collActionLink = inviteData.properties?.action_link;
         }
 
-        if (collActionLink) {
+        let finalCollLinkToEmail = collActionLink;
+
+        if (!requiresAuth) {
+          finalCollLinkToEmail = `${origin}/studio/${newProject.id}`;
+        } else if (collActionLink) {
           try {
             const url = new URL(collActionLink);
             url.searchParams.set('redirect_to', `${origin}/studio/${newProject.id}`);
-            collActionLink = url.toString();
+            finalCollLinkToEmail = url.toString();
           } catch (e) {}
         } else {
-          collActionLink = `${origin}/studio/${newProject.id}`;
+          finalCollLinkToEmail = `${origin}/studio/${newProject.id}`;
         }
 
         // Add to db
@@ -341,7 +350,7 @@ serve(async (req) => {
         });
 
         // Send email to collaborator (no invoice attached for them)
-        await sendProjectEmail(collEmail, collActionLink, null);
+        await sendProjectEmail(collEmail, finalCollLinkToEmail, null);
       }
     }
 
