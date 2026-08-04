@@ -54,6 +54,8 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
   const [formatUploadTarget, setFormatUploadTarget] = useState<{trackId: string, format: 'wav' | 'aiff' | 'mp3'} | null>(null);
   const formatInputRef = useRef<HTMLInputElement>(null);
 
+  useLockBodyScroll(true);
+
   const handleFormatUploadClick = (trackId: string, format: 'wav' | 'aiff' | 'mp3') => {
     setFormatUploadTarget({ trackId, format });
     if (formatInputRef.current) {

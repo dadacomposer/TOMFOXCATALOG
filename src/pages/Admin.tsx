@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ShieldAlert, User, Music, Users, FileText, Ticket, LogOut, ExternalLink, Settings } from 'lucide-react';
+import { ShieldAlert, User, Music, Users, FileText, Ticket, LogOut, ExternalLink, Settings, Tag, BarChart } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { DadaLogo } from '../components/shared/DadaLogo';
 import NotFound from './NotFound';
@@ -118,13 +118,23 @@ export default function Admin() {
             <div className="w-6 h-6 shrink-0 flex items-center justify-center"><Users className="w-5 h-5" /></div>
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Users</span>
           </NavLink>
-          <button
-            className={`w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden text-black/60 opacity-50 grayscale cursor-not-allowed`}
-            title="Licenses"
+          <NavLink
+            to="/admin/tags"
+            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+            title="Tags"
           >
-            <div className="w-6 h-6 shrink-0 flex items-center justify-center"><FileText className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Licenses</span>
-          </button>
+            <div className="w-6 h-6 shrink-0 flex items-center justify-center"><Tag className="w-5 h-5" /></div>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Tags</span>
+          </NavLink>
+          <NavLink
+            to="/admin/statistics"
+            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+            title="Statistics"
+          >
+            <div className="w-6 h-6 shrink-0 flex items-center justify-center"><BarChart className="w-5 h-5" /></div>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Statistics</span>
+          </NavLink>
+
           <NavLink
             to="/admin/tickets"
             className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}

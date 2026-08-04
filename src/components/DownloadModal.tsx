@@ -98,11 +98,19 @@ export default function DownloadModal() {
   useEffect(() => {
     if (isOpen && buttonRect && showDropdown) {
       const minW = Math.max(buttonRect.width, 160);
-      setDropdownStyle({
+      let style: React.CSSProperties = {
         bottom: `${window.innerHeight - buttonRect.top + 8}px`,
-        left: `${buttonRect.left}px`,
         minWidth: `${minW}px`
-      });
+      };
+      
+      // Prevent overflow on the right
+      if (buttonRect.left + minW > window.innerWidth - 16) {
+        style.right = `${window.innerWidth - buttonRect.right}px`;
+      } else {
+        style.left = `${buttonRect.left}px`;
+      }
+      
+      setDropdownStyle(style);
     }
   }, [isOpen, buttonRect, showDropdown]);
 

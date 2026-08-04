@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useRef, useEffect, ReactNode, useCallback } from 'react';
 import { getPreviewTimings } from '../lib/audioUtils';
 import { supabase } from '../lib/supabase';
+import { analytics } from '../lib/analytics';
 
 export type Track = {
   id: string;
   file_name: string;
   duration?: number;
-  bpm?: number | null;
   key?: string;
   artwork_url?: string;
   r2_url?: string;
@@ -22,6 +22,9 @@ export type Track = {
   instruments?: string | string[];
   textures?: string | string[];
   human_tags?: string | string[];
+  humanly_reviewed?: boolean;
+  pro_registered?: boolean;
+  frequency_audio_registered?: boolean;
   versions?: Track[];
   [key: string]: any;
 };
@@ -72,6 +75,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [selectedTrackForDetails, setSelectedTrackForDetails] = useState<Track | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const handleSetPreviewMode = (mode: boolean) => {
+    setIsPreviewMode(mode);
+    if (currentTrack && currentSource !== 'top') {
+      const timings = mode ? getPreviewTimings(currentTrack) : null;
+      if (timings) {
+        setPendingSeek(timings.startPct);
+      } else {
+        setPendingSeek(null);
+      }
+    }
+  };
+
   useEffect(() => {
     if (currentTrack && audioRef.current) {
       if (isPlaying) {
@@ -87,8 +102,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       supabase.rpc('increment_play_count', { track_id: currentTrack.id }).then(({ error }) => {
         if (error) console.error("Failed to increment play count:", error);
       });
+      // Telemetry: Start
+      analytics.trackPlayStart(currentTrack.id);
     }
   }, [currentTrack?.id]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying && currentTrack && audioRef.current) {
+      interval = setInterval(() => {
+        if (audioRef.current && !audioRef.current.paused) {
+          analytics.trackPlayPing(currentTrack.id, Math.floor(audioRef.current.currentTime));
+        }
+      }, 10000); // Ping every 10 seconds
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isPlaying, currentTrack]);
 
   const applyPreview = (track: Track, overridePreviewMode?: boolean) => {
     const isPreviewActive = overridePreviewMode !== undefined ? overridePreviewMode : isPreviewMode;
@@ -274,7 +305,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setPendingSeek,
       setProgress,
       isPreviewMode,
-      setIsPreviewMode,
+      setIsPreviewMode: handleSetPreviewMode,
       isCurrentPreviewDormant,
       setIsCurrentPreviewDormant,
       fallbackPlaylist,

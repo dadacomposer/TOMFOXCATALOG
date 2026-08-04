@@ -38,6 +38,7 @@ export async function fetchTracks(page: number = 1, pageSize: number = 20, filte
   else if (sortBy === 'oldest') query = query.order('release_date', { ascending: true });
   else if (sortBy === 'most_played') query = query.order('play_count', { ascending: false });
   else if (sortBy === 'a-z') query = query.order('file_name', { ascending: true });
+  else if (sortBy === 'z-a') query = query.order('file_name', { ascending: false });
   else {
     // relevance default
     if (!searchIds || searchIds.length === 0) {
@@ -46,32 +47,20 @@ export async function fetchTracks(page: number = 1, pageSize: number = 20, filte
     // If searchIds is present, we do not order in SQL so we can order in memory later
   }
     
-  // Apply filters
+  // Apply filters — each key uses OR within its category, AND between categories
   for (const [key, values] of Object.entries(filters)) {
     if (!values || (Array.isArray(values) && values.length === 0)) continue;
 
     if (key === 'genre') {
-      // genre is a plain text column
+      // genre is a plain text column — OR across selected values
       const conditions = (values as string[]).map(v => `genre.ilike.%${v}%`).join(',');
       query = query.or(conditions);
-    } else if (key === 'subgenre') {
-      // subgenre is a text column, sometimes containing a JSON array string
-      const conditions = (values as string[]).map(v => `subgenre.ilike.%${v}%`).join(',');
-      query = query.or(conditions);
     } else if (key === 'energy_level') {
-      // energy_level is a plain text column
+      // energy_level is a plain text column — OR across selected values
       const conditions = (values as string[]).map(v => `energy_level.eq.${v}`).join(',');
       query = query.or(conditions);
-    } else if (key === 'bpm_range' && Array.isArray(values) && values.length === 2) {
-      // bpm_range is [min, max]
-      const [min, max] = values as [number, number];
-      if (min > 0) query = query.gte('bpm', min);
-      if (max > 0 && max < 400) query = query.lte('bpm', max);
-    } else if (key === 'human_tags') {
-      // human_tags is jsonb
-      query = query.contains(key, values as string[]);
-    } else if (['moods', 'instruments', 'textures', 'scenarios'].includes(key)) {
-      // These are text[] arrays — use Postgres && operator via .overlaps (OR logic)
+    } else if (['subgenre', 'moods', 'instruments', 'textures', 'scenarios', 'human_tags', 'movement'].includes(key)) {
+      // All are text[] arrays — use Postgres && operator via .overlaps (OR logic within category)
       query = query.overlaps(key, values as string[]);
     }
   }
@@ -113,11 +102,9 @@ export async function fetchSimilarTracks(trackId: string, limit: number = 5, off
   let query = supabase.from('tracks').select('*').eq('is_hidden', false).is('deleted_at', null).eq('track_type', 'main').neq('id', trackId).range(offset, offset + limit - 1);
   
   if (trackData) {
-    if (trackData.subgenre) {
-      const sg = Array.isArray(trackData.subgenre) ? trackData.subgenre[0] : trackData.subgenre;
-      if (typeof sg === 'string' && sg.length > 0) {
-        query = query.ilike('subgenre', `%${sg}%`);
-      }
+    if (trackData.subgenre && Array.isArray(trackData.subgenre) && trackData.subgenre.length > 0) {
+      // subgenre is now text[] — use overlaps to find tracks sharing any genre tag
+      query = query.overlaps('subgenre', trackData.subgenre.slice(0, 3));
     }
   }
   
@@ -353,10 +340,8 @@ export async function searchTracksByTags(query: string) {
   const conditions = [
     `file_name.ilike.%${q}%`,
     `genre.ilike.%${q}%`,
-    `subgenre.ilike.%${q}%`,
     `description.ilike.%${q}%`,
     `energy_level.ilike.%${q}%`,
-    `movement.ilike.%${q}%`,
   ].join(',');
   
   const { data: textData } = await supabase

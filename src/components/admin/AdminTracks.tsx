@@ -42,7 +42,6 @@ export type AdminTrack = {
   versions?: AdminTrack[];
   track_type?: string;
   parent_track_id?: string | null;
-  bpm?: number;
   key?: string;
   scale?: string;
   duration?: number;
@@ -347,6 +346,8 @@ export default function AdminTracks() {
     setDraftPlaylistTracks(prev => [newPt, ...prev]);
     setDraftPlaylist((prev: any) => ({ ...prev, track_count: (prev?.track_count || 0) + 1 }));
     setHasUnsavedChanges(true);
+    setPlaylistSearchQuery('');
+    setIsAddingTracks(false);
     toast.success('Track added to draft (remember to save)');
   };
 
@@ -386,7 +387,7 @@ export default function AdminTracks() {
     try {
       let query = supabase
         .from('tracks')
-        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, subgenre, moods, scenarios, instruments, textures, human_tags, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, bpm, key, scale, duration, genre, energy_level, description')
+        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, subgenre, moods, scenarios, instruments, textures, human_tags, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, energy_level, description')
         .order('release_date', { ascending: false });
 
       let allTracks: AdminTrack[] = [];
@@ -477,9 +478,18 @@ export default function AdminTracks() {
       if (sortBy === 'newest') return new Date(b.release_date || b.created_at || 0).getTime() - new Date(a.release_date || a.created_at || 0).getTime();
       if (sortBy === 'oldest') return new Date(a.release_date || a.created_at || 0).getTime() - new Date(b.release_date || b.created_at || 0).getTime();
       if (sortBy === 'most_played') return (b.play_count || 0) - (a.play_count || 0);
+      const clean = (s: string) => s.replace(/^[^a-zA-Z0-9]+/, '').toLowerCase();
       if (sortBy === 'a-z') {
-        const clean = (s: string) => s.replace(/^[^a-zA-Z0-9]+/, '').toLowerCase();
         return clean(a.file_name || '').localeCompare(clean(b.file_name || ''));
+      }
+      if (sortBy === 'z-a') {
+        return clean(b.file_name || '').localeCompare(clean(a.file_name || ''));
+      }
+      if (sortBy === 'hidden_first') {
+        if (a.is_hidden && !b.is_hidden) return -1;
+        if (!a.is_hidden && b.is_hidden) return 1;
+        // fallback to newest if both hidden or both visible
+        return new Date(b.release_date || b.created_at || 0).getTime() - new Date(a.release_date || a.created_at || 0).getTime();
       }
       
       // relevance
@@ -903,7 +913,7 @@ toast.success('Track restored successfully');
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Top Panels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
         <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm flex items-center justify-between gap-4 col-span-1 md:col-span-1">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-black/60 mb-2">
@@ -951,23 +961,7 @@ toast.success('Track restored successfully');
             Manage
           </button>
         </div>
-
-        <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm flex items-center justify-between gap-4 col-span-1 md:col-span-1 opacity-50 grayscale">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-black/60 mb-2">
-              <FileText className="w-4 h-4 shrink-0" />
-              <span className="text-[10px] font-medium tracking-widest break-words">Licensing</span>
-            </div>
-            <div className="text-xl font-medium text-black/40 break-words">Contracts</div>
-          </div>
-          <button 
-            className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium tracking-wider cursor-not-allowed shrink-0"
-          >
-            Create
-          </button>
-        </div>
       </div>
-
       <div className="flex gap-4 shrink-0">
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black/40" />
@@ -990,7 +984,7 @@ toast.success('Track restored successfully');
             onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
             className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-black outline-none cursor-pointer"
           >
-            {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'most_played' ? 'Most Played' : 'A-Z'}
+            {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'most_played' ? 'Most Played' : sortBy === 'a-z' ? 'A-Z' : sortBy === 'z-a' ? 'Z-A' : 'Hidden First'}
             <svg className={`w-3 h-3 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </button>
           
@@ -1001,7 +995,9 @@ toast.success('Track restored successfully');
                 { id: 'newest', label: 'Newest' },
                 { id: 'oldest', label: 'Oldest' },
                 { id: 'most_played', label: 'Most Played' },
-                { id: 'a-z', label: 'A-Z' }
+                { id: 'a-z', label: 'A-Z' },
+                { id: 'z-a', label: 'Z-A' },
+                { id: 'hidden_first', label: 'Hidden First' }
               ].map(opt => (
                 <button
                   key={opt.id}
@@ -1136,7 +1132,7 @@ toast.success('Track restored successfully');
                         </div>
                         <div className="flex flex-col">
                           <span className="font-medium text-black truncate max-w-[200px] sm:max-w-md flex items-center gap-2">
-                            {track.file_name}
+                            {track.file_name.replace(/\.[^/.]+$/, '')}
                             {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 uppercase tracking-widest shrink-0">New</span>
                             )}
@@ -1555,20 +1551,39 @@ toast.success('Track restored successfully');
             
             {/* Sidebar: Playlist List */}
             <div className="w-1/3 border-r border-black/10 flex flex-col bg-black/[0.02]">
-              <div className="p-6 border-b border-black/5 shrink-0 flex items-center justify-between">
-                <h3 className="text-xl font-bold">Playlists</h3>
-                <button 
-                  onClick={() => {
-                    setEditingCategoriesStr(playlistCategories.join(', '));
-                    setIsCategoryManagerOpen(true);
-                  }}
-                  className="px-3 py-1.5 bg-black/5 hover:bg-black/10 text-black text-[10px] font-bold rounded-lg uppercase tracking-wider transition-colors"
-                >
-                  Manage Categories
-                </button>
-              </div>       
+              <div className="p-6 border-b border-black/5 shrink-0 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold">Playlists</h3>
+                  <button 
+                    onClick={() => {
+                      setEditingCategoriesStr(playlistCategories.join(', '));
+                      setIsCategoryManagerOpen(true);
+                    }}
+                    className="px-3 py-1.5 bg-black/5 hover:bg-black/10 text-black text-[10px] font-bold rounded-lg uppercase tracking-wider transition-colors"
+                  >
+                    Manage Categories
+                  </button>
+                </div>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
+                  <input
+                    type="text"
+                    value={playlistSearchQuery}
+                    onChange={(e) => setPlaylistSearchQuery(e.target.value)}
+                    placeholder="Search playlists..."
+                    className="w-full bg-black/5 border-none rounded-xl pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-black/10 outline-none transition-all"
+                  />
+                  {playlistSearchQuery && (
+                    <button onClick={() => setPlaylistSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {allPlaylists.map(p => (
+                {allPlaylists
+                  .filter(p => p.title?.toLowerCase().includes(playlistSearchQuery.toLowerCase()))
+                  .map(p => (
                   <button 
                     key={p.id}
                     onClick={() => handlePlaylistSelect(p.id)}
@@ -1578,7 +1593,7 @@ toast.success('Track restored successfully');
                     <div className="text-xs text-black/50 mt-1">{p.track_count} Tracks</div>
                   </button>
                 ))}
-                {allPlaylists.length === 0 && <div className="text-center text-sm text-black/40 p-4">No playlists found</div>}
+                {allPlaylists.filter(p => p.title?.toLowerCase().includes(playlistSearchQuery.toLowerCase())).length === 0 && <div className="text-center text-sm text-black/40 p-4">No playlists found</div>}
               </div>
             </div>
 
@@ -1770,7 +1785,7 @@ toast.success('Track restored successfully');
                                     const isAlreadyAdded = draftPlaylistTracks.some(pt => pt.track_id === t.id);
                                     return (
                                       <div key={t.id} className="flex items-center justify-between p-3 hover:bg-black/5 border-b border-black/5 last:border-0">
-                                        <span className="text-sm font-medium truncate">{t.file_name}</span>
+                                        <span className="text-sm font-medium truncate">{t.file_name.replace(/\.[^/.]+$/, '')}</span>
                                         {isAlreadyAdded ? (
                                           <button onClick={() => handlePlaylistTrackRemove(selectedPlaylistId, t.id)} className="p-1.5 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors" title="Remove">
                                             <Trash2 className="w-4 h-4" />
@@ -1828,7 +1843,7 @@ toast.success('Track restored successfully');
                                               </button>
 
                                               <div className="flex-1 min-w-0 pl-2">
-                                                <div className="font-bold text-sm truncate">{pt.tracks?.file_name}</div>
+                                                <div className="font-bold text-sm truncate">{pt.tracks?.file_name?.replace(/\.[^/.]+$/, '')}</div>
                                                 {pt.is_hidden && <div className="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-0.5">Hidden from playlist</div>}
                                               </div>
                                               <div className="flex items-center gap-2 shrink-0">

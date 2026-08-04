@@ -8,7 +8,7 @@ import CustomSelect from '../CustomSelect';
 import { DEFAULT_COMPOSERS } from '../../config';
 import TrackArtwork from '../TrackArtwork';
 import { extractWaveformFromFile } from '../../utils/audioWaveform';
-
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 type TrackEditModalProps = {
   track: Track;
   onClose: () => void;
@@ -61,6 +61,8 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
   const [versions, setVersions] = useState<Track[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   
+  useLockBodyScroll(true);
+  
   // New version state
   const [versionForm, setVersionForm] = useState<{
     file: File | null;
@@ -84,6 +86,11 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
       if (!track.subgenre) return [];
       if (Array.isArray(track.subgenre)) return track.subgenre;
       try { return JSON.parse(track.subgenre); } catch(e) { return [track.subgenre]; }
+    })(),
+    genre: (() => {
+      if (!track.genre) return [];
+      if (Array.isArray(track.genre)) return track.genre;
+      try { return JSON.parse(track.genre); } catch(e) { return track.genre.split(',').map((s:string) => s.trim()).filter(Boolean); }
     })(),
     moods: Array.isArray(track.moods) ? track.moods : (track.moods ? [track.moods] : []),
     scenarios: Array.isArray(track.scenarios) ? track.scenarios : (track.scenarios ? [track.scenarios] : []),
@@ -143,6 +150,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         album: form.album,
         composers: form.composers,
         key: form.key,
+        genre: JSON.stringify(form.genre),
         subgenre: JSON.stringify(form.subgenre),
         moods: form.moods,
         scenarios: form.scenarios,
@@ -389,12 +397,13 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
               </div>
 
               {[
+                { label: 'Genre', field: 'genre', placeholder: 'e.g. Electronic, Orchestral' },
                 { label: 'Arrangement', field: 'subgenre', placeholder: 'e.g. Ambient Piano, Neoclassical' },
                 { label: 'Mood', field: 'moods', placeholder: 'e.g. Peaceful, Melancholic' },
-                { label: 'Usage', field: 'scenarios', placeholder: 'e.g. Late Night Listening, Focus' },
-                { label: 'Instrumentation', field: 'instruments', placeholder: 'e.g. Piano, Synth Pad' },
-                { label: 'Texture', field: 'textures', placeholder: 'e.g. Delicate, Organic' },
-                { label: 'Keywords', field: 'human_tags', placeholder: 'Add custom tags...' },
+                { label: 'Music For', field: 'scenarios', placeholder: 'e.g. Late Night Listening, Focus' },
+                { label: 'Instruments', field: 'instruments', placeholder: 'e.g. Piano, Synth Pad' },
+                { label: 'Function', field: 'textures', placeholder: 'e.g. Delicate, Organic' },
+                { label: 'Character', field: 'human_tags', placeholder: 'Add custom tags...' },
                 { label: 'Movement', field: 'movement', placeholder: 'e.g. Building, Flowing' },
               ].map(item => (
                 <div key={item.field}>

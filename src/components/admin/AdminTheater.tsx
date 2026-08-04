@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { extractWaveformFromFile } from '../../utils/audioWaveform';
 import WaveformView from '../WaveformView';
 import { supabase } from '../../lib/supabase';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DadaLogo } from '../shared/DadaLogo';
 import { useAsyncTheater } from '../../hooks/useAsyncTheater';
-import { Play, Pause, MessageCircle, ChevronLeft, Send, CheckCircle2, Lock, UploadCloud, Loader2 } from 'lucide-react';
+import { Play, Pause, MessageCircle, ChevronLeft, Send, CheckCircle2, Lock, UploadCloud, Loader2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 import StudioOnboardingModal from '../studio/StudioOnboardingModal';
@@ -25,6 +27,9 @@ export default function AdminTheater() {
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+
+  const isCompleted = project?.status === 'completed';
 
   // Sync Hook
   const {
@@ -142,6 +147,10 @@ export default function AdminTheater() {
   };
 
   const submitNewComment = async (text: string, timecode: number | null, parentId: string | null = null) => {
+    if (isCompleted) {
+      toast.error('Comments are disabled for completed projects.');
+      return;
+    }
     if (!text.trim() && timecode === draftTimecode && draftTimecode !== null) return;
     if (!text.trim()) return;
     try {
@@ -184,6 +193,42 @@ export default function AdminTheater() {
   const submitComment = () => {
     if (draftTimecode !== null) {
       submitNewComment(commentText, draftTimecode);
+    }
+  };
+
+  const handleDownloadAllZip = async () => {
+    const audioAssets = assets.filter(a => a.asset_type === 'audio');
+    if (!audioAssets || audioAssets.length === 0) {
+      toast.error('No audio files to download.');
+      return;
+    }
+    setIsDownloadingZip(true);
+    try {
+      const zip = new JSZip();
+      const folderName = `Project_${project.title.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const folder = zip.folder(folderName);
+      
+      if (!folder) throw new Error('Could not create ZIP folder');
+
+      const promises = audioAssets.map(async (asset, index) => {
+        const response = await fetch(asset.file_url);
+        if (!response.ok) throw new Error(`Failed to fetch ${asset.file_url}`);
+        const blob = await response.blob();
+        const ext = asset.file_url.split('.').pop()?.split('?')[0] || 'wav';
+        const safeTitle = asset.track_group.replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `${index + 1}_${safeTitle}_Rev${asset.revision_number}.${ext}`;
+        folder.file(filename, blob);
+      });
+
+      await Promise.all(promises);
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, `TomFox_${folderName}.zip`);
+      toast.success('Download complete!');
+    } catch (error) {
+      console.error('Error creating ZIP:', error);
+      toast.error('Failed to create ZIP file.');
+    } finally {
+      setIsDownloadingZip(false);
     }
   };
 
@@ -317,16 +362,16 @@ export default function AdminTheater() {
         )}
 
         {/* Main Grid */}
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 min-h-0 overflow-hidden">
+        <div className={`flex-grow grid gap-4 sm:gap-6 min-h-0 overflow-hidden ${isCompleted ? 'grid-cols-1 lg:grid-cols-1 max-w-5xl mx-auto' : 'grid-cols-1 lg:grid-cols-3'}`}>
           
           {/* Left Column: Player & Assets */}
-          <div className="lg:col-span-2 flex flex-col min-h-0 pr-2 pb-4">
+          <div className={`${isCompleted ? 'lg:col-span-1' : 'lg:col-span-2'} flex flex-col min-h-0 pr-2 pb-4`}>
             
-            <div className="bg-white rounded-[32px] shadow-sm border border-black/5 flex flex-col min-h-0 overflow-hidden">
+            <div className="bg-white rounded-[32px] shadow-sm border border-black/5 flex flex-col min-h-0 overflow-hidden max-w-4xl w-full mx-auto">
               
               {/* Video Player or Upload Overlay */}
-              <div className="p-4 pb-2">
-                <div className="aspect-video bg-black/5 rounded-[24px] overflow-hidden relative group">
+              <div className="p-4 pb-2 shrink-0">
+                <div className="w-full aspect-video bg-black/5 rounded-[24px] overflow-hidden relative group flex flex-col items-center justify-center">
                 {!project.media_file_url ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8">
                     <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-4 text-black/50">
@@ -353,7 +398,7 @@ export default function AdminTheater() {
                   <video
                     ref={videoRef}
                     src={videoAsset?.file_url || project.media_file_url}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain bg-black"
                     playsInline
                     muted={true}
                     onClick={togglePlay}
@@ -380,7 +425,7 @@ export default function AdminTheater() {
             </div>
 
             {/* Audio Tracks Selection */}
-            <div className="bg-white rounded-[32px] p-4 sm:p-6 shadow-sm border border-black/5 flex flex-col gap-3 overflow-y-auto min-h-0 pb-32">
+            <div className="bg-white rounded-[32px] p-4 sm:p-6 shadow-sm border border-black/5 flex flex-col gap-3 overflow-y-auto min-h-0 pb-32 max-w-4xl w-full mx-auto">
               {audioAssets.map((asset) => {
                 const isActive = activeTrackId === asset.id;
                 const isTrackPlaying = isActive && isPlaying;
@@ -475,17 +520,28 @@ export default function AdminTheater() {
                   );
                 })}
 
-                <button 
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="mt-2 w-full py-4 border-2 border-dashed border-black/10 rounded-[24px] text-black/50 font-bold uppercase tracking-widest text-xs hover:border-black/30 hover:text-black hover:bg-black/5 transition-all flex items-center justify-center gap-2"
-                >
-                  <UploadCloud className="w-4 h-4" /> Add Version
-                </button>
+                {isCompleted ? (
+                  <button 
+                    onClick={handleDownloadAllZip}
+                    disabled={isDownloadingZip}
+                    className="mt-4 w-full py-4 border-2 border-transparent bg-black text-white rounded-[24px] font-bold uppercase tracking-widest text-xs hover:bg-black/90 transition-all flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    {isDownloadingZip ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} 
+                    {isDownloadingZip ? 'Preparing ZIP...' : 'Download All Versions (ZIP)'}
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="mt-2 w-full py-4 border-2 border-dashed border-black/10 rounded-[24px] text-black/50 font-bold uppercase tracking-widest text-xs hover:border-black/30 hover:text-black hover:bg-black/5 transition-all flex items-center justify-center gap-2"
+                  >
+                    <UploadCloud className="w-4 h-4" /> Add Version
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Right Column: Chat/Comments & Project Files */}
+          {!isCompleted && (
           <div className="flex flex-col gap-4 sm:gap-6 min-h-0 pr-2 pb-4 relative h-full flex-1">
             
             {/* Comments Sidebar */}
@@ -666,6 +722,7 @@ export default function AdminTheater() {
               onRefresh={fetchStudioData} 
             />
           </div>
+          )}
         </div>
 
         {/* Onboarding Modal */}

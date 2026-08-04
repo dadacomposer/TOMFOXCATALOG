@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { fetchTracks, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, searchTracksByTitle, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds, fetchFilterOptions, searchTracksByTags } from '../lib/supabase';
+import { supabase, fetchTracks, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, searchTracksByTitle, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds, fetchFilterOptions, searchTracksByTags } from '../lib/supabase';
+import { analytics } from '../lib/analytics';
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import { useAuth } from '../context/AuthContext';
@@ -27,15 +28,17 @@ type Track = {
   has_aiff?: boolean;
   has_mp3?: boolean;
   has_watermarked?: boolean;
-  bpm?: number;
   duration?: number;
   key?: string;
   scale?: string;
-  subgenre?: string[] | string;
-  instruments?: string[] | string;
-  moods?: string[] | string;
-  textures?: string[] | string;
-  scenarios?: string[] | string;
+  subgenre?: string[];
+  instruments?: string[];
+  moods?: string[];
+  textures?: string[];
+  scenarios?: string[];
+  human_tags?: string[];
+  movement?: string[];
+  energy_level?: string;
   waveform_data?: number[];
   artwork_url?: string;
   composers?: string[];
@@ -271,6 +274,7 @@ export default function Browse() {
     const q = overrideQuery || searchQuery;
     if (!q.trim()) return;
     setIsSearching(true);
+    analytics.trackSearch(q);
     try {
       // Run semantic, title, and tag searches in parallel
       const [vector, textRaw, tagIds] = await Promise.all([
@@ -343,6 +347,9 @@ export default function Browse() {
   const toggleFilter = (categoryKey: string, option: string) => {
     setActiveFilters(prev => {
       const isSelected = (prev[categoryKey] as string[])?.includes(option);
+      if (!isSelected) {
+        analytics.trackFilter(categoryKey, option);
+      }
       return {
         ...prev,
         [categoryKey]: isSelected 
@@ -461,7 +468,7 @@ export default function Browse() {
         
         {loading ? (
           <div className="w-full xl:w-[420px] flex flex-col shrink-0">
-            <h2 className="text-[22px] font-bold uppercase tracking-tighter mb-6 text-black">Latest & Greatest</h2>
+            <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Latest & Greatest</h2>
             <div className="flex flex-col p-2 -ml-2 -mt-2 w-full">
               <div className="relative w-full flex-1 min-h-0 flex items-center justify-center mb-6">
                  <div className="relative h-full aspect-[1.15]">
@@ -478,7 +485,7 @@ export default function Browse() {
           </div>
         ) : newMusicPlaylist && (
           <div className="w-full xl:w-[420px] flex flex-col shrink-0">
-            <h2 className="text-[22px] font-bold uppercase tracking-tighter mb-6 text-black">Latest & Greatest</h2>
+            <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Latest & Greatest</h2>
             <div 
               className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-2 -ml-2 -mt-2 rounded-[32px] group cursor-pointer w-full h-full transition-all duration-300 border border-transparent hover:border-black/5"
               onClick={() => setSearchParams({ playlist: newMusicPlaylist.id })}
@@ -491,7 +498,7 @@ export default function Browse() {
                  </div>
               </div>
               <div className="flex flex-col px-2 pb-2 shrink-0">
-                <span className="font-bold text-[24px] text-black">{newMusicPlaylist.title}</span>
+                <span className="font-medium text-[24px] text-black">{newMusicPlaylist.title}</span>
                 <span className="font-sans text-[15px] text-black/50 mt-1">{newMusicPlaylist.track_count} tracks</span>
               </div>
             </div>
@@ -502,7 +509,7 @@ export default function Browse() {
           {loading ? (
              <>
                <div className="flex-[2] flex flex-col min-w-0">
-                 <h2 className="text-[22px] font-bold uppercase tracking-tighter mb-6 text-black">Trending tracks</h2>
+                 <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Trending tracks</h2>
                  <div className="w-full">
                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-6 content-start pb-4">
                      {[...Array(15)].map((_, i) => (
@@ -521,7 +528,7 @@ export default function Browse() {
           ) : (
             <>
               <div className="flex-[2] flex flex-col min-w-0">
-                <h2 className="text-[22px] font-bold uppercase tracking-tighter mb-6 text-black">Trending tracks</h2>
+                <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Trending tracks</h2>
                 
                 {trendingTracks.length === 0 ? (
                   <div className="font-sans text-[11px] uppercase tracking-widest text-black/30">Nessuna traccia trovata.</div>
@@ -547,7 +554,7 @@ export default function Browse() {
                           </div>
                           <div className="flex flex-col overflow-hidden w-full">
                             <div 
-                              className="font-bold text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
+                              className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
                               onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(track); }}
                             >
                               {cleanTitle(track.file_name)}
@@ -568,19 +575,10 @@ export default function Browse() {
         </div>
       </div>
 
-      {/* Scroll Down Chevron */}
-      <div className="w-full flex justify-center pb-0">
-        <button 
-          onClick={() => document.getElementById('full-catalog-browser')?.scrollIntoView({ behavior: 'smooth' })}
-          className="p-4 hover:bg-black/5 transition-colors cursor-pointer text-black/40 hover:text-black rounded-full"
-        >
-          <ChevronDown className="w-8 h-8 scale-x-150 scale-y-75" />
-        </button>
-      </div>
 
       <div className="w-full px-8 pt-0 pb-8">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-[22px] font-bold uppercase tracking-tighter text-black">Featured playlists</h2>
+          <h2 className="text-[22px] font-medium uppercase tracking-tighter text-black">Featured playlists</h2>
           <button 
             onClick={() => navigate('/playlists')}
             className="font-sans text-[11px] uppercase tracking-widest text-black/50 hover:text-black flex items-center gap-0.5 transition-colors"
@@ -618,7 +616,7 @@ export default function Browse() {
                    <PlaylistArtwork playlist={pl} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl hover:scale-[1.02] transition-transform cursor-pointer z-20" />
                 </div>
                 <div className="flex flex-col px-2 pb-2">
-                  <span className="font-bold text-[18px] text-black">{pl.title}</span>
+                  <span className="font-medium text-[18px] text-black">{pl.title}</span>
                   <span className="font-sans text-[13px] text-black/50 mt-0.5">{pl.track_count} tracks</span>
                 </div>
               </div>
@@ -642,7 +640,7 @@ export default function Browse() {
             <input 
               type="text" 
               placeholder="DESCRIBE THE MUSIC YOU NEED..." 
-              className="w-full bg-transparent outline-none font-bold uppercase text-[13px] tracking-widest placeholder:text-black/30 text-black relative z-10"
+              className="w-full bg-transparent outline-none font-medium uppercase text-[13px] tracking-widest placeholder:text-black/30 text-black relative z-10"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -662,12 +660,12 @@ export default function Browse() {
             />
             
             <div className="absolute left-0 top-0 bottom-0 flex items-center pointer-events-none z-0">
-              <span className="invisible whitespace-pre font-bold uppercase text-[13px] tracking-widest">{searchQuery}</span>
+              <span className="invisible whitespace-pre font-medium uppercase text-[13px] tracking-widest">{searchQuery}</span>
               {!isSearching && isTypingSearch && searchQuery.trim() !== '' && (
-                <span className="ml-2 text-[10px] uppercase font-bold text-black/40 tracking-widest animate-pulse whitespace-nowrap">Press Enter ↵</span>
+                <span className="ml-2 text-[10px] uppercase font-medium text-black/40 tracking-widest animate-pulse whitespace-nowrap">Press Enter ↵</span>
               )}
               {isSearching && (
-                <span className="ml-2 text-[10px] uppercase font-bold text-black/40 tracking-widest animate-pulse whitespace-nowrap">Thinking...</span>
+                <span className="ml-2 text-[10px] uppercase font-medium text-black/40 tracking-widest animate-pulse whitespace-nowrap">Thinking...</span>
               )}
             </div>
           </div>
@@ -675,12 +673,12 @@ export default function Browse() {
           <div className="flex items-center gap-4 ml-6 shrink-0 z-10 relative">
             <div className="w-[1px] h-4 bg-black/10" />
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold tracking-widest uppercase text-black/40">Sort</span>
+              <span className="text-[10px] font-medium tracking-widest uppercase text-black/40">Sort</span>
               <button 
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-                className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-black outline-none cursor-pointer"
+                className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-black outline-none cursor-pointer"
               >
-                {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'most_played' ? 'Most Played' : 'A-Z'}
+                {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'most_played' ? 'Most Played' : sortBy === 'a-z' ? 'A-Z' : 'Z-A'}
                 <svg className={`w-3 h-3 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
               
@@ -691,12 +689,13 @@ export default function Browse() {
                     { id: 'newest', label: 'Newest' },
                     { id: 'oldest', label: 'Oldest' },
                     { id: 'most_played', label: 'Most Played' },
-                    { id: 'a-z', label: 'A-Z' }
+                    { id: 'a-z', label: 'A-Z' },
+                    { id: 'z-a', label: 'Z-A' }
                   ].map(opt => (
                     <button
                       key={opt.id}
                       onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
-                      className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                      className={`w-full text-left px-4 py-2 text-[11px] font-medium uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
                     >
                       {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
                       {opt.label}
@@ -709,7 +708,7 @@ export default function Browse() {
             <div className="w-[1px] h-4 bg-black/10" />
 
             <div className="flex items-center gap-3 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
-              <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
+              <span className={`text-[10px] font-medium tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
               <div 
                 className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
               >
@@ -722,13 +721,13 @@ export default function Browse() {
         {/* Active filter chips below search bar */}
         {totalActiveFilterCount > 0 && (
           <div className="w-full pt-4 flex flex-wrap gap-2 items-center">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-black/40 mr-1">Filtering:</span>
+            <span className="text-[10px] font-medium uppercase tracking-widest text-black/40 mr-1">Filtering:</span>
             {FILTER_CATEGORIES.map(cat =>
               (activeFilters[cat.key] as string[] || []).map(val => (
                 <button
                   key={`${cat.key}-${val}`}
                   onClick={() => toggleFilter(cat.key, val)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
                 >
                   {val}
                   <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -739,13 +738,13 @@ export default function Browse() {
               <button
                 key={`shadow-${val}`}
                 onClick={() => setActiveFilters(prev => ({ ...prev, shadow_tags: (prev.shadow_tags as string[]).filter(t => t !== val) }))}
-                className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
               >
                 {val}
                 <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             ))}
-            <button onClick={() => setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] })} className="text-[10px] font-bold uppercase tracking-wider text-black/40 hover:text-black underline ml-2 transition-colors">Clear all</button>
+            <button onClick={() => setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] })} className="text-[10px] font-medium uppercase tracking-wider text-black/40 hover:text-black underline ml-2 transition-colors">Clear all</button>
           </div>
         )}
       </div>
@@ -767,7 +766,7 @@ export default function Browse() {
                     <button 
                       key={category.key}
                       onClick={() => { setExpandedCategory(isExpanded ? null : category.key); setFilterSearch(''); }}
-                      className={`w-full text-left px-3 h-[38px] shrink-0 rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center justify-between transition-colors ${isExpanded ? 'bg-black text-white' : 'hover:bg-black/5 text-black/60 hover:text-black'}`}
+                      className={`w-full text-left px-3 h-[38px] shrink-0 rounded-lg text-[11px] font-medium uppercase tracking-widest flex items-center justify-between transition-colors ${isExpanded ? 'bg-black text-white' : 'hover:bg-black/5 text-black/60 hover:text-black'}`}
                     >
                       <span>{category.title}</span>
                       {count > 0 ? (
@@ -783,7 +782,7 @@ export default function Browse() {
                 
                 <button 
                   onClick={clearAllFilters}
-                  className={`w-full text-left px-3 mt-2 h-[32px] shrink-0 text-[10px] transition-colors underline font-bold uppercase tracking-widest flex items-center ${
+                  className={`w-full text-left px-3 mt-2 h-[32px] shrink-0 text-[10px] transition-colors underline font-medium uppercase tracking-widest flex items-center ${
                     totalActiveFilterCount > 0
                       ? 'text-black/50 hover:text-black pointer-events-auto'
                       : 'opacity-0 pointer-events-none'
@@ -813,7 +812,7 @@ export default function Browse() {
                           className="w-full pl-7 pr-2 py-1.5 bg-black/5 border border-black/10 rounded-lg text-[11px] focus:outline-none focus:border-black/30 transition-colors"
                         />
                       </div>
-                      <div className="text-black/40 text-[10px] font-bold uppercase tracking-widest mb-3 shrink-0">Select {cat.title}</div>
+                      <div className="text-black/40 text-[10px] font-medium uppercase tracking-widest mb-3 shrink-0">Select {cat.title}</div>
                       <div className="flex flex-col gap-2.5 overflow-y-auto pb-24 pr-2 hide-scrollbar">
                         {filteredOpts.map(opt => {
                           const isActive = (activeFilters[expandedCategory] as string[])?.includes(opt.value);
@@ -822,7 +821,7 @@ export default function Browse() {
                               <div className={`w-4 h-4 shrink-0 rounded flex items-center justify-center transition-colors border ${isActive ? 'bg-black border-black' : 'border-black/20 group-hover:border-black/50'}`}>
                                 {isActive && <div className="w-2 h-2 bg-white rounded-sm" />}
                               </div>
-                              <span className={`text-[11px] transition-colors whitespace-normal leading-tight flex-1 ${isActive ? 'text-black font-bold' : 'text-black/70 group-hover:text-black'}`}>{opt.value}</span>
+                              <span className={`text-[11px] transition-colors whitespace-normal leading-tight flex-1 ${isActive ? 'text-black font-medium' : 'text-black/70 group-hover:text-black'}`}>{opt.value}</span>
                               <span className="text-[9px] text-black/30 shrink-0 font-mono">{opt.count}</span>
                             </label>
                           );
@@ -888,13 +887,13 @@ export default function Browse() {
               <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
                 <div className="flex items-center gap-2 overflow-hidden">
                   <div 
-                    className="font-bold truncate text-[14px] hover:underline underline-offset-2 cursor-pointer"
+                    className="font-medium truncate text-[14px] hover:underline underline-offset-2 cursor-pointer"
                     onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(track); }}
                   >
                     {cleanTitle(track.file_name)}
                   </div>
                   {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 uppercase tracking-widest shrink-0">New</span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-100 text-blue-700 uppercase tracking-widest shrink-0">New</span>
                   )}
                 </div>
                 <div className="font-sans text-[12px] text-black/50 mt-0.5">
@@ -927,13 +926,13 @@ export default function Browse() {
                   
                   const tags = uniqueTags.slice(0, 2);
                   
-                  if (tags.length === 0) return <span className="text-[10px] text-black/30 font-bold uppercase tracking-widest">Tagging...</span>;
+                  if (tags.length === 0) return <span className="text-[10px] text-black/30 font-medium uppercase tracking-widest">Tagging...</span>;
 
                   return tags.map((t, idx) => (
                     <span 
                       key={idx} 
                       onClick={e => handleTagClick(t.category, t.val, e)} 
-                      className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-bold text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                      className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
                     >
                       {t.val}
                     </span>
@@ -955,7 +954,7 @@ export default function Browse() {
 
               <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
                 <TrackActionButtons trackId={track.id} />
-                <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-10 text-right mr-2">
+                <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-10 text-right mr-2">
                   {track.duration ? formatTime(track.duration) : '0:00'}
                 </div>
                 <div className="w-[50px] flex justify-center shrink-0">
@@ -966,7 +965,7 @@ export default function Browse() {
                       title={`${track.versions.length} alternative versions`}
                     >
                       <Layers className="w-4 h-4" />
-                      <span className="font-bold text-[11px] font-sans">{track.versions.length}</span>
+                      <span className="font-medium text-[11px] font-sans">{track.versions.length}</span>
                     </button>
                   )}
                 </div>
@@ -1002,7 +1001,7 @@ export default function Browse() {
                     </div>
                     <div className="flex flex-col w-[20%] shrink-0 pr-4">
                       <div 
-                        className="font-bold text-[13px] truncate hover:underline underline-offset-2 cursor-pointer"
+                        className="font-medium text-[13px] truncate hover:underline underline-offset-2 cursor-pointer"
                         onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(version); }}
                       >
                         {cleanTitle(version.file_name)}
@@ -1022,7 +1021,7 @@ export default function Browse() {
                     </div>
                     <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
                       <TrackActionButtons trackId={version.id} />
-                      <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-10 text-right mr-2">
+                      <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-10 text-right mr-2">
                         {version.duration ? formatTime(version.duration) : '0:00'}
                       </div>
                       {currentTrack?.id !== version.id && (
@@ -1049,7 +1048,7 @@ export default function Browse() {
             <div className="flex items-center justify-center mt-12 pb-12">
               <button 
                 onClick={handleLoadMore}
-                className="px-8 py-3 bg-black text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-transform"
+                className="px-8 py-3 bg-black text-white rounded-full text-xs font-medium uppercase tracking-widest hover:scale-105 transition-transform"
               >
                 Load more
               </button>

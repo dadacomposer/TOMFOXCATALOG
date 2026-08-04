@@ -101,19 +101,8 @@ export function useAsyncTheater({ isVaulted = false }: UseAsyncTheaterProps = {}
     });
   }, [activeTrackId]);
 
-  // Freeze if vaulted
-  useEffect(() => {
-    if (isVaulted) {
-      setIsPlaying(false);
-      if (videoRef.current) videoRef.current.pause();
-      Object.values(audioRefs.current).forEach(audio => {
-        if (audio) audio.pause();
-      });
-    }
-  }, [isVaulted]);
-
+  // Freeze if vaulted (REMOVED: playback is now allowed in completed/vaulted projects)
   const togglePlay = useCallback(() => {
-    if (isVaulted) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -144,7 +133,7 @@ export function useAsyncTheater({ isVaulted = false }: UseAsyncTheaterProps = {}
 
   const handleTrackSelect = useCallback((trackId: string) => {
     if (trackId === activeTrackId) {
-      if (!isVaulted) togglePlay();
+      togglePlay();
       return;
     }
 
@@ -160,13 +149,11 @@ export function useAsyncTheater({ isVaulted = false }: UseAsyncTheaterProps = {}
       }
     });
 
-    if (!isVaulted) {
-      videoRef.current?.play().catch(() => {});
-      Object.values(audioRefs.current).forEach(audio => {
-        if (audio) audio.play().catch(() => {});
-      });
-      setIsPlaying(true);
-    }
+    videoRef.current?.play().catch(() => {});
+    Object.values(audioRefs.current).forEach(audio => {
+      if (audio) audio.play().catch(() => {});
+    });
+    setIsPlaying(true);
   }, [activeTrackId, isVaulted, togglePlay]);
 
   // Global Keyboard Listener for Comments

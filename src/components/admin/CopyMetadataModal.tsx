@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Copy, CheckCircle2, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import toast from 'react-hot-toast';
 import { AdminTrack } from './AdminTracks';
 
@@ -16,6 +17,7 @@ export default function CopyMetadataModal({ sourceTrack, targetTrackIds, allTrac
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(['artwork_url', 'composers', 'subgenre', 'moods', 'scenarios', 'instruments', 'textures', 'human_tags']));
   const [searchQuery, setSearchQuery] = useState('');
+  useLockBodyScroll(true);
   
   // If no targets were pre-selected, allow manual selection
   const [manualTargets, setManualTargets] = useState<Set<string>>(new Set(targetTrackIds));
@@ -24,14 +26,15 @@ export default function CopyMetadataModal({ sourceTrack, targetTrackIds, allTrac
     { id: 'artwork_url', label: 'Artwork' },
     { id: 'composers', label: 'Composers' },
     { id: 'album', label: 'Album' },
-    { id: 'bpm', label: 'BPM' },
     { id: 'key', label: 'Key' },
-    { id: 'subgenre', label: 'Subgenre' },
+    { id: 'energy_level', label: 'Tempo' },
+    { id: 'subgenre', label: 'Arrangement' },
     { id: 'moods', label: 'Moods' },
-    { id: 'scenarios', label: 'Scenarios' },
+    { id: 'scenarios', label: 'Music For' },
     { id: 'instruments', label: 'Instruments' },
-    { id: 'textures', label: 'Textures' },
-    { id: 'human_tags', label: 'Human Tags' },
+    { id: 'textures', label: 'Function' },
+    { id: 'human_tags', label: 'Character' },
+    { id: 'movement', label: 'Movement' },
   ];
 
   const toggleField = (fieldId: string) => {

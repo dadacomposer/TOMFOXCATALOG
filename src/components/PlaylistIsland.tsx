@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { fetchPlaylistTrackIds, fetchTracksByIds, supabase } from '../lib/supabase';
+import React, { useEffect, useState, useRef } from 'react';
+import { fetchPlaylistTrackIds, fetchTracksByIds, fetchTracks, supabase } from '../lib/supabase';
 import { Play, Pause, Download, ShoppingBag, X, TrendingUp } from 'lucide-react';
 import WaveformView from './WaveformView';
 import { DEFAULT_ARTIST, DEFAULT_ARTWORK } from '../config';
@@ -48,6 +48,19 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [playlistTitle, setPlaylistTitle] = useState('Playlist');
+  const [sortBy, setSortBy] = useState('relevance');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setIsSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const { openDownloadModal } = useDownload();
   const { removeTrackFromPlaylist, favoritesPlaylist } = useUserPlaylists();
   const { openLicenseModal } = useLicense();
@@ -63,23 +76,34 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       if (pDataRes.data) setPlaylistTitle(pDataRes.data.title);
       
       if (tIds.length > 0) {
-        // Fast initial load of first 15 tracks
-        const firstChunk = await fetchTracksByIds(tIds.slice(0, 15));
-        setTracks(firstChunk as Track[]);
-        setLoading(false);
-        
-        // Background load of the rest
-        if (tIds.length > 15) {
-          fetchTracksByIds(tIds.slice(15)).then(restChunk => {
-            setTracks(prev => [...prev, ...(restChunk as Track[])]);
-          });
+        if (sortBy === 'relevance') {
+          // Fast initial load of first 15 tracks
+          const firstChunk = await fetchTracksByIds(tIds.slice(0, 15));
+          setTracks(firstChunk as Track[]);
+          setLoading(false);
+          
+          // Background load of the rest
+          if (tIds.length > 15) {
+            fetchTracksByIds(tIds.slice(15)).then(restChunk => {
+              setTracks(prev => {
+                // Prevent duplicate appending if component re-rendered
+                const newTracks = (restChunk as Track[]).filter(rt => !prev.find(p => p.id === rt.id));
+                return [...prev, ...newTracks];
+              });
+            });
+          }
+        } else {
+          // Use fetchTracks to apply sorting on the playlist's tracks
+          const sorted = await fetchTracks(1, 1000, {}, sortBy, tIds);
+          setTracks(sorted as Track[]);
+          setLoading(false);
         }
       } else {
         setLoading(false);
       }
     }
     load();
-  }, [id]);
+  }, [id, sortBy]);
 
   const handlePlayPauseIsland = (track: Track) => {
     if (currentTrack?.id === track.id) {
@@ -115,6 +139,41 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
             )}
           </div>
           <div className="flex items-center gap-6">
+            
+            {/* Sort Dropdown */}
+            <div className="relative flex items-center gap-2 px-4 shrink-0" ref={sortDropdownRef}>
+              <span className="text-[10px] font-bold tracking-widest uppercase text-black/40">Sort</span>
+              <button 
+                onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-black outline-none cursor-pointer"
+              >
+                {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'most_played' ? 'Most Played' : sortBy === 'a-z' ? 'A-Z' : 'Z-A'}
+                <svg className={`w-3 h-3 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              
+              {isSortDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                  {[
+                    { id: 'relevance', label: 'Relevance' },
+                    { id: 'newest', label: 'Newest' },
+                    { id: 'oldest', label: 'Oldest' },
+                    { id: 'most_played', label: 'Most Played' },
+                    { id: 'a-z', label: 'A-Z' },
+                    { id: 'z-a', label: 'Z-A' }
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
+                      className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                    >
+                      {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-3 shrink-0 border-l border-black/10 pl-6 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
               <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
               <div 

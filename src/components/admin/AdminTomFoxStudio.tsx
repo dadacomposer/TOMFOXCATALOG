@@ -140,11 +140,13 @@ export default function AdminTomFoxStudio() {
   const completedProjects = projects.filter(p => p.status === 'completed');
 
   const updateStatus = async (id: string, status: string) => {
+    const previousProjects = [...projects];
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, status } : p));
     try {
       await supabase.from('tf_studio_projects').update({ status }).eq('id', id);
-      setProjects(prev => prev.map(p => p.id === id ? { ...p, status } : p));
       toast.success(`Project moved to ${status}`);
     } catch (e) {
+      setProjects(previousProjects);
       toast.error("Failed to update status");
     }
   };
@@ -832,8 +834,8 @@ export default function AdminTomFoxStudio() {
       )}
       {/* Panoramic Project Details Modal */}
       {selectedProject && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-[32px] w-full max-w-xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto" onClick={() => setSelectedProject(null)}>
+          <div className="bg-white rounded-[32px] w-full max-w-xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto" onClick={(e) => e.stopPropagation()}>
             <button 
               onClick={() => setSelectedProject(null)}
               className="absolute top-6 right-6 text-black/40 hover:text-black transition-colors"
@@ -880,22 +882,6 @@ export default function AdminTomFoxStudio() {
               </div>
 
               <div className="flex flex-col gap-3 mt-4">
-                {selectedProject.status === 'accepted' && (
-                  <button 
-                    onClick={() => { updateStatus(selectedProject.id, 'in production'); setSelectedProject(null); }}
-                    className="w-full bg-blue-500 text-white p-4 rounded-2xl font-bold uppercase tracking-widest text-sm hover:bg-blue-600 transition-colors"
-                  >
-                    Move to In Production
-                  </button>
-                )}
-                {selectedProject.status === 'in production' && (
-                  <button 
-                    onClick={() => { updateStatus(selectedProject.id, 'completed'); setSelectedProject(null); }}
-                    className="w-full bg-purple-500 text-white p-4 rounded-2xl font-bold uppercase tracking-widest text-sm hover:bg-purple-600 transition-colors"
-                  >
-                    Move to Completed
-                  </button>
-                )}
                 
                 <button 
                   onClick={() => {

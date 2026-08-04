@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Plus, CheckCircle2, ListMusic } from 'lucide-react';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { useNavigate } from 'react-router-dom';
@@ -46,9 +47,10 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
     }
   };
 
-  if (successMode) {
-    return (
-      <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={handleClose}>
+
+
+  const content = successMode ? (
+    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={handleClose}>
         <div className="bg-white rounded-[24px] w-full max-w-md p-8 flex flex-col items-center justify-center text-center shadow-2xl relative" onClick={e => e.stopPropagation()}>
           <button onClick={handleClose} className="absolute top-4 right-4 p-2 hover:bg-black/5 rounded-full transition-colors">
             <X className="w-5 h-5 text-black/50" />
@@ -75,11 +77,8 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
             </button>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
+    </div>
+  ) : (
     <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
       <div className="bg-white rounded-[24px] w-full max-w-md overflow-hidden shadow-2xl relative animate-slide-in-up" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-black/5">
@@ -167,4 +166,6 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }

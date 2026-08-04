@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Search, UserCheck, UserX, User, Shield, Calendar, DollarSign, Loader2 } from 'lucide-react';
 import UserDetailModal from './UserDetailModal';
@@ -25,6 +25,8 @@ export default function AdminUsers() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedUser, setSelectedUser] = useState<ProfileData | null>(null);
 
   const fetchUsers = async () => {
@@ -43,6 +45,16 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setIsFilterDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const filteredUsers = users.filter(u => {
@@ -112,17 +124,37 @@ export default function AdminUsers() {
               className="w-full bg-black/5 border border-black/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-black/20"
             />
           </div>
-          
-          <select 
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-black/5 border border-black/10 rounded-lg py-2 px-4 text-sm font-bold focus:outline-none focus:border-black/20"
-          >
-            <option value="all">All Users</option>
-            <option value="active">Active Subscribers</option>
-            <option value="admin">Admins</option>
-            <option value="banned">Banned</option>
-          </select>
+          <div className="relative flex items-center gap-2 px-4 bg-white border border-black/10 rounded-xl shadow-sm shrink-0 h-10" ref={filterDropdownRef}>
+            <button 
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-black outline-none cursor-pointer"
+            >
+              {statusFilter === 'all' ? 'All Users' : statusFilter === 'active' ? 'Active Subscribers' : statusFilter === 'admin' ? 'Admins' : 'Banned'}
+              <svg className={`w-3 h-3 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            
+            {isFilterDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                {[
+                  { id: 'all', label: 'All Users' },
+                  { id: 'active', label: 'Active Subscribers' },
+                  { id: 'admin', label: 'Admins' },
+                  { id: 'banned', label: 'Banned' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setStatusFilter(opt.id); setIsFilterDropdownOpen(false); }}
+                    className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${statusFilter === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {statusFilter === opt.id ? <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3" />}
+                      {opt.label}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">

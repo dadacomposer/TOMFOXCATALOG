@@ -201,8 +201,8 @@ export default function TrackDetailsModal() {
                 </div>
               </div>
               <div className="bg-white p-4 rounded-xl border border-black/5 shadow-sm">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-black/40 mb-1">BPM</div>
-                <div className="font-sans text-sm font-bold">{displayTrack.bpm || '—'}</div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-black/40 mb-1">Tempo</div>
+                <div className="font-sans text-sm font-bold">{(displayTrack as any).energy_level || '—'}</div>
               </div>
               <div className="bg-white p-4 rounded-xl border border-black/5 shadow-sm">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-black/40 mb-1">Key</div>

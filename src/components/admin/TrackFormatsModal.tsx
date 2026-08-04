@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, Trash2, FileAudio, AlertTriangle, Cloud, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { AdminTrack } from './AdminTracks';
 
 type TrackFormatsModalProps = {
@@ -28,8 +29,11 @@ const FORMATS: FormatType[] = [
 
 export default function TrackFormatsModal({ track, onClose, onUpdate }: TrackFormatsModalProps) {
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFormat, setSelectedFormat] = useState<FormatType | null>(null);
+
+  useLockBodyScroll(true);
 
   const handleDelete = async (format: FormatType) => {
     if (!confirm(`Are you sure you want to delete the ${format.label} file for this track? This will remove it from Cloudflare R2 immediately.`)) {

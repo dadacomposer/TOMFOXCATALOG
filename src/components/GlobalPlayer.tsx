@@ -4,8 +4,10 @@ import { useLocation } from 'react-router-dom';
 import WaveformView from './WaveformView';
 import { usePlayer } from '../context/PlayerContext';
 import { getPreviewTimings, parseWaveform } from '../lib/audioUtils';
+import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
+import TrackActionButtons from './TrackActionButtons';
 import { fetchSimilarTracks } from '../lib/supabase';
 import TrackArtwork from './TrackArtwork';
 import { Track } from '../context/PlayerContext';
@@ -252,7 +254,7 @@ export default function GlobalPlayer() {
           onCanPlay={() => setIsBuffering(false)}
         />
       )}
-      <div className="flex items-center gap-4 w-auto md:w-[240px] shrink-0">
+      <div className="flex items-center gap-4 w-auto md:w-[280px] shrink-0">
         <div 
           className={`w-12 h-12 rounded overflow-hidden flex items-center justify-center relative hidden sm:flex border ${baseBorder} ${isSharedPage ? 'bg-white/5' : 'bg-black/5'} cursor-pointer group`}
           onClick={() => currentTrack && setSelectedTrackForDetails(currentTrack)}
@@ -272,6 +274,11 @@ export default function GlobalPlayer() {
               : 'Tom Fox'}
           </div>
         </div>
+        {!isSharedPage && currentTrack && (
+          <div className="ml-auto flex items-center">
+            <TrackActionButtons trackId={currentTrack.id} />
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-4 shrink-0">
         <button onClick={playPrevTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipBack className="w-5 h-5 fill-current" /></button>

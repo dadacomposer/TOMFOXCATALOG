@@ -206,38 +206,46 @@ export default function ProjectFilesPanel({ projectId, project, onRefresh }: Pro
           <div className="flex justify-center p-4"><Loader2 className="w-5 h-5 animate-spin text-black/20" /></div>
         ) : files.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {files.map(file => (
-              <div key={file.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-[#fafafa] border border-black/5 p-3 rounded-2xl gap-3 group">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                    <FileAudio className="w-5 h-5" />
+            {files.map(file => {
+              const isAudio = /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(file.file_name || '');
+              return (
+              <div key={file.id} className="flex flex-col bg-[#fafafa] border border-black/5 p-3 rounded-2xl gap-3 group">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                      <FileAudio className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col truncate">
+                      <span className="font-medium text-sm truncate pr-2">{file.file_name}</span>
+                      <span className="text-xs text-black/40">{(file.file_size / (1024 * 1024)).toFixed(2)} MB • {new Date(file.created_at).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col truncate">
-                    <span className="font-medium text-sm truncate pr-2">{file.file_name}</span>
-                    <span className="text-xs text-black/40">{(file.file_size / (1024 * 1024)).toFixed(2)} MB • {new Date(file.created_at).toLocaleDateString()}</span>
+                  
+                  <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <a 
+                      href={file.file_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-full hover:bg-black/5 text-black/60 hover:text-black transition-colors"
+                      title="Download"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                    <button 
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="p-2 rounded-full hover:bg-red-50 text-red-400 hover:text-red-500 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  <a 
-                    href={file.file_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-full hover:bg-black/5 text-black/60 hover:text-black transition-colors"
-                    title="Download"
-                  >
-                    <Download className="w-4 h-4" />
-                  </a>
-                  <button 
-                    onClick={() => handleDeleteFile(file.id)}
-                    className="p-2 rounded-full hover:bg-red-50 text-red-400 hover:text-red-500 transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+
+                {isAudio && (
+                  <audio controls src={file.file_url} className="w-full h-8 mt-1 custom-audio-player" />
+                )}
               </div>
-            ))}
+            )})}
           </div>
         ) : (
           <p className="text-sm text-black/40 italic">No source files uploaded yet.</p>

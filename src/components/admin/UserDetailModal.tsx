@@ -155,13 +155,6 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
                     </div>
                   </div>
                 </div>
-
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-black/40 mb-4">Security Controls</h3>
-                  <div className="bg-white rounded-2xl border border-black/10 p-6 shadow-sm">
-                    <p className="text-sm text-black/50 text-center">Active administrative actions (ban, reset password, change role) are currently disabled in this view.</p>
-                  </div>
-                </div>
               </div>
             </div>
           )}
