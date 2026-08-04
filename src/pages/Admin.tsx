@@ -12,7 +12,7 @@ export default function Admin() {
   const { currentTrack } = usePlayer();
   const { user, profile, loading, setAccountPanelOpen, setLoginModalOpen } = useAuth();
   const location = useLocation();
-  const isStudioRoute = location.pathname.includes('/studio');
+  const isAdminTheaterRoute = /^\/admin\/studio\/[^/]+/.test(location.pathname);
 
   // Prevent indexing of admin page
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function Admin() {
         <div id="admin-navbar-center" className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"></div>
         
         <nav className="hidden md:flex items-center gap-10 font-bold uppercase text-xs tracking-widest relative z-10">
-          {!isStudioRoute && (
+          {!isAdminTheaterRoute && (
             <>
               <Link to="/browse" className="transition-colors hover:text-black/50">Browse</Link>
               <Link to="/playlists" className="transition-colors hover:text-black/50">Playlists</Link>
