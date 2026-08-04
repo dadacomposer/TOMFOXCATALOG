@@ -16,7 +16,7 @@ import InviteCollaboratorModal from '../components/studio/InviteCollaboratorModa
 export default function TomFoxStudio() {
   const { project_id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading, setLoginModalOpen } = useAuth();
 
   const [project, setProject] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
@@ -65,7 +65,6 @@ export default function TomFoxStudio() {
   const [replyText, setReplyText] = useState('');
   const [hoveredComment, setHoveredComment] = useState<{comment: any, rect: DOMRect} | null>(null);
 
-  const { setLoginModalOpen } = useAuth();
   const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
@@ -75,6 +74,7 @@ export default function TomFoxStudio() {
   }, [interceptedKey, isTypingComment]);
 
   useEffect(() => {
+    if (authLoading) return;
     fetchStudioData();
 
     if (!project_id) return;
@@ -95,10 +95,11 @@ export default function TomFoxStudio() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, project_id, setLoginModalOpen]);
+  }, [user, authLoading, project_id, setLoginModalOpen]);
 
   const fetchStudioData = async () => {
     if (!project) setLoading(true);
+    setUnauthorized(false);
     try {
       const { data: pData, error: pErr } = await supabase
         .from('tf_studio_projects')
