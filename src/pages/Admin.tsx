@@ -183,7 +183,7 @@ export default function Admin() {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#fafafa]">
-        <main className={`flex-1 flex flex-col min-h-0 ${isStudioRoute ? 'p-4 pb-0' : 'p-8 pb-0'}`}>
+        <main className={`flex-1 flex flex-col min-h-0 ${isAdminTheaterRoute ? 'p-4 pb-0' : 'p-8 pb-0'}`}>
           <Outlet />
         </main>
 
