@@ -217,7 +217,8 @@ export default function AdminTracks() {
         title: draftPlaylist.title,
         categories: draftPlaylist.categories,
         is_featured: draftPlaylist.is_featured,
-        cover_url: draftPlaylist.cover_url
+        cover_url: draftPlaylist.cover_url,
+        track_count: draftPlaylistTracks.length
       };
       
       const { error: metadataError } = await supabase.from('playlists').update(updates).eq('id', selectedPlaylistId);
@@ -245,9 +246,6 @@ export default function AdminTracks() {
           .eq('playlist_id', selectedPlaylistId)
           .in('track_id', deletedTrackIds);
         if (deleteError) throw deleteError;
-        
-        const newCount = Math.max(0, draftPlaylist.track_count - deletedTrackIds.length);
-        await supabase.from('playlists').update({ track_count: newCount }).eq('id', selectedPlaylistId);
       }
 
       toast.success('Changes saved and published to public view!', { id: loadingToast, icon: '🚀' });

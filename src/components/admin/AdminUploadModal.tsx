@@ -192,7 +192,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
   }, []);
 
   const fetchPlaylists = async () => {
-    const { data } = await supabase.from('playlists').select('id, title').order('created_at', { ascending: false });
+    const { data } = await supabase.from('playlists').select('id, title').is('user_id', null).order('created_at', { ascending: false });
     if (data) setPlaylists(data);
   };
 
@@ -571,6 +571,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
             track_id: track.dbId,
             position: count || 0
           }]);
+          await supabase.from('playlists').update({ track_count: (count || 0) + 1 }).eq('id', realPlaylistId);
         }
 
         if (addToNewMusic && track.type === 'main') {
@@ -582,6 +583,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
                track_id: track.dbId,
                position: nmCount || 0
              }]);
+             await supabase.from('playlists').update({ track_count: (nmCount || 0) + 1 }).eq('id', newMusicPlaylist.id);
           }
         }
 

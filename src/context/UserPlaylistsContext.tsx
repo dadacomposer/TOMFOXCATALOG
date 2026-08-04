@@ -26,14 +26,14 @@ type UserPlaylistsContextType = {
 const UserPlaylistsContext = createContext<UserPlaylistsContextType | undefined>(undefined);
 
 export function UserPlaylistsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const [playlists, setPlaylists] = useState<UserPlaylist[]>([]);
   const [favoritesPlaylist, setFavoritesPlaylist] = useState<UserPlaylist | null>(null);
   const [favoriteTrackIds, setFavoriteTrackIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserPlaylists = async () => {
-    if (!user) {
+    if (!user || !activeWorkspace) {
       setPlaylists([]);
       setFavoritesPlaylist(null);
       setFavoriteTrackIds(new Set());
@@ -46,6 +46,7 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
         .from('playlists')
         .select('*')
         .eq('user_id', user.id)
+        .eq('workspace_id', activeWorkspace.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -77,7 +78,7 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     fetchUserPlaylists();
-  }, [user]);
+  }, [user, activeWorkspace]);
 
   const ensureFavoritesPlaylist = async (): Promise<UserPlaylist | null> => {
     if (favoritesPlaylist) return favoritesPlaylist;
@@ -88,6 +89,7 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
         .from('playlists')
         .insert([{
           user_id: user.id,
+          workspace_id: activeWorkspace.id,
           title: 'Favourites',
           is_favorites: true,
           track_count: 0
@@ -159,13 +161,15 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
   };
 
   const createPlaylist = async (title: string, trackId?: string) => {
-    if (!user) return null;
+    if (!user || !activeWorkspace) return null;
     try {
       const { data, error } = await supabase
         .from('playlists')
         .insert([{
           user_id: user.id,
-          title,
+          workspace_id: activeWorkspace.id,
+          title: title,
+          is_favorites: false,
           track_count: trackId ? 1 : 0
         }])
         .select()
