@@ -549,6 +549,18 @@ export async function getUserWorkspaces(userId: string) {
   return data || [];
 }
 
+export async function getUserStudioProjects() {
+  const { data, error } = await supabase
+    .from('tf_studio_projects')
+    .select('*')
+    .order('created_at', { ascending: false });
+    
+  if (error) {
+    console.error('Failed to fetch user studio projects', error);
+    return [];
+  }
+  return data || [];
+}
 export async function createWorkspace(userId: string, name: string, avatarUrl?: string, companyName?: string, companyIndustry?: string) {
   const { data, error } = await supabase.rpc('create_new_workspace', {
     p_name: name,

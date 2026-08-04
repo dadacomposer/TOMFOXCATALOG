@@ -43,6 +43,9 @@ type AuthContextType = {
   setCustomMusicIntent: (val: boolean) => void;
   isUpdatePasswordModalOpen: boolean;
   setUpdatePasswordModalOpen: (val: boolean) => void;
+  studioProjects: any[];
+  setStudioProjects: (projects: any[]) => void;
+  fetchStudioProjects: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -70,6 +73,9 @@ const AuthContext = createContext<AuthContextType>({
   refreshProfile: async () => {},
   setWorkspaces: () => {},
   fetchWorkspaces: async () => {},
+  studioProjects: [],
+  setStudioProjects: () => {},
+  fetchStudioProjects: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -91,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isUpdatePasswordModalOpen, setUpdatePasswordModalOpen] = useState(() => {
     return typeof window !== 'undefined' && window.location.hash.includes('type=invite');
   });
+  const [studioProjects, setStudioProjects] = useState<any[]>([]);
 
   const fetchWorkspaces = async (userId: string) => {
     try {
@@ -110,6 +117,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Also load workspaces
     await fetchWorkspaces(userId);
+    
+    // Load studio projects
+    await fetchProjects();
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const { getUserStudioProjects } = await import('../lib/supabase');
+      const projects = await getUserStudioProjects();
+      setStudioProjects(projects);
+    } catch (e) {
+      console.error("Error loading studio projects", e);
+    }
   };
 
   useEffect(() => {
@@ -196,7 +216,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUpdatePasswordModalOpen,
       signOut,
       refreshProfile, setWorkspaces, fetchWorkspaces,
-      customMusicIntent, setCustomMusicIntent
+      customMusicIntent, setCustomMusicIntent,
+      studioProjects, setStudioProjects, fetchStudioProjects: fetchProjects
     }}>
       {children}
     </AuthContext.Provider>
