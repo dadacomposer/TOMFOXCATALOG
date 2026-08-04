@@ -64,6 +64,12 @@ export default function AdminTheater() {
   const [replyText, setReplyText] = useState('');
   const [hoveredComment, setHoveredComment] = useState<{comment: any, rect: DOMRect} | null>(null);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [comments]);
+
   useEffect(() => {
     if (interceptedKey && isTypingComment) {
       setCommentText(interceptedKey);
@@ -584,6 +590,7 @@ export default function AdminTheater() {
                   </div>
                 )}
                 <div className="h-4" /> {/* Spacer */}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Chat Input (Bottom) */}

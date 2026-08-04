@@ -65,6 +65,12 @@ export default function TomFoxStudio() {
   const [replyText, setReplyText] = useState('');
   const [hoveredComment, setHoveredComment] = useState<{comment: any, rect: DOMRect} | null>(null);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [comments]);
+
   const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
@@ -684,6 +690,7 @@ export default function TomFoxStudio() {
                   </div>
                 )}
                 <div className="h-4" /> {/* Spacer */}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Chat Input (Bottom) */}
