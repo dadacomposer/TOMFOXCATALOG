@@ -385,13 +385,19 @@ export default function TomFoxStudio() {
       
       {/* Navbar con Titolo */}
       <header className="w-full h-20 bg-white border-b-2 border-black/10 shrink-0 flex items-center justify-between px-6 z-10">
-        <div className="flex-1 flex justify-start">
+        <div className="flex-1 flex justify-start items-center gap-8">
           <Link to="/">
             <img 
               src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
               alt="Tom Fox" 
               className="h-7" 
             />
+          </Link>
+          <Link 
+            to="/browse"
+            className="text-xs font-bold uppercase tracking-widest text-black/40 hover:text-black transition-colors hidden sm:block"
+          >
+            Catalog
           </Link>
         </div>
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 animate-in fade-in duration-300">
