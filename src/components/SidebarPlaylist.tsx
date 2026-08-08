@@ -21,7 +21,7 @@ export default function SidebarPlaylist({
   dragTarget,
   setDragTarget
 }: SidebarPlaylistProps) {
-  const { toggleFavorite, addTrackToPlaylist, favoriteTrackIds } = useUserPlaylists();
+  const { addTracksToPlaylist } = useUserPlaylists();
   const { playTrack } = usePlayer();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,17 +58,7 @@ export default function SidebarPlaylist({
       try {
         const payload = JSON.parse(data);
         if (payload.type === 'tracks') {
-          if (isFavorites) {
-            await Promise.all(payload.ids.map(async (id: string) => {
-              if (!favoriteTrackIds.has(id)) {
-                await toggleFavorite(id);
-              }
-            }));
-          } else {
-            await Promise.all(payload.ids.map(async (id: string) => {
-              await addTrackToPlaylist(playlist.id, id);
-            }));
-          }
+          await addTracksToPlaylist(playlist.id, payload.ids);
           if (isExpanded) {
             loadTracks();
           }
@@ -81,7 +71,12 @@ export default function SidebarPlaylist({
   const isDraggingOver = dragTarget === targetId;
 
   return (
-    <div className="flex flex-col mb-1 w-full shrink-0">
+    <div 
+      className="flex flex-col mb-1 w-full shrink-0"
+      onDragOver={(e) => { e.preventDefault(); setDragTarget(targetId); }}
+      onDragLeave={() => setDragTarget(null)}
+      onDrop={handleDrop}
+    >
       <div
         className={`w-full text-left px-3 py-2 shrink-0 rounded-lg text-[11px] font-medium uppercase tracking-widest flex items-center justify-between transition-colors border-2 cursor-pointer ${
           isDraggingOver
@@ -89,9 +84,6 @@ export default function SidebarPlaylist({
             : isExpanded ? 'border-transparent text-black' : 'border-transparent text-black/60 hover:bg-black/5 hover:text-black'
         }`}
         onClick={onToggleExpand}
-        onDragOver={(e) => { e.preventDefault(); setDragTarget(targetId); }}
-        onDragLeave={() => setDragTarget(null)}
-        onDrop={handleDrop}
       >
         <div className="flex items-center gap-2 truncate pr-2">
           {isFavorites ? (

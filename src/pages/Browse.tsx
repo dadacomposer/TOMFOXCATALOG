@@ -939,12 +939,10 @@ export default function Browse() {
                   />
                 )}
                 
-                <div className="mt-6 mb-2 px-3 flex items-center justify-between group">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-black/30">My Playlists</span>
-                </div>
+
                 
                 <div 
-                  className={`mx-2 mb-2 flex items-center gap-2 p-2 rounded-lg border-2 transition-colors cursor-pointer ${isInlineCreating || pendingDropTracks.length > 0 ? 'border-black bg-black/5 text-black' : 'border-dashed border-black/20 text-black/40 hover:border-black/40 hover:text-black hover:bg-black/5'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`mt-4 mx-2 mb-2 flex items-center gap-2 p-2 rounded-lg border-2 transition-colors cursor-pointer ${isInlineCreating || pendingDropTracks.length > 0 ? 'border-black bg-black/5 text-black' : 'border-dashed border-black/20 text-black/40 hover:border-black/40 hover:text-black hover:bg-black/5'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => !isInlineCreating && setIsInlineCreating(true)}
                   onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   onDrop={(e) => {

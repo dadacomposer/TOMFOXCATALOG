@@ -18,6 +18,7 @@ type UserPlaylistsContextType = {
   toggleFavorite: (trackId: string) => Promise<void>;
   createPlaylist: (title: string, trackId?: string) => Promise<UserPlaylist | null>;
   addTrackToPlaylist: (playlistId: string, trackId: string) => Promise<boolean>;
+  addTracksToPlaylist: (playlistId: string, trackIds: string[]) => Promise<boolean>;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<boolean>;
   refreshPlaylists: () => Promise<void>;
   isLoading: boolean;
@@ -189,26 +190,31 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
     }
   };
 
-  const addTrackToPlaylist = async (playlistId: string, trackId: string) => {
+  const addTracksToPlaylist = async (playlistId: string, trackIds: string[]) => {
     if (!user) return false;
     const pl = playlists.find(p => p.id === playlistId);
     if (!pl) return false;
     
     try {
-      // Check if already in playlist
-      const { data: existing } = await supabase.from('playlist_tracks').select('track_id').match({ playlist_id: playlistId, track_id: trackId }).maybeSingle();
-      if (existing) {
-        toast.error('Track is already in this playlist');
-        return false;
-      }
+      const { data: existing } = await supabase.from('playlist_tracks').select('track_id').eq('playlist_id', playlistId);
+      const existingSet = new Set(existing?.map(t => t.track_id) || []);
       
-      await supabase.from('playlist_tracks').insert([{ playlist_id: playlistId, track_id: trackId, position: pl.track_count }]);
-      await supabase.from('playlists').update({ track_count: pl.track_count + 1 }).eq('id', playlistId);
+      const newIds = trackIds.filter(id => !existingSet.has(id));
+      if (newIds.length === 0) return true; // all already exist
+
+      const inserts = newIds.map((id, index) => ({
+        playlist_id: playlistId,
+        track_id: id,
+        position: pl.track_count + index
+      }));
+
+      await supabase.from('playlist_tracks').insert(inserts);
+      await supabase.from('playlists').update({ track_count: pl.track_count + newIds.length }).eq('id', playlistId);
       
       if (pl.is_favorites) {
         setFavoriteTrackIds(prev => {
           const next = new Set(prev);
-          next.add(trackId);
+          newIds.forEach(id => next.add(id));
           return next;
         });
       }
@@ -216,9 +222,13 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
       await fetchUserPlaylists();
       return true;
     } catch (e) {
-      console.error('Failed to add track to playlist', e);
+      console.error('Failed to add tracks to playlist', e);
       return false;
     }
+  };
+
+  const addTrackToPlaylist = async (playlistId: string, trackId: string) => {
+    return addTracksToPlaylist(playlistId, [trackId]);
   };
 
   const removeTrackFromPlaylist = async (playlistId: string, trackId: string) => {
@@ -253,6 +263,7 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
       toggleFavorite, 
       createPlaylist, 
       addTrackToPlaylist,
+      addTracksToPlaylist,
       removeTrackFromPlaylist,
       refreshPlaylists: fetchUserPlaylists,
       isLoading 
