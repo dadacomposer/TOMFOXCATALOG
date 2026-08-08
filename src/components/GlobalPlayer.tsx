@@ -310,16 +310,14 @@ export default function GlobalPlayer() {
         <div className={`font-sans text-[11px] ${secondaryText} uppercase tracking-widest w-12 text-right`}>{audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'}</div>
       </div>
       <div className="shrink-0 flex items-center gap-4 ml-4">
-        {location.pathname.startsWith('/admin') && (
-          <div className="flex items-center gap-3 cursor-pointer group/preview mr-2" onClick={() => setIsPreviewMode(!isPreviewMode)}>
-            <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
-            <div 
-              className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
-            >
-              <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
-            </div>
+        <div className="flex items-center gap-3 cursor-pointer group/preview mr-2" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+          <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? (isSharedPage ? 'text-white' : 'text-black group-hover/preview:text-black/70') : (isSharedPage ? 'text-white/50' : 'text-black/30 group-hover/preview:text-black/60')}`}>Preview</span>
+          <div 
+            className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? (isSharedPage ? 'bg-white/30 group-hover/preview:bg-white/40' : 'bg-[#111111] group-hover/preview:bg-[#333]') : (isSharedPage ? 'bg-white/10 group-hover/preview:bg-white/20' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]')}`}
+          >
+            <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
           </div>
-        )}
+        </div>
         {!isSharedPage && (
           <button 
             onClick={() => {

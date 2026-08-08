@@ -6,6 +6,7 @@ export type SiteSettings = {
   free_watermarks_enabled: boolean;
   free_hd_enabled: boolean;
   public_artwork_frames_enabled: boolean;
+  top_picks_animation_enabled: boolean;
 };
 
 export type PageContent = Record<string, string>;
@@ -22,6 +23,7 @@ const defaultSettings: SiteSettings = {
   free_watermarks_enabled: false,
   free_hd_enabled: true,
   public_artwork_frames_enabled: true,
+  top_picks_animation_enabled: true,
 };
 
 export const DEFAULT_CONTENT: Record<string, PageContent> = {

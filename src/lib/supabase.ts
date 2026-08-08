@@ -281,6 +281,25 @@ export async function fetchTrendingTracks() {
   return fullTracks;
 }
 
+export async function fetchSuggestedTracks(userId: string) {
+  if (!userId) return [];
+  const { data, error } = await supabase.rpc('get_suggested_tracks', {
+    p_user_id: userId
+  });
+  
+  if (error) {
+    console.error('Error fetching suggested tracks:', error);
+    return [];
+  }
+  
+  if (!data || data.length === 0) return [];
+  
+  const finalIds = data.map((t: { track_id: string }) => t.track_id);
+  const fullTracks = await fetchTracksByIds(finalIds);
+  return fullTracks;
+}
+
+
 export async function searchTracksByTitle(query: string) {
   // Try full text search first (handles stemming: investigation -> investig)
   const { data: ftsData, error: ftsError } = await supabase

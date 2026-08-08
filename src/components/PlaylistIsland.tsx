@@ -39,10 +39,11 @@ interface PlaylistIslandProps {
   isOwner?: boolean;
   inline?: boolean;
   initialTrackCount?: number;
+  isScrollableContainer?: boolean;
 }
 
 export default function PlaylistIsland(props: PlaylistIslandProps) {
-  const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount } = props;
+  const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount, isScrollableContainer } = props;
   const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, setSelectedTrackForDetails } = usePlayer();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,7 +218,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col gap-1 pb-16">
+            <div className={`flex flex-col gap-1 pb-16 ${isScrollableContainer ? 'max-h-[640px] overflow-y-auto pr-2 custom-scrollbar' : ''}`}>
               {tracks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-6 py-20 text-black/40">
                   <img src="/search-for-documents.svg" alt="Empty playlist" className="w-80 h-80" />

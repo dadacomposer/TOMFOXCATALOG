@@ -36,7 +36,7 @@ type PlayerContextType = {
   progress: number;
   pendingSeek: number | null;
   audioRef: React.MutableRefObject<HTMLAudioElement | null>;
-  playTrack: (track: Track, playlist?: Track[], source?: 'top' | 'browse' | 'playlist') => void;
+  playTrack: (track: Track, playlist?: Track[], source?: 'top' | 'browse' | 'playlist' | 'suggested') => void;
   playPlaylist: (playlist: Track[], startIndex?: number) => void;
   togglePlay: () => void;
   playNextTrack: () => void;
@@ -50,8 +50,8 @@ type PlayerContextType = {
   setIsCurrentPreviewDormant: (mode: boolean) => void;
   fallbackPlaylist: Track[];
   setFallbackPlaylist: (playlist: Track[]) => void;
-  currentSource: 'top' | 'browse' | 'playlist' | null;
-  setCurrentSource: (source: 'top' | 'browse' | 'playlist' | null) => void;
+  currentSource: 'top' | 'browse' | 'playlist' | 'suggested' | null;
+  setCurrentSource: (source: 'top' | 'browse' | 'playlist' | 'suggested' | null) => void;
   setCurrentPlaylist: (playlist: Track[]) => void;
   returnTrackId: string | null;
   setReturnTrackId: (id: string | null) => void;
@@ -70,7 +70,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [isCurrentPreviewDormant, setIsCurrentPreviewDormant] = useState(false);
   const [fallbackPlaylist, setFallbackPlaylist] = useState<Track[]>([]);
-  const [currentSource, setCurrentSource] = useState<'top' | 'browse' | 'playlist' | null>(null);
+  const [currentSource, setCurrentSource] = useState<'top' | 'browse' | 'playlist' | 'suggested' | null>(null);
   const [returnTrackId, setReturnTrackId] = useState<string | null>(null);
   const [selectedTrackForDetails, setSelectedTrackForDetails] = useState<Track | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -135,7 +135,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const playTrack = (track: Track, playlist?: Track[], source?: 'top' | 'browse' | 'playlist') => {
+  const playTrack = (track: Track, playlist?: Track[], source?: 'top' | 'browse' | 'playlist' | 'suggested') => {
     setIsCurrentPreviewDormant(false);
     if (source === 'top') {
       setIsPreviewMode(false);

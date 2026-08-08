@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { Heart, ListMusic, Plus, Share2, Trash2, X, Loader2 } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
-import CreatePlaylistModal from '../components/CreatePlaylistModal';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -16,6 +15,8 @@ export default function MyMusic() {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
@@ -85,6 +86,22 @@ export default function MyMusic() {
     setShowDeleteModal(true);
   };
 
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPlaylistTitle.trim() || isCreating) return;
+    
+    setIsCreating(true);
+    try {
+      await createPlaylist(newPlaylistTitle.trim());
+      setShowCreateModal(false);
+      setNewPlaylistTitle('');
+    } catch (err) {
+      toast.error('Failed to create playlist');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const handleSeek = () => {}; // Used for PlaylistIsland when previewing, but PlaylistIsland handles internal seek via context for the most part.
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -132,7 +149,8 @@ export default function MyMusic() {
                 trendingTrackIds={new Set()}
                 isOwner={true}
                 inline={true}
-                initialTrackCount={1} // Favourites usually has tracks if this is true, but we could use favoritesPlaylist.tracks?.length if available, but 1 is safe to force loader since we don't have track_count here easily
+                initialTrackCount={1}
+                isScrollableContainer={true}
               />
             ) : (
               <div className="w-full flex flex-col items-center justify-center p-12 rounded-3xl">
@@ -212,15 +230,40 @@ export default function MyMusic() {
       )}
 
       {/* Create Playlist Modal */}
-      <CreatePlaylistModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={(pl) => {
-          setShowCreateModal(false);
-          // Optional: immediately select the newly created playlist
-          // setSelectedPlaylistId(pl.id);
-        }}
-      />
+      <AnimatePresence>
+        {showCreateModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isCreating && setShowCreateModal(false)} />
+            <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-6 border-b border-black/10 flex justify-between items-center bg-[#fafafa] rounded-t-3xl">
+                <h2 className="text-xl font-bold uppercase tracking-tighter text-black">Create Playlist</h2>
+                <button onClick={() => !isCreating && setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center hover:bg-black/10"><X className="w-4 h-4" /></button>
+              </div>
+              <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-black/60">Playlist Name</label>
+                  <input
+                    type="text"
+                    value={newPlaylistTitle}
+                    onChange={(e) => setNewPlaylistTitle(e.target.value)}
+                    placeholder="E.g., Summer Vibes"
+                    className="w-full bg-[#fafafa] border border-black/10 rounded-xl px-4 py-3 font-sans text-sm focus:bg-white focus:border-black/30 outline-none transition-all"
+                    autoFocus
+                  />
+                </div>
+                <div className="pt-4 mt-2 border-t border-black/10 flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowCreateModal(false)} className="px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/5 transition-colors" disabled={isCreating}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={!newPlaylistTitle.trim() || isCreating} className="px-6 py-3 bg-black text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center gap-2">
+                    {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Playlist Modal */}
       <AnimatePresence>

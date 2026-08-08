@@ -17,6 +17,7 @@ export default function TrackActionButtons({ trackId, hideHeart }: TrackActionBu
   const isFavorite = favoriteTrackIds.has(trackId);
 
   const handleHeartClick = async (e: React.MouseEvent) => {
+    if (e.shiftKey || e.metaKey || e.ctrlKey) return;
     e.stopPropagation();
     if (!user) {
       setLoginModalOpen(true);
@@ -26,6 +27,7 @@ export default function TrackActionButtons({ trackId, hideHeart }: TrackActionBu
   };
 
   const handlePlusClick = (e: React.MouseEvent) => {
+    if (e.shiftKey || e.metaKey || e.ctrlKey) return;
     e.stopPropagation();
     if (!user) {
       setLoginModalOpen(true);

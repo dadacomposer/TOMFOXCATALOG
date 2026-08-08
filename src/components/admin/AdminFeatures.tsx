@@ -131,7 +131,7 @@ export default function AdminFeatures() {
     <div className="flex-1 overflow-y-auto h-full w-full -mx-8 px-8 pb-32">
       <div className="w-full max-w-5xl mx-auto space-y-12">
       
-      <div className="sticky top-0 z-10 bg-[#fafafa]/80 backdrop-blur-md pt-6 md:pt-12 pb-6 border-b border-black/5 -mx-8 px-8 mb-8 flex items-center justify-between">
+      <div className="sticky top-0 z-10 bg-[#fafafa] pt-6 md:pt-12 pb-6 border-b border-black/5 -mx-8 px-8 mb-8 flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-medium uppercase tracking-tighter mb-2">Content</h2>
           <p className="text-black/50 font-sans">Control public site behavior and modify page copy instantly.</p>
@@ -152,29 +152,36 @@ export default function AdminFeatures() {
           <Settings2 className="w-5 h-5" />
           <h3 className="text-xl font-medium uppercase tracking-tight">Top Picks For You</h3>
         </div>
-        <p className="text-xs font-medium uppercase tracking-widest text-black/40">
-          Assign public playlists to the 4 cards in the Browse page and select their background gradient.
-        </p>
-        <div className="bg-white rounded-2xl border border-black/10 shadow-sm p-6 overflow-x-auto hide-scrollbar">
-          <div className="flex gap-8 min-w-max">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <p className="text-xs font-medium uppercase tracking-widest text-black/40">
+            Assign public playlists to the 4 cards in the Browse page and select their background gradient.
+          </p>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-black/40">SVG Animation</span>
+            <button 
+              onClick={() => setLocalSettings(prev => ({ ...prev, top_picks_animation_enabled: !prev.top_picks_animation_enabled }))}
+              className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${localSettings.top_picks_animation_enabled !== false ? 'bg-[#111111]' : 'bg-[#e0e0e0]'}`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${localSettings.top_picks_animation_enabled !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-black/10 shadow-sm p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
             {[1, 2, 3, 4].map(num => {
               const plId = topPicks[`card_${num}`];
               const pl = publicPlaylists.find(p => p.id === plId);
-              const gradient = localContent.top_picks?.[`card_${num}_gradient`] || 'bg-[#e5e5e5]';
               
-              const GRADIENTS = [
-                'bg-[#e5e5e5]',
-                'bg-gradient-to-br from-rose-400 to-red-500',
-                'bg-gradient-to-br from-fuchsia-500 to-purple-600',
-                'bg-gradient-to-br from-violet-500 to-purple-500',
-                'bg-gradient-to-br from-blue-500 to-cyan-500',
-                'bg-gradient-to-br from-teal-400 to-emerald-500',
-                'bg-gradient-to-br from-amber-400 to-orange-500',
-                'bg-gradient-to-br from-gray-800 to-black',
+              const cardStyles = [
+                { baseColor: 'bg-gradient-to-br from-[#1E293B] to-[#0F172A]', bgIdle: 'bg-[#38BDF8]/20', bgHover: 'bg-[#38BDF8]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#3F3F46] to-[#18181B]', bgIdle: 'bg-[#A78BFA]/20', bgHover: 'bg-[#A78BFA]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#1E1B4B] to-[#09090B]', bgIdle: 'bg-[#F472B6]/20', bgHover: 'bg-[#F472B6]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#0F172A] to-[#020617]', bgIdle: 'bg-[#34D399]/20', bgHover: 'bg-[#34D399]/40' }
               ];
+              const style = cardStyles[num - 1];
 
               return (
-                <div key={`card_${num}`} className="flex flex-col gap-6 w-[340px] shrink-0">
+                <div key={`card_${num}`} className="flex flex-col gap-6 w-full">
                   {/* Controls */}
                   <div className="flex flex-col gap-3">
                     <label className="text-xs font-medium uppercase tracking-widest text-black/60">
@@ -193,51 +200,34 @@ export default function AdminFeatures() {
                         }))
                       ]}
                     />
-                    <label className="text-xs font-medium uppercase tracking-widest text-black/60 mt-1">
-                      Gradient Color
-                    </label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {GRADIENTS.map(g => (
-                        <button
-                          key={g}
-                          onClick={() => {
-                            setLocalContent(prev => ({
-                              ...prev,
-                              top_picks: {
-                                ...(prev.top_picks || {}),
-                                [`card_${num}_gradient`]: g
-                              }
-                            }));
-                          }}
-                          className={`w-6 h-6 rounded-full border border-black/10 shadow-sm ${g} ${gradient === g ? 'ring-2 ring-black ring-offset-2 scale-110' : 'hover:scale-110 transition-transform'}`}
-                          title={g}
-                        />
-                      ))}
-                    </div>
                   </div>
                   
                   {/* Preview Card */}
-                  <div className={`flex flex-col p-4 rounded-[32px] ${gradient} w-full transition-all duration-300 border border-black/5`}>
-                    <div className="relative w-full aspect-[1.15] mb-6">
-                      {pl ? (
-                        <>
-                          <PlaylistArtwork playlist={pl} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md z-0" />
-                          <PlaylistArtwork playlist={pl} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md z-10" />
-                          <PlaylistArtwork playlist={pl} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl z-20" />
-                        </>
-                      ) : (
-                        <div className="w-full h-full border-2 border-dashed border-black/10 rounded-[28px] flex flex-col items-center justify-center text-center p-4">
-                          <span className="text-xs font-bold uppercase tracking-widest text-black/30">No Playlist</span>
-                        </div>
-                      )}
+                  <div className={`relative w-full aspect-[3/4] rounded-[32px] overflow-hidden group shadow-sm transition-all duration-500 border border-transparent ${style.baseColor}`}>
+                    {/* Animated Mesh Background (Idle State) */}
+                    <div className="absolute inset-[-100%] animate-[spin_16s_linear_infinite] origin-[45%_55%] pointer-events-none">
+                      <div className={`absolute inset-0 ${style.bgIdle} blur-[100px] scale-150`} />
                     </div>
-                    <div className="flex flex-col px-2 pb-2">
-                      <span className={`font-medium text-[18px] ${gradient === 'bg-[#e5e5e5]' ? 'text-black' : 'text-white'} line-clamp-1`}>
-                        {pl ? pl.title : 'Select a playlist'}
-                      </span>
-                      <span className={`font-sans text-[13px] ${gradient === 'bg-[#e5e5e5]' ? 'text-black/50' : 'text-white/70'} mt-0.5`}>
-                        {pl ? `${pl.track_count} tracks` : '-'}
-                      </span>
+                    
+                    {/* Animated Mesh Background (Active State) */}
+                    <div className="absolute inset-[-100%] animate-[spin_8s_linear_infinite] origin-[45%_55%] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+                      <div className={`absolute inset-0 ${style.bgHover} blur-[100px] scale-150`} />
+                    </div>
+
+                    {/* Logo */}
+                    <img 
+                      src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
+                      alt="Tom Fox" 
+                      className="absolute top-6 right-6 h-[18px] object-contain invert opacity-90 mix-blend-plus-lighter z-20"
+                    />
+
+                    {/* Bottom Content */}
+                    <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col justify-end h-[60%] bg-gradient-to-t from-black/80 via-black/30 to-transparent z-20">
+                      <div className="flex items-end justify-between w-full mt-auto">
+                        <span className="text-white font-medium tracking-tight text-lg drop-shadow-md leading-[1.1] max-w-[80%]">
+                          {pl ? pl.title : 'No Playlist'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -264,9 +254,9 @@ export default function AdminFeatures() {
                
                <button 
                  onClick={() => setLocalSettings(prev => ({ ...prev, public_artwork_frames_enabled: !prev.public_artwork_frames_enabled }))}
-                 className={`preview-toggle w-12 h-6 rounded-full transition-colors relative ${localSettings.public_artwork_frames_enabled ? 'bg-black' : 'bg-black/20'}`}
+                 className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${localSettings.public_artwork_frames_enabled ? 'bg-[#111111]' : 'bg-[#e0e0e0]'}`}
                >
-                 <div className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full transition-all ${localSettings.public_artwork_frames_enabled ? 'left-[calc(100%-1.25rem)]' : 'left-1'}`} />
+                 <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${localSettings.public_artwork_frames_enabled ? 'translate-x-5' : 'translate-x-0'}`} />
                </button>
              </div>
            </div>

@@ -14,6 +14,7 @@ export default function WaveformView({ data, isPlaying = false, progress = 0, on
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.shiftKey || e.metaKey || e.ctrlKey) return;
     e.stopPropagation();
     if (!onSeek || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();

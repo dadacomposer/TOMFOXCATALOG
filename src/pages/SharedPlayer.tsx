@@ -282,16 +282,15 @@ export default function SharedPlayer() {
                   </div>
                   
                   {canDownload && (
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         openDownloadModal(track, e, { forceUnrestricted: true, sharedSlug: slug });
                       }}
-                      className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded-lg hover:border-black/30 transition-colors bg-white font-sans text-[11px] font-bold uppercase tracking-widest text-black shadow-sm shrink-0"
+                      className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0"
                       title="Download Track"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download</span>
+                      <Download className="w-4 h-4" />
                     </button>
                   )}
                 </div>
