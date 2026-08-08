@@ -35,7 +35,6 @@ interface PlaylistIslandProps {
   progress: number;
   handleSeek: (track: Track, percentage: number) => void;
   formatTime: (seconds: number) => string;
-  newMusicTrackIds: Set<string>;
   trendingTrackIds: Set<string>;
   isOwner?: boolean;
   inline?: boolean;
@@ -43,7 +42,7 @@ interface PlaylistIslandProps {
 }
 
 export default function PlaylistIsland(props: PlaylistIslandProps) {
-  const { id, onClose, progress, handleSeek, formatTime, newMusicTrackIds, trendingTrackIds, isOwner, inline, initialTrackCount } = props;
+  const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount } = props;
   const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, setSelectedTrackForDetails } = usePlayer();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +72,9 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
         fetchPlaylistTrackIds(id)
       ]);
       
-      if (pDataRes.data) setPlaylistTitle(pDataRes.data.title);
+      if (pDataRes.data) {
+        setPlaylistTitle(pDataRes.data.title === 'Favourites' ? 'Favorites' : pDataRes.data.title);
+      }
       
       if (tIds.length > 0) {
         if (sortBy === 'relevance') {
@@ -315,8 +316,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                       </button>
                     ) : (
                       <>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest text-black" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }}>
-                          <Download className="w-3.5 h-3.5" /> Download
+                        <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
+                          <Download className="w-4 h-4" />
                         </button>
                         {settings.free_watermarks_enabled && (
                           <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>

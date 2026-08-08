@@ -8,10 +8,13 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { generateEmbedding, initEmbeddingModel } from '../lib/embedding';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
-import { ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers } from 'lucide-react';
+import { ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers, Plus, Heart } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import TrackActionButtons from '../components/TrackActionButtons';
+import SidebarPlaylist from '../components/SidebarPlaylist';
+import CreatePlaylistModal from '../components/CreatePlaylistModal';
+import { useUserPlaylists } from '../context/UserPlaylistsContext';
 
 import WaveformView from '../components/WaveformView';
 import { usePlayer } from '../context/PlayerContext';
@@ -89,6 +92,9 @@ export default function Browse() {
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
+  const [expandedTags, setExpandedTags] = useState<{trackId: string, tags: any[]} | null>(null);
+  const expandedTagsRef = useRef<HTMLDivElement>(null);
+
 
 
   const FILTER_CATEGORIES = useMemo(() => [
@@ -108,6 +114,11 @@ export default function Browse() {
   const { openLicenseModal } = useLicense();
   const { profile } = useAuth();
   const { settings } = useSettings();
+  
+  const { playlists: userPlaylists, favoritesPlaylist, createPlaylist } = useUserPlaylists();
+  const [dragTarget, setDragTarget] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isTypingSearch, setIsTypingSearch] = useState(false);
@@ -122,6 +133,11 @@ export default function Browse() {
     const handleClickOutside = (event: MouseEvent) => {
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
         setIsSortDropdownOpen(false);
+      }
+      if (expandedTagsRef.current && !expandedTagsRef.current.contains(event.target as Node)) {
+        setExpandedTags(null);
+      } else if (!expandedTagsRef.current) {
+        setExpandedTags(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -463,6 +479,25 @@ export default function Browse() {
           trendingTrackIds={trendingTrackIds}
         />
       )}
+
+      {isCreateModalOpen && (
+        <CreatePlaylistModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreate={async (title) => {
+            setIsCreatingPlaylist(true);
+            try {
+              await createPlaylist(title);
+              setIsCreateModalOpen(false);
+            } catch (err) {
+              console.error(err);
+            } finally {
+              setIsCreatingPlaylist(false);
+            }
+          }}
+          isCreating={isCreatingPlaylist}
+        />
+      )}
       
       <div className="w-full flex flex-col xl:flex-row px-8 pt-12 pb-12 gap-12">
         
@@ -490,12 +525,16 @@ export default function Browse() {
               className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-2 -ml-2 -mt-2 rounded-[32px] group cursor-pointer w-full h-full transition-all duration-300 border border-transparent hover:border-black/5"
               onClick={() => setSearchParams({ playlist: newMusicPlaylist.id })}
             >
-              <div className="relative w-full flex-1 min-h-0 flex items-center justify-center mb-6">
-                 <div className="relative h-full aspect-[1.15]">
-                   <PlaylistArtwork playlist={newMusicPlaylist} className="absolute top-0 right-0 h-[85%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-0" />
-                   <PlaylistArtwork playlist={newMusicPlaylist} className="absolute top-[5%] right-[10%] h-[85%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-10" />
-                   <PlaylistArtwork playlist={newMusicPlaylist} className="absolute top-[10%] left-0 h-[85%] aspect-square shadow-xl hover:scale-[1.02] transition-transform cursor-pointer z-20" />
-                 </div>
+              <div className={`relative w-full mb-6 ${settings?.public_artwork_frames_enabled ? 'aspect-[1.15]' : 'aspect-square'}`}>
+                 {settings?.public_artwork_frames_enabled ? (
+                   <>
+                     <PlaylistArtwork playlist={newMusicPlaylist} className="absolute top-0 right-0 h-[85%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-0" />
+                     <PlaylistArtwork playlist={newMusicPlaylist} className="absolute top-[5%] right-[10%] h-[85%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-10" />
+                     <PlaylistArtwork playlist={newMusicPlaylist} className="absolute top-[10%] left-0 h-[85%] aspect-square shadow-xl hover:scale-[1.02] transition-transform cursor-pointer z-20" />
+                   </>
+                 ) : (
+                   <PlaylistArtwork playlist={newMusicPlaylist} className="absolute top-0 left-0 w-full h-full shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-20 rounded-[28px]" />
+                 )}
               </div>
               <div className="flex flex-col px-2 pb-2 shrink-0">
                 <span className="font-medium text-[24px] text-black">{newMusicPlaylist.title}</span>
@@ -610,10 +649,16 @@ export default function Browse() {
                 className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer shrink-0 w-[340px] transition-all duration-300 border border-transparent hover:border-black/5"
                 onClick={() => setSearchParams({ playlist: pl.id })}
               >
-                <div className="relative w-full aspect-[1.15] mb-6">
-                   <PlaylistArtwork playlist={pl} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-0" />
-                   <PlaylistArtwork playlist={pl} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-10" />
-                   <PlaylistArtwork playlist={pl} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl hover:scale-[1.02] transition-transform cursor-pointer z-20" />
+                <div className={`relative w-full mb-6 ${settings?.public_artwork_frames_enabled ? 'aspect-[1.15]' : 'aspect-square'}`}>
+                   {settings?.public_artwork_frames_enabled ? (
+                     <>
+                       <PlaylistArtwork playlist={pl} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-0" />
+                       <PlaylistArtwork playlist={pl} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-10" />
+                       <PlaylistArtwork playlist={pl} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl hover:scale-[1.02] transition-transform cursor-pointer z-20" />
+                     </>
+                   ) : (
+                     <PlaylistArtwork playlist={pl} className="absolute top-0 left-0 w-full h-full shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-20 rounded-[28px]" />
+                   )}
                 </div>
                 <div className="flex flex-col px-2 pb-2">
                   <span className="font-medium text-[18px] text-black">{pl.title}</span>
@@ -790,6 +835,44 @@ export default function Browse() {
                 >
                   Clear Filters
                 </button>
+
+                {/* YOUR MUSIC */}
+                <div className="mt-8 mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-black/30">
+                  Your Music
+                </div>
+                {profile && favoritesPlaylist && (
+                  <SidebarPlaylist 
+                    playlist={favoritesPlaylist}
+                    isFavorites={true}
+                    isExpanded={expandedCategory === 'favorites'}
+                    onToggleExpand={() => { setExpandedCategory(expandedCategory === 'favorites' ? null : 'favorites'); setFilterSearch(''); }}
+                    dragTarget={dragTarget}
+                    setDragTarget={setDragTarget}
+                  />
+                )}
+                
+                <div className="mt-6 mb-2 px-3 flex items-center justify-between group">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-black/30">My Playlists</span>
+                  <button 
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="w-4 h-4 rounded-full flex items-center justify-center bg-black/5 hover:bg-black/10 text-black/40 hover:text-black transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                
+                <div className="flex flex-col overflow-y-auto hide-scrollbar gap-1 flex-1 pb-16">
+                  {userPlaylists.filter(p => !p.is_favorites).map(pl => (
+                    <SidebarPlaylist
+                      key={pl.id}
+                      playlist={pl}
+                      isExpanded={expandedCategory === `playlist-${pl.id}`}
+                      onToggleExpand={() => { setExpandedCategory(expandedCategory === `playlist-${pl.id}` ? null : `playlist-${pl.id}`); setFilterSearch(''); }}
+                      dragTarget={dragTarget}
+                      setDragTarget={setDragTarget}
+                    />
+                  ))}
+                </div>
               </div>
 
               <div className={`absolute left-[130px] top-0 bottom-0 w-[250px] pl-6 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
@@ -866,6 +949,17 @@ export default function Browse() {
               <div 
               className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none"
               onClick={() => handlePlayPause(track, 'browse')}
+              draggable
+              onDragStart={(e) => {
+                const dragImage = document.createElement('div');
+                dragImage.className = 'px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-widest rounded-lg shadow-xl pointer-events-none fixed top-[-1000px] left-[-1000px] z-[9999]';
+                dragImage.innerText = '1 track';
+                document.body.appendChild(dragImage);
+                e.dataTransfer.setDragImage(dragImage, 10, 10);
+                setTimeout(() => document.body.removeChild(dragImage), 0);
+                e.dataTransfer.effectAllowed = 'copyMove';
+                e.dataTransfer.setData('application/json', JSON.stringify({ type: 'tracks', ids: [track.id] }));
+              }}
             >
               <div 
                 className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
@@ -901,7 +995,7 @@ export default function Browse() {
                 </div>
               </div>
               
-              <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] overflow-hidden">
+              <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] overflow-visible relative">
                 {(() => {
                   const human = parseTags((track as any).human_tags);
                   const subgenres = parseTags(track.subgenre);
@@ -925,18 +1019,49 @@ export default function Browse() {
                   }
                   
                   const tags = uniqueTags.slice(0, 2);
+                  const remainingTags = uniqueTags.slice(2);
                   
                   if (tags.length === 0) return <span className="text-[10px] text-black/30 font-medium uppercase tracking-widest">Tagging...</span>;
 
-                  return tags.map((t, idx) => (
-                    <span 
-                      key={idx} 
-                      onClick={e => handleTagClick(t.category, t.val, e)} 
-                      className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
-                    >
-                      {t.val}
-                    </span>
-                  ));
+                  return (
+                    <div className="flex items-center gap-2">
+                      {tags.map((t, idx) => (
+                        <span 
+                          key={idx} 
+                          onClick={e => handleTagClick(t.category, t.val, e)} 
+                          className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                        >
+                          {t.val}
+                        </span>
+                      ))}
+                      {remainingTags.length > 0 && (
+                        <div className="relative">
+                          <span 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedTags(expandedTags?.trackId === track.id ? null : { trackId: track.id, tags: remainingTags });
+                            }}
+                            className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                          >
+                            +{remainingTags.length}
+                          </span>
+                          {expandedTags?.trackId === track.id && (
+                            <div ref={expandedTagsRef} className="absolute top-full left-0 mt-2 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64">
+                              {expandedTags.tags.map((t, idx) => (
+                                <span 
+                                  key={idx} 
+                                  onClick={e => handleTagClick(t.category, t.val, e)} 
+                                  className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                                >
+                                  {t.val}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
                 })()}
               </div>
 
@@ -988,6 +1113,17 @@ export default function Browse() {
                     key={version.id} 
                     className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group/version transition-colors cursor-pointer select-none"
                     onClick={() => handlePlayPause(version, 'browse')}
+                    draggable
+                    onDragStart={(e) => {
+                      const dragImage = document.createElement('div');
+                      dragImage.className = 'px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-widest rounded-lg shadow-xl pointer-events-none fixed top-[-1000px] left-[-1000px] z-[9999]';
+                      dragImage.innerText = '1 track';
+                      document.body.appendChild(dragImage);
+                      e.dataTransfer.setDragImage(dragImage, 10, 10);
+                      setTimeout(() => document.body.removeChild(dragImage), 0);
+                      e.dataTransfer.effectAllowed = 'copyMove';
+                      e.dataTransfer.setData('application/json', JSON.stringify({ type: 'tracks', ids: [version.id] }));
+                    }}
                   >
                     <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5">
                       <TrackArtwork track={version} className="absolute inset-0 w-full h-full" />

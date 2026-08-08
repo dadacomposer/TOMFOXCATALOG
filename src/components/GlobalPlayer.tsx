@@ -341,8 +341,8 @@ export default function GlobalPlayer() {
         <button className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} ml-2`}><Volume2 className="w-5 h-5" /></button>
         {!isSharedPage && (
           <div className="flex gap-2 ml-4">
-            <button className="flex items-center gap-2 px-4 py-2 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[11px] uppercase tracking-widest" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
-              <Download className="w-3.5 h-3.5" /> Download
+            <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
+              <Download className="w-4 h-4" />
             </button>
             {location.pathname !== '/admin' && settings.free_watermarks_enabled && (
               <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={() => { if (currentTrack) { openLicenseModal(currentTrack); } }}>
@@ -451,8 +451,8 @@ export default function GlobalPlayer() {
 
                   {/* Download and License buttons */}
                   <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[280px]">
-                    <button className="flex items-center gap-2 px-3 py-1.5 border border-black/10 rounded hover:border-black/30 transition-colors bg-white font-sans text-[10px] uppercase tracking-widest" onClick={(e) => { e.stopPropagation(); openDownloadModal(track, e); }}>
-                      <Download className="w-3 h-3" /> Download
+                    <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { e.stopPropagation(); openDownloadModal(track, e); }}>
+                      <Download className="w-4 h-4" />
                     </button>
                     {settings.free_watermarks_enabled && (
                       <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] uppercase tracking-widest" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>

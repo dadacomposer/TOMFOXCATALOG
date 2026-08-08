@@ -1,11 +1,39 @@
 import React from 'react';
+import { useSettings } from '../context/SettingsContext';
 
 type PlaylistArtworkProps = {
   playlist: any;
   className?: string;
+  forcePreviewFrames?: boolean;
 };
 
-export default function PlaylistArtwork({ playlist, className = '' }: PlaylistArtworkProps) {
+export default function PlaylistArtwork({ playlist, className = '', forcePreviewFrames }: PlaylistArtworkProps) {
+  const { settings } = useSettings();
+
+  const framesEnabled = forcePreviewFrames !== undefined ? forcePreviewFrames : settings.public_artwork_frames_enabled;
+
+  if (!framesEnabled) {
+    return (
+      <div className={`relative overflow-hidden aspect-square ${className}`}>
+        {playlist?.cover_url ? (
+          <img 
+            src={playlist.cover_url} 
+            className="w-full h-full object-cover select-none pointer-events-none" 
+            alt={playlist.title || 'Playlist Artwork'} 
+          />
+        ) : (
+          <div className="absolute inset-0 w-full h-full bg-[#f4f4f4] flex items-center justify-center">
+            <img 
+              src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
+              className="w-[50%] h-[50%] object-contain opacity-20 select-none pointer-events-none" 
+              alt="Placeholder"
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={`@container isolate flex flex-col bg-white border border-black/5 overflow-hidden no-radius select-none pointer-events-none ${className}`}>
       

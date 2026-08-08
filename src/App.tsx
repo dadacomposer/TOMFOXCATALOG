@@ -23,6 +23,7 @@ import AdminFeatures from './components/admin/AdminFeatures';
 import AdminTomFoxStudio from './components/admin/AdminTomFoxStudio';
 import AdminTheater from './components/admin/AdminTheater';
 import AdminTags from './components/admin/AdminTags';
+import AdminPlaylists from './components/admin/AdminPlaylists';
 import AdminStatistics from './components/admin/AdminStatistics';
 import SharedPlayer from './pages/SharedPlayer';
 import TomFoxStudio from './pages/TomFoxStudio';
@@ -102,6 +103,7 @@ function AppLayout() {
               <Route path="features" element={<AdminFeatures />} />
               <Route path="studio" element={<AdminTomFoxStudio />} />
               <Route path="studio/:projectId" element={<AdminTheater />} />
+              <Route path="playlists" element={<AdminPlaylists />} />
               <Route path="tags" element={<AdminTags />} />
               <Route path="statistics" element={<AdminStatistics />} />
             </Route>

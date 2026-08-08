@@ -10,7 +10,7 @@ import Pricing from '../pages/Pricing';
 import UpgradePlan from './UpgradePlan';
 
 export default function AccountPanel() {
-  const { user, profile, workspaces, setWorkspaces, activeWorkspace, setActiveWorkspace, isAccountPanelOpen, setAccountPanelOpen, signOut, fetchWorkspaces, refreshProfile } = useAuth();
+  const { user, profile, workspaces, setWorkspaces, activeWorkspace, setActiveWorkspace, isAccountPanelOpen, setAccountPanelOpen, signOut, fetchWorkspaces, refreshProfile, studioProjects } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -390,6 +390,30 @@ export default function AccountPanel() {
             </div>
 
             <hr className="border-black/10 my-1" />
+
+            {studioProjects && studioProjects.length > 0 && (
+              <>
+                <div className="p-3">
+                  <h3 className="text-[9px] uppercase tracking-widest text-black/40 mb-2 px-2">Studio Projects</h3>
+                  <div className="flex flex-col gap-0.5">
+                    {studioProjects.map((project) => (
+                      <Link 
+                        key={project.id} 
+                        to={`/studio/${project.id}`}
+                        onClick={() => setAccountPanelOpen(false)}
+                        className="flex items-center justify-between gap-3 p-1.5 px-3 rounded-lg hover:bg-black/5 transition-all text-left text-xs font-sans text-black/80"
+                      >
+                        <span className="flex flex-col gap-0.5">
+                          <span className="font-bold truncate leading-none">{project.title}</span>
+                          <span className="text-[9px] font-medium text-black/40 uppercase tracking-widest leading-none">{project.project_type?.replace(/_/g, ' ')}</span>
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                <hr className="border-black/10 my-1" />
+              </>
+            )}
 
             {/* Workspace Menu */}
             <div className="p-3">

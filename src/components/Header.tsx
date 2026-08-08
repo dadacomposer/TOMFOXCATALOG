@@ -73,30 +73,6 @@ export default function Header() {
         {user && (
           <div className="flex items-center gap-10">
             <Link to="/my-music" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>My Music</Link>
-            {studioProjects && studioProjects.length > 0 && (
-              <div className="relative group cursor-pointer">
-                <div className={`transition-colors flex items-center gap-1 ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>
-                  My Projects
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
-                </div>
-                {/* Invisible bridge to keep hover active */}
-                <div className="absolute top-full left-0 w-full h-8" />
-                <div className="absolute top-[calc(100%+20px)] left-1/2 -translate-x-1/2 w-[280px] bg-white border border-black/10 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.05)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none group-hover:pointer-events-auto flex flex-col overflow-hidden text-black z-50 transform origin-top group-hover:translate-y-0 translate-y-2">
-                  <div className="p-2 flex flex-col gap-1 max-h-[300px] overflow-y-auto custom-scrollbar">
-                    {studioProjects.map((project) => (
-                      <Link 
-                        key={project.id} 
-                        to={`/studio/${project.id}`}
-                        className="px-4 py-3 hover:bg-black/5 rounded-xl transition-colors text-left flex flex-col gap-1"
-                      >
-                        <span className="text-[11px] font-bold truncate leading-none">{project.title}</span>
-                        <span className="text-[9px] font-medium text-black/40 uppercase tracking-widest leading-none">{project.project_type?.replace(/_/g, ' ')}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
         {(!user || profile?.subscription_status !== 'active') && settings.subscriptions_enabled && (

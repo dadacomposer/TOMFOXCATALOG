@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, CheckCircle2, ListMusic } from 'lucide-react';
+import { X, Plus, CheckCircle2, ListMusic, Loader2 } from 'lucide-react';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -17,13 +17,12 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
   const customPlaylists = playlists.filter(p => !p.is_favorites);
   
   const [isCreating, setIsCreating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [successMode, setSuccessMode] = useState(false);
   
   const handleClose = () => {
     setIsCreating(false);
     setNewTitle('');
-    setSuccessMode(false);
     onClose();
   };
 
@@ -33,52 +32,26 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
   const showCreateMode = isCreating || customPlaylists.length === 0;
 
   const handleCreate = async () => {
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || isSubmitting) return;
+    setIsSubmitting(true);
     const pl = await createPlaylist(newTitle, trackId);
     if (pl) {
-      setSuccessMode(true);
+      handleClose();
     }
+    setIsSubmitting(false);
   };
 
   const handleAdd = async (playlistId: string) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const ok = await addTrackToPlaylist(playlistId, trackId);
     if (ok) {
-      setSuccessMode(true);
+      handleClose();
     }
+    setIsSubmitting(false);
   };
 
-
-
-  const content = successMode ? (
-    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={handleClose}>
-        <div className="bg-white rounded-[24px] w-full max-w-md p-8 flex flex-col items-center justify-center text-center shadow-2xl relative" onClick={e => e.stopPropagation()}>
-          <button onClick={handleClose} className="absolute top-4 right-4 p-2 hover:bg-black/5 rounded-full transition-colors">
-            <X className="w-5 h-5 text-black/50" />
-          </button>
-          
-          <CheckCircle2 className="w-16 h-16 text-green-500 mb-6" />
-          <h2 className="text-3xl font-bold uppercase tracking-tighter mb-2">Success!</h2>
-          <p className="text-black/60 font-sans text-sm mb-8">
-            Track added to your playlist.
-          </p>
-          
-          <div className="flex flex-col w-full gap-3">
-            <button 
-              onClick={() => { handleClose(); navigate('/my-music'); }}
-              className="w-full py-4 bg-black text-white font-bold uppercase tracking-widest text-[11px] rounded-full hover:bg-black/80 transition-colors"
-            >
-              Go to My Music
-            </button>
-            <button 
-              onClick={handleClose}
-              className="w-full py-4 bg-[#f6f6f6] text-black font-bold uppercase tracking-widest text-[11px] rounded-full hover:bg-[#eaeaea] transition-colors"
-            >
-              Continue Browsing
-            </button>
-          </div>
-        </div>
-    </div>
-  ) : (
+  const content = (
     <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
       <div className="bg-white rounded-[24px] w-full max-w-md overflow-hidden shadow-2xl relative animate-slide-in-up" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-black/5">
@@ -116,10 +89,10 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
                 )}
                 <button 
                   onClick={handleCreate} 
-                  disabled={!newTitle.trim()}
-                  className="flex-1 py-4 bg-black text-white rounded-full font-bold uppercase text-[11px] tracking-widest hover:bg-black/80 transition-colors disabled:opacity-50"
+                  disabled={!newTitle.trim() || isSubmitting}
+                  className="flex-1 py-4 bg-black text-white rounded-full font-bold uppercase text-[11px] tracking-widest hover:bg-black/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Create & Add
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create & Add'}
                 </button>
               </div>
             </div>

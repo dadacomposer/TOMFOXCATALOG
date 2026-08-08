@@ -1,39 +1,38 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchPlaylists, supabase } from '../lib/supabase';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Star, Search } from 'lucide-react';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import PlaylistIsland from '../components/PlaylistIsland';
 import { AnimatePresence } from 'framer-motion';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 type Playlist = {
   id: string;
   title: string;
   description: string;
+  is_featured?: boolean;
   human_tags?: string[];
   track_count?: number;
   track_ids?: string[];
   categories?: string[];
+  created_at?: string;
 };
 
 export default function Playlists() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const playlistUrlId = searchParams.get('playlist');
+  const { settings } = useSettings();
   
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [playlistCategories, setPlaylistCategories] = useState<string[]>([
-    "Percussion & Rhythm", 
-    "Cinematic & Film", 
-    "Dark & Tension", 
-    "Electronic & Synth", 
-    "Calm & Reflective", 
-    "Documentary & Explainer", 
-    "Jazz & Organic"
-  ]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('relevance');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
   
   const { playTrack, currentSource, audioRef, setIsCurrentPreviewDormant, setPendingSeek, progress } = usePlayer();
   const { user, loading: authLoading, setLoginModalOpen } = useAuth();
@@ -64,10 +63,6 @@ export default function Playlists() {
         ]);
         
         setPlaylists(data || []);
-        
-        if (contentData.data?.content?.categories && Array.isArray(contentData.data.content.categories)) {
-          setPlaylistCategories(contentData.data.content.categories);
-        }
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -77,37 +72,45 @@ export default function Playlists() {
     load();
   }, []);
 
-  const getCategories = (allPlaylists: Playlist[]) => {
-    if (!allPlaylists.length) return [];
-    
-    const MACROCATEGORIES = playlistCategories;
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setIsSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const categoriesData: { title: string, playlists: Playlist[] }[] = [];
-    const assignedIds = new Set<string>();
+  const filteredPlaylists = useMemo(() => {
+    let result = playlists.filter(pl => 
+      pl.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-    for (const catTitle of MACROCATEGORIES) {
-      const catPlaylists = allPlaylists.filter(p => {
-        if (p.categories && p.categories.includes(catTitle)) {
-          assignedIds.add(p.id);
-          return true;
-        }
-        return false;
-      });
-      categoriesData.push({ title: catTitle, playlists: catPlaylists });
+    switch (sortBy) {
+      case 'newest':
+        result.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+        break;
+      case 'oldest':
+        result.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+        break;
+      case 'a-z':
+        result.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'z-a':
+        result.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case 'relevance':
+      default:
+        // Use the original fetch order (which is by sort_order / created_at)
+        break;
     }
-
-    const catOthers = allPlaylists.filter(p => !assignedIds.has(p.id) || (p.categories && p.categories.includes("Others")));
     
-    const uniqueOthers = Array.from(new Set(catOthers));
-    categoriesData.push({ title: "Others", playlists: uniqueOthers });
-
-    return categoriesData.filter(c => c.playlists.length > 0);
-  };
-
-  const categories = getCategories(playlists);
+    return result;
+  }, [playlists, searchQuery, sortBy]);
 
   return (
-    <div className="relative flex flex-col w-full min-h-screen pt-32 md:pt-40 bg-[#fafafa] text-black overflow-hidden">
+    <div className="relative flex flex-col w-full min-h-screen pt-[88px] bg-[#fafafa] text-black overflow-hidden">
       {/* HUGE DRIBBBLE LOGO WATERMARK */}
       <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" className="absolute top-10 -right-20 w-[120%] md:w-[60%] opacity-[0.02] rotate-12 pointer-events-none select-none mix-blend-multiply z-0" alt="" />
       
@@ -122,27 +125,68 @@ export default function Playlists() {
             progress={progress}
             handleSeek={handleSeek}
             formatTime={formatTime}
-            newMusicTrackIds={new Set()}
             trendingTrackIds={new Set()}
           />
         )}
       </AnimatePresence>
-      
-      {/* Hero Section */}
-      <div className="w-full px-8 md:px-12 lg:px-24 mb-16 md:mb-24">
-        <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter leading-[0.9] text-black max-w-5xl mb-8">
-          Set the mood.
-        </h1>
-        <p className="text-black/50 text-sm md:text-base max-w-xl leading-relaxed">
-          Find the exact mood, tempo, and style for your project without the noise.
-        </p>
+
+      <div 
+        className={`sticky top-[88px] z-40 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 md:px-12 lg:px-24 flex flex-col border-b border-black/10 py-4 mb-10 shadow-sm focus-within:border-black/30 group/searchbar ${playlistUrlId ? 'hidden' : ''}`}
+      >
+        <div className="flex items-center w-full">
+          <div className="group-hover/searchbar:text-black/80 group-focus-within/searchbar:text-black transition-colors z-10">
+            <Search className="w-5 h-5 mr-4 shrink-0 transition-colors text-black/50" />
+          </div>
+          
+          <div className="relative flex-grow flex items-center">
+            <input 
+              type="text" 
+              placeholder="SEARCH PLAYLISTS..." 
+              className="w-full bg-transparent outline-none font-medium uppercase text-[13px] tracking-widest placeholder:text-black/30 text-black relative z-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="w-[1px] h-4 bg-black/10 mx-4" />
+          <div className="relative flex items-center gap-2 z-20 shrink-0" ref={sortDropdownRef}>
+            <span className="text-[10px] font-medium tracking-widest uppercase text-black/40 hidden md:inline">Sort</span>
+            <button 
+              onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+              className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-black outline-none cursor-pointer"
+            >
+              {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'a-z' ? 'A-Z' : 'Z-A'}
+              <svg className={`w-3 h-3 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            
+            {isSortDropdownOpen && (
+              <div className="absolute top-full right-0 mt-4 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                {[
+                  { id: 'relevance', label: 'Relevance' },
+                  { id: 'newest', label: 'Newest' },
+                  { id: 'oldest', label: 'Oldest' },
+                  { id: 'a-z', label: 'A-Z' },
+                  { id: 'z-a', label: 'Z-A' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
+                    className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                  >
+                    {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Playlists Grid / Rows */}
-      <div className="w-full pl-8 md:pl-12 lg:pl-24 pb-24 overflow-hidden">
+      <div className="w-full px-8 md:px-12 lg:px-24 pb-24 overflow-hidden relative z-10">
         {loading ? (
           <div className="mb-16">
-            <div className="w-48 h-8 bg-[#e5e5e5] animate-pulse rounded mb-6" />
             <div className="flex overflow-x-hidden gap-6 md:gap-8">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex flex-col p-4 rounded-[32px] shrink-0 w-[280px] sm:w-[320px] md:w-[340px]">
@@ -160,36 +204,43 @@ export default function Playlists() {
               ))}
             </div>
           </div>
+        ) : filteredPlaylists.length === 0 ? (
+          <div className="w-full flex flex-col items-center justify-center py-20 opacity-50">
+             <Search className="w-12 h-12 mb-4" />
+             <p className="font-bold uppercase tracking-widest text-sm">No playlists found</p>
+          </div>
         ) : (
-          <div className="flex flex-col gap-16">
-            {categories.map((cat, idx) => (
-              <div key={idx} className="w-full">
-                <div className="flex items-center justify-between mb-6 pr-8 md:pr-12 lg:pr-24">
-                  <h2 className="text-2xl md:text-3xl font-semibold uppercase tracking-tighter text-black">{cat.title}</h2>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8">
+            {filteredPlaylists.map((pl) => (
+              <div 
+                key={pl.id} 
+                className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all duration-300 border border-transparent hover:border-black/5 relative"
+                onClick={() => setSearchParams({ playlist: pl.id })}
+              >
                 
-                <div className="flex overflow-x-auto gap-6 md:gap-8 pb-8 hide-scrollbar snap-x pr-8 md:pr-12 lg:pr-24">
-                  {cat.playlists.map((pl) => (
-                    <div 
-                      key={pl.id} 
-                      className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer w-[280px] sm:w-[320px] md:w-[340px] shrink-0 snap-start transition-all duration-300 border border-transparent hover:border-black/5"
-                      onClick={() => setSearchParams({ playlist: pl.id })}
-                    >
-                      <div className="relative w-full aspect-[1.15] mb-6">
-                         <PlaylistArtwork playlist={pl as any} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-0" />
-                         <PlaylistArtwork playlist={pl as any} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-10" />
-                         <PlaylistArtwork playlist={pl as any} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl group-hover:scale-[1.02] transition-transform cursor-pointer z-20" />
-                      </div>
-                      <div className="flex flex-col px-2 pb-2 mt-2">
-                        <h3 className="font-bold text-[18px] uppercase tracking-tighter text-black truncate mb-1">
-                          {pl.title}
-                        </h3>
-                        <div className="font-sans text-[11px] uppercase tracking-widest text-black/50 line-clamp-2 leading-relaxed">
-                          {pl.track_count || 0} tracks
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className={`relative w-full mb-6 ${settings.public_artwork_frames_enabled ? 'aspect-[1.15]' : 'aspect-square'}`}>
+                   {pl.is_featured && (
+                     <div className="absolute bottom-2 left-2 z-30 bg-yellow-400 text-black p-2 rounded-full shadow-lg pointer-events-none">
+                       <Star className="w-4 h-4 fill-black" />
+                     </div>
+                   )}
+                   {settings.public_artwork_frames_enabled ? (
+                    <>
+                      <PlaylistArtwork playlist={pl as any} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-0" />
+                      <PlaylistArtwork playlist={pl as any} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-10" />
+                      <PlaylistArtwork playlist={pl as any} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl group-hover:scale-[1.02] transition-transform cursor-pointer z-20" />
+                    </>
+                  ) : (
+                    <PlaylistArtwork playlist={pl as any} className="absolute top-0 left-0 w-[100%] h-[100%] shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-20 rounded-[32px]" />
+                  )}
+                </div>
+                <div className="flex flex-col px-2 pb-2 mt-2">
+                  <h3 className="font-bold text-[18px] uppercase tracking-tighter text-black truncate mb-1">
+                    {pl.title}
+                  </h3>
+                  <div className="font-sans text-[11px] uppercase tracking-widest text-black/50 line-clamp-2 leading-relaxed">
+                    {pl.track_count || 0} tracks
+                  </div>
                 </div>
               </div>
             ))}

@@ -5,6 +5,8 @@ import { usePlayer } from '../../context/PlayerContext';
 import { toast } from 'react-hot-toast';
 import TrackEditModal from './TrackEditModal';
 import TrackArtwork from '../TrackArtwork';
+import ImportTagsModal from './ImportTagsModal';
+import { Upload } from 'lucide-react';
 
 type AdminTrack = {
   id: string;
@@ -42,6 +44,7 @@ export default function AdminTags() {
   const [visibleCount, setVisibleCount] = useState(50);
   
   const [editingTagsTrack, setEditingTagsTrack] = useState<AdminTrack | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{title?: string, message: string, onConfirm: () => void} | null>(null);
 
@@ -78,7 +81,7 @@ export default function AdminTags() {
     try {
       let query = supabase
         .from('tracks')
-        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, subgenre, moods, scenarios, instruments, textures, human_tags, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, energy_level, description, humanly_reviewed, pro_registered, frequency_audio_registered')
+        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, subgenre, moods, scenarios, instruments, textures, human_tags, movement, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, energy_level, description, humanly_reviewed, pro_registered, frequency_audio_registered')
         .is('deleted_at', null)
         .eq('track_type', 'main');
 
@@ -262,6 +265,14 @@ export default function AdminTags() {
               </div>
             )}
           </div>
+          
+          <button 
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 bg-black text-white rounded-xl shadow-sm shrink-0 h-12 hover:bg-black/80 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="text-[11px] font-bold tracking-widest uppercase">Import CSV</span>
+          </button>
         </div>
 
         {/* Table Header */}
@@ -429,6 +440,17 @@ export default function AdminTags() {
             </div>
           </div>
         </div>
+      )}
+
+      {isImportModalOpen && (
+        <ImportTagsModal 
+          onClose={() => setIsImportModalOpen(false)}
+          existingTracks={allFetchedTracks}
+          onSuccess={() => {
+            setIsImportModalOpen(false);
+            fetchTracks();
+          }}
+        />
       )}
 
     </div>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
-import { Heart, ListMusic, Plus, Share2, Trash2, X } from 'lucide-react';
+import { Heart, ListMusic, Plus, Share2, Trash2, X, Loader2 } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
+import CreatePlaylistModal from '../components/CreatePlaylistModal';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -15,7 +16,6 @@ export default function MyMusic() {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
@@ -25,21 +25,6 @@ export default function MyMusic() {
       navigate('/');
     }
   }, [user, authLoading, navigate]);
-
-  const handleCreatePlaylistSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPlaylistTitle && newPlaylistTitle.trim()) {
-      const toastId = toast.loading('Creating playlist...');
-      const pl = await createPlaylist(newPlaylistTitle.trim());
-      if (pl) {
-        toast.success('Playlist created! Add tracks to it.', { id: toastId });
-        setShowCreateModal(false);
-        setNewPlaylistTitle('');
-      } else {
-        toast.error('Failed to create playlist', { id: toastId });
-      }
-    }
-  };
   
   const customPlaylists = playlists.filter(p => !p.is_favorites);
   
@@ -121,7 +106,6 @@ export default function MyMusic() {
             progress={0}
             handleSeek={handleSeek}
             formatTime={formatTime}
-            newMusicTrackIds={new Set()}
             trendingTrackIds={new Set()}
             isOwner={true}
             initialTrackCount={customPlaylists.find(p => p.id === selectedPlaylistId)?.track_count || 0}
@@ -129,23 +113,15 @@ export default function MyMusic() {
         )}
       </AnimatePresence>
 
-      <div className="w-full px-8 md:px-12 lg:px-24 mb-16 md:mb-24">
-        <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter leading-[0.9] text-black max-w-5xl mb-8">
-          My Music
-        </h1>
-        <p className="text-black/50 text-sm md:text-base max-w-xl leading-relaxed">
-          Your personal collection and favourites.
-        </p>
-      </div>
+      {/* Removed My Music title section as requested */}
 
       {isLoading ? (
         <div className="w-full pl-8 md:pl-12 lg:pl-24 pb-24">Loading...</div>
       ) : (
         <div className="w-full pl-8 md:pl-12 lg:pl-24 pb-24 flex flex-col gap-16">
           
-          {/* Favourites Section */}
+          {/* Favorites Section */}
           <div className="w-full pr-8 md:pr-12 lg:pr-24">
-            <h2 className="text-2xl md:text-3xl font-semibold uppercase tracking-tighter text-black mb-6">Favourites</h2>
             {favoritesPlaylist ? (
               <PlaylistIsland 
                 id={favoritesPlaylist.id}
@@ -153,14 +129,17 @@ export default function MyMusic() {
                 progress={0}
                 handleSeek={handleSeek}
                 formatTime={formatTime}
-                newMusicTrackIds={new Set()}
                 trendingTrackIds={new Set()}
                 isOwner={true}
                 inline={true}
                 initialTrackCount={1} // Favourites usually has tracks if this is true, but we could use favoritesPlaylist.tracks?.length if available, but 1 is safe to force loader since we don't have track_count here easily
               />
             ) : (
-              <div className="text-black/40 text-sm font-sans">You haven't liked any tracks yet. Click the heart icon on any track to add it here.</div>
+              <div className="w-full flex flex-col items-center justify-center p-12 rounded-3xl">
+                <Heart className="w-12 h-12 text-black/20 mb-4" />
+                <h3 className="font-bold text-xl uppercase tracking-tighter text-black/40 mb-2">No Favorites Yet</h3>
+                <p className="font-sans text-xs text-black/40">Click the heart icon on any track to add it here.</p>
+              </div>
             )}
           </div>
 
@@ -177,81 +156,71 @@ export default function MyMusic() {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8 pr-8 md:pr-12 lg:pr-24">
-              {customPlaylists.map(pl => (
-                <div 
-                  key={pl.id}
-                  className="flex flex-col bg-white hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all border border-black/5 hover:border-black/10 relative"
-                  onClick={() => setSelectedPlaylistId(pl.id)}
-                >
-                  <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <button onClick={(e) => handleShare(e, pl)} className="p-2 bg-white rounded-full shadow hover:bg-black hover:text-white transition-colors" title="Share">
-                      <Share2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={(e) => handleDelete(e, pl.id)} className="p-2 bg-white rounded-full shadow hover:bg-red-500 hover:text-white transition-colors text-red-500" title="Delete">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+            {customPlaylists.length === 0 ? (
+              <div className="w-full flex flex-col items-center justify-center py-12 pr-8 md:pr-12 lg:pr-24">
+                <div className="flex flex-col items-center justify-center gap-6 text-black/40 w-full max-w-2xl">
+                  <img src="/search-for-documents.svg" alt="No playlists" className="w-80 h-80" />
+                  <span className="font-bold uppercase tracking-widest text-sm text-center">You haven't created any custom playlists yet.<br/>Create one to organize your favorite tracks.</span>
+                  <button 
+                    onClick={() => setShowCreateModal(true)}
+                    className="px-6 py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-full hover:bg-black/80 transition-colors flex items-center gap-2 mt-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create New Playlist
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8 pr-8 md:pr-12 lg:pr-24 mt-6">
+                {customPlaylists.map(pl => (
+                  <div 
+                    key={pl.id}
+                    className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all border border-transparent hover:border-black/5 relative"
+                    onClick={() => setSelectedPlaylistId(pl.id)}
+                  >
+                    <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <button onClick={(e) => handleShare(e, pl)} className="p-2 bg-white rounded-full shadow hover:bg-black hover:text-white transition-colors" title="Share">
+                        <Share2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={(e) => handleDelete(e, pl.id)} className="p-2 bg-white rounded-full shadow hover:bg-red-500 hover:text-white transition-colors text-red-500" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
 
-                  <div className="relative w-full aspect-square mb-4 rounded-[20px] bg-black/5 overflow-hidden flex items-center justify-center">
-                    {pl.cover_url ? (
-                      <img src={pl.cover_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    ) : (
-                      <ListMusic className="w-10 h-10 text-black/20 group-hover:scale-110 transition-transform" />
-                    )}
-                  </div>
-                  <div className="flex flex-col px-2 pb-2">
-                    <h3 className="font-bold text-[18px] uppercase tracking-tighter text-black truncate mb-1">
-                      {pl.title}
-                    </h3>
-                    <div className="font-sans text-[11px] uppercase tracking-widest text-black/50 line-clamp-2 leading-relaxed">
-                      {pl.track_count || 0} tracks
+                    <div className="relative w-full aspect-square mb-4 rounded-[20px] bg-black/5 overflow-hidden flex items-center justify-center">
+                      {pl.cover_url ? (
+                        <img src={pl.cover_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      ) : (
+                        <ListMusic className="w-10 h-10 text-black/20 group-hover:scale-110 transition-transform" />
+                      )}
+                    </div>
+                    <div className="flex flex-col px-2 pb-2">
+                      <h3 className="font-bold text-[18px] uppercase tracking-tighter text-black truncate mb-1">
+                        {pl.title}
+                      </h3>
+                      <div className="font-sans text-[11px] uppercase tracking-widest text-black/50 line-clamp-2 leading-relaxed">
+                        {pl.track_count || 0} tracks
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
       )}
 
       {/* Create Playlist Modal */}
-      <AnimatePresence>
-        {showCreateModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowCreateModal(false)} />
-            <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl animate-slide-in-up">
-              <div className="p-6 border-b border-black/10 flex justify-between items-center bg-[#fafafa] rounded-t-3xl">
-                <h2 className="text-xl font-bold uppercase tracking-tighter">New Playlist</h2>
-                <button onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center hover:bg-black/10"><X className="w-4 h-4" /></button>
-              </div>
-              <form onSubmit={handleCreatePlaylistSubmit} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-black/50 mb-2">Playlist Name</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={newPlaylistTitle}
-                    onChange={e => setNewPlaylistTitle(e.target.value)}
-                    placeholder="E.g., Late Night Vibes"
-                    className="w-full border border-black/20 rounded-xl px-4 py-3 focus:outline-none focus:border-black transition-colors"
-                    autoFocus
-                  />
-                </div>
-                <div className="pt-4 mt-2 border-t border-black/10 flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowCreateModal(false)} className="px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-black/5 transition-colors">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={!newPlaylistTitle.trim()} className="px-6 py-3 bg-black text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
-                    Create
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
+      <CreatePlaylistModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={(pl) => {
+          setShowCreateModal(false);
+          // Optional: immediately select the newly created playlist
+          // setSelectedPlaylistId(pl.id);
+        }}
+      />
 
       {/* Delete Playlist Modal */}
       <AnimatePresence>

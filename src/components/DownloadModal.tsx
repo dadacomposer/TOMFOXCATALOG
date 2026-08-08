@@ -8,7 +8,7 @@ import { X, Download, ShieldCheck, FileAudio, Music, AudioLines } from 'lucide-r
 import { supabase } from '../lib/supabase';
 
 export default function DownloadModal() {
-  const { downloadTrack, buttonRect, forceUnrestricted, sharedSlug, closeDownloadModal } = useDownload();
+  const { downloadTrack, buttonRect, buttonElement, forceUnrestricted, sharedSlug, closeDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const { profile } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -96,7 +96,38 @@ export default function DownloadModal() {
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
-    if (isOpen && buttonRect && showDropdown) {
+    if (!isOpen || !showDropdown) return;
+
+    const el = buttonElement;
+    if (el) {
+      let animationFrameId: number;
+
+      const updatePosition = () => {
+        const rect = el.getBoundingClientRect();
+        const minW = Math.max(rect.width, 160);
+        let style: React.CSSProperties = {
+          bottom: `${window.innerHeight - rect.top + 8}px`,
+          minWidth: `${minW}px`
+        };
+        
+        // Prevent overflow on the right
+        if (rect.left + minW > window.innerWidth - 16) {
+          style.right = `${window.innerWidth - rect.right}px`;
+        } else {
+          style.left = `${rect.left}px`;
+        }
+        
+        setDropdownStyle(style);
+        animationFrameId = requestAnimationFrame(updatePosition);
+      };
+
+      updatePosition();
+
+      return () => {
+        cancelAnimationFrame(animationFrameId);
+      };
+    } else if (buttonRect) {
+      // Fallback if no buttonElement is provided
       const minW = Math.max(buttonRect.width, 160);
       let style: React.CSSProperties = {
         bottom: `${window.innerHeight - buttonRect.top + 8}px`,
@@ -112,7 +143,7 @@ export default function DownloadModal() {
       
       setDropdownStyle(style);
     }
-  }, [isOpen, buttonRect, showDropdown]);
+  }, [isOpen, buttonElement, buttonRect, showDropdown]);
 
   if (showDropdown) {
     // Subscriber View: Dropdown Popover

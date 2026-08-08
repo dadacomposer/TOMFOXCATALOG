@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
-import { Save, Settings2, Edit3, Loader2, RefreshCw } from 'lucide-react';
+import { supabase, fetchPlaylists } from '../../lib/supabase';
+import { Save, Settings2, Edit3, Loader2, RefreshCw, Palette } from 'lucide-react';
 import { useSettings, SiteSettings, PageContent } from '../../context/SettingsContext';
 import toast from 'react-hot-toast';
+import CustomSelect from '../CustomSelect';
+import PlaylistArtwork from '../PlaylistArtwork';
+
 
 // Hardcoded character limits based on original strings to prevent layout breaks
 const MAX_LENGTHS: Record<string, Record<string, number>> = {
@@ -27,28 +30,28 @@ export default function AdminFeatures() {
   const [localContent, setLocalContent] = useState<Record<string, PageContent>>(content);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedPage, setExpandedPage] = useState<string | null>(null);
+  const [publicPlaylists, setPublicPlaylists] = useState<any[]>([]);
+  const [topPicks, setTopPicks] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchPlaylists().then(data => {
+      setPublicPlaylists(data || []);
+      const tp: Record<string, string> = {};
+      (data || []).forEach(p => {
+        if (p.top_pick_position) {
+          tp[`card_${p.top_pick_position}`] = p.id;
+        }
+      });
+      setTopPicks(tp);
+    });
+  }, []);
 
   useEffect(() => {
     setLocalSettings(settings);
     setLocalContent(content);
   }, [settings, content]);
 
-  const handleToggle = (key: keyof SiteSettings) => {
-    if (key === 'free_hd_enabled' && localSettings.free_watermarks_enabled) {
-      return;
-    }
-
-    setLocalSettings(prev => {
-      const nextValue = !prev[key];
-      const updates = { ...prev, [key]: nextValue };
-      
-      if (key === 'free_watermarks_enabled' && nextValue === true) {
-        updates.free_hd_enabled = false;
-      }
-      
-      return updates;
-    });
-  };
+  // Toggles removed as requested
 
   const handleContentChange = (pageId: string, key: string, value: string) => {
     const maxLen = MAX_LENGTHS[pageId]?.[key] || 1000;
@@ -75,14 +78,42 @@ export default function AdminFeatures() {
       if (settingsError) throw settingsError;
 
       // 2. Save Content
-      const updatePromises = Object.entries(localContent).map(([pageId, contentObj]) => {
-        return supabase
+      const updatePromises = Object.entries(localContent).map(async ([pageId, contentObj]) => {
+        const { error } = await supabase
           .from('page_content')
-          .update({ content: contentObj })
-          .eq('page_id', pageId);
+          .upsert({ page_id: pageId, content: contentObj }, { onConflict: 'page_id' });
+        
+        if (error) {
+          console.error(`Error saving ${pageId}:`, error);
+          throw new Error(`Failed to save ${pageId}: ${error.message}`);
+        }
       });
 
       await Promise.all(updatePromises);
+      
+      // 3. Save Top Picks to Playlists
+      const updateTopPicksPromises = publicPlaylists.map(async (pl) => {
+        let newPosition = null;
+        for (const [key, id] of Object.entries(topPicks)) {
+          if (id === pl.id) {
+            newPosition = parseInt(key.replace('card_', ''));
+            break;
+          }
+        }
+        
+        if (pl.top_pick_position !== newPosition) {
+          const { error } = await supabase
+            .from('playlists')
+            .update({ top_pick_position: newPosition })
+            .eq('id', pl.id);
+          if (error) throw new Error(`Failed to update playlist ${pl.title}: ${error.message}`);
+        }
+      });
+      await Promise.all(updateTopPicksPromises);
+
+      const refreshedPlaylists = await fetchPlaylists();
+      setPublicPlaylists(refreshedPlaylists || []);
+
       await refreshSettings(); // Reload global context
       toast.success("Settings saved successfully! The public site has been updated.");
 
@@ -94,21 +125,7 @@ export default function AdminFeatures() {
     }
   };
 
-  const ToggleSwitch = ({ label, desc, active, disabled = false, onClick }: { label: string, desc: string, active: boolean, disabled?: boolean, onClick: () => void }) => (
-    <div className={`flex items-center justify-between p-6 bg-white rounded-2xl border ${disabled ? 'border-black/5 opacity-50' : 'border-black/10'} shadow-sm transition-all`}>
-      <div className="pr-8">
-        <h3 className="font-medium text-lg mb-1">{label}</h3>
-        <p className="text-sm text-black/50 leading-relaxed">{desc}</p>
-      </div>
-      <button 
-        onClick={disabled ? undefined : onClick}
-        disabled={disabled}
-        className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${active ? 'bg-green-500' : 'bg-black/10'} ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
-      >
-        <div className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${active ? 'translate-x-6' : 'translate-x-0'}`} />
-      </button>
-    </div>
-  );
+  // ToggleSwitch removed
 
   return (
     <div className="flex-1 overflow-y-auto h-full w-full -mx-8 px-8 pb-32">
@@ -116,7 +133,7 @@ export default function AdminFeatures() {
       
       <div className="sticky top-0 z-10 bg-[#fafafa]/80 backdrop-blur-md pt-6 md:pt-12 pb-6 border-b border-black/5 -mx-8 px-8 mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-medium uppercase tracking-tighter mb-2">Public Content</h2>
+          <h2 className="text-3xl font-medium uppercase tracking-tighter mb-2">Content</h2>
           <p className="text-black/50 font-sans">Control public site behavior and modify page copy instantly.</p>
         </div>
         <button 
@@ -129,33 +146,146 @@ export default function AdminFeatures() {
         </button>
       </div>
 
-      {/* Feature Flags Section */}
+      {/* Top Picks Section */}
       <div className="space-y-6">
         <div className="flex items-center gap-3 border-b border-black/10 pb-4">
           <Settings2 className="w-5 h-5" />
-          <h3 className="text-xl font-medium uppercase tracking-tight">Global Toggles</h3>
+          <h3 className="text-xl font-medium uppercase tracking-tight">Top Picks For You</h3>
         </div>
+        <p className="text-xs font-medium uppercase tracking-widest text-black/40">
+          Assign public playlists to the 4 cards in the Browse page and select their background gradient.
+        </p>
+        <div className="bg-white rounded-2xl border border-black/10 shadow-sm p-6 overflow-x-auto hide-scrollbar">
+          <div className="flex gap-8 min-w-max">
+            {[1, 2, 3, 4].map(num => {
+              const plId = topPicks[`card_${num}`];
+              const pl = publicPlaylists.find(p => p.id === plId);
+              const gradient = localContent.top_picks?.[`card_${num}_gradient`] || 'bg-[#e5e5e5]';
+              
+              const GRADIENTS = [
+                'bg-[#e5e5e5]',
+                'bg-gradient-to-br from-rose-400 to-red-500',
+                'bg-gradient-to-br from-fuchsia-500 to-purple-600',
+                'bg-gradient-to-br from-violet-500 to-purple-500',
+                'bg-gradient-to-br from-blue-500 to-cyan-500',
+                'bg-gradient-to-br from-teal-400 to-emerald-500',
+                'bg-gradient-to-br from-amber-400 to-orange-500',
+                'bg-gradient-to-br from-gray-800 to-black',
+              ];
 
-        <div className="grid grid-cols-1 gap-4">
-          <ToggleSwitch 
-            label="Enable Public Subscriptions (SaaS Mode)"
-            desc="If OFF, the public Pricing page turns into a lead generation funnel, and the Billing/Licenses tabs disappear from user profiles."
-            active={localSettings.subscriptions_enabled}
-            onClick={() => handleToggle('subscriptions_enabled')}
-          />
-          <ToggleSwitch 
-            label="Watermarks for Free Users"
-            desc="If OFF, non-logged and free users will download standard MP3 files instead of watermarked audio when they click 'Try It'."
-            active={localSettings.free_watermarks_enabled}
-            onClick={() => handleToggle('free_watermarks_enabled')}
-          />
-          <ToggleSwitch 
-            label="Enable HD Audio (WAV/AIF) for Free Users"
-            desc="If ON, non-logged and free users can download uncompressed WAV and AIFF files without a subscription."
-            active={localSettings.free_hd_enabled}
-            disabled={localSettings.free_watermarks_enabled}
-            onClick={() => handleToggle('free_hd_enabled')}
-          />
+              return (
+                <div key={`card_${num}`} className="flex flex-col gap-6 w-[340px] shrink-0">
+                  {/* Controls */}
+                  <div className="flex flex-col gap-3">
+                    <label className="text-xs font-medium uppercase tracking-widest text-black/60">
+                      Card {num} Playlist
+                    </label>
+                    <CustomSelect
+                      value={topPicks[`card_${num}`] || ''}
+                      onChange={(val) => setTopPicks(prev => ({ ...prev, [`card_${num}`]: val }))}
+                      searchable={true}
+                      placeholder="-- No playlist --"
+                      options={[
+                        { value: '', label: '-- No playlist --' },
+                        ...publicPlaylists.map(p => ({
+                          value: p.id,
+                          label: `${p.title} ${p.is_featured ? '(Featured)' : ''}`
+                        }))
+                      ]}
+                    />
+                    <label className="text-xs font-medium uppercase tracking-widest text-black/60 mt-1">
+                      Gradient Color
+                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {GRADIENTS.map(g => (
+                        <button
+                          key={g}
+                          onClick={() => {
+                            setLocalContent(prev => ({
+                              ...prev,
+                              top_picks: {
+                                ...(prev.top_picks || {}),
+                                [`card_${num}_gradient`]: g
+                              }
+                            }));
+                          }}
+                          className={`w-6 h-6 rounded-full border border-black/10 shadow-sm ${g} ${gradient === g ? 'ring-2 ring-black ring-offset-2 scale-110' : 'hover:scale-110 transition-transform'}`}
+                          title={g}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Preview Card */}
+                  <div className={`flex flex-col p-4 rounded-[32px] ${gradient} w-full transition-all duration-300 border border-black/5`}>
+                    <div className="relative w-full aspect-[1.15] mb-6">
+                      {pl ? (
+                        <>
+                          <PlaylistArtwork playlist={pl} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md z-0" />
+                          <PlaylistArtwork playlist={pl} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md z-10" />
+                          <PlaylistArtwork playlist={pl} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl z-20" />
+                        </>
+                      ) : (
+                        <div className="w-full h-full border-2 border-dashed border-black/10 rounded-[28px] flex flex-col items-center justify-center text-center p-4">
+                          <span className="text-xs font-bold uppercase tracking-widest text-black/30">No Playlist</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col px-2 pb-2">
+                      <span className={`font-medium text-[18px] ${gradient === 'bg-[#e5e5e5]' ? 'text-black' : 'text-white'} line-clamp-1`}>
+                        {pl ? pl.title : 'Select a playlist'}
+                      </span>
+                      <span className={`font-sans text-[13px] ${gradient === 'bg-[#e5e5e5]' ? 'text-black/50' : 'text-white/70'} mt-0.5`}>
+                        {pl ? `${pl.track_count} tracks` : '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Artwork Frames Section */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 border-b border-black/10 pb-4">
+          <Palette className="w-5 h-5" />
+          <h3 className="text-xl font-medium uppercase tracking-tight">Artwork Frames</h3>
+        </div>
+        <p className="text-xs font-medium uppercase tracking-widest text-black/40">
+          Enable or disable the custom CSS frames around public playlist artworks.
+        </p>
+        <div className="bg-white rounded-2xl border border-black/10 shadow-sm p-6 flex flex-col md:flex-row gap-6">
+           <div className="flex-1 space-y-4">
+             <div>
+               <h4 className="font-bold uppercase tracking-tighter">Public Playlist Frames</h4>
+               <p className="text-sm font-sans text-black/50 mb-4">When disabled, only the raw uploaded image will be shown.</p>
+               
+               <button 
+                 onClick={() => setLocalSettings(prev => ({ ...prev, public_artwork_frames_enabled: !prev.public_artwork_frames_enabled }))}
+                 className={`preview-toggle w-12 h-6 rounded-full transition-colors relative ${localSettings.public_artwork_frames_enabled ? 'bg-black' : 'bg-black/20'}`}
+               >
+                 <div className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full transition-all ${localSettings.public_artwork_frames_enabled ? 'left-[calc(100%-1.25rem)]' : 'left-1'}`} />
+               </button>
+             </div>
+           </div>
+
+           {/* Live Preview block */}
+           <div className="w-full md:w-64 shrink-0 border border-black/10 bg-[#fafafa] rounded-xl p-4 flex flex-col items-center justify-center">
+             <span className="text-[10px] font-bold uppercase tracking-widest text-black/40 mb-4">Live Preview</span>
+             <div className="w-32 aspect-square relative group">
+               {localSettings.public_artwork_frames_enabled ? (
+                 <>
+                   <PlaylistArtwork playlist={publicPlaylists[0] || {}} forcePreviewFrames={true} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md z-0" />
+                   <PlaylistArtwork playlist={publicPlaylists[0] || {}} forcePreviewFrames={true} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md z-10" />
+                   <PlaylistArtwork playlist={publicPlaylists[0] || {}} forcePreviewFrames={true} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl z-20" />
+                 </>
+               ) : (
+                 <PlaylistArtwork playlist={publicPlaylists[0] || {}} forcePreviewFrames={false} className="absolute top-0 left-0 w-full h-full shadow-md z-20 rounded-[12px]" />
+               )}
+             </div>
+           </div>
         </div>
       </div>
 
@@ -170,7 +300,7 @@ export default function AdminFeatures() {
         </p>
 
         <div className="grid grid-cols-1 gap-4">
-          {Object.entries(localContent).map(([pageId, fields]) => (
+          {Object.entries(localContent).filter(([pageId]) => pageId !== 'top_picks').map(([pageId, fields]) => (
             <div key={pageId} className="bg-white rounded-2xl border border-black/10 shadow-sm overflow-hidden transition-all">
               <button 
                 onClick={() => setExpandedPage(expandedPage === pageId ? null : pageId)}
@@ -183,7 +313,7 @@ export default function AdminFeatures() {
               {expandedPage === pageId && (
                 <div className="p-6 grid grid-cols-1 gap-6">
                   {Object.entries(fields)
-                    .filter(([fieldKey]) => !fieldKey.includes('btn'))
+                    .filter(([fieldKey]) => !fieldKey.includes('btn') && !fieldKey.includes('top_picks_card_'))
                     .map(([fieldKey, fieldValue]) => {
                     const maxLen = MAX_LENGTHS[pageId]?.[fieldKey] || 1000;
                     const isLongText = fieldKey.includes('subtitle') || fieldKey.includes('desc');

@@ -90,7 +90,7 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
         .insert([{
           user_id: user.id,
           workspace_id: activeWorkspace.id,
-          title: 'Favourites',
+          title: 'Favorites',
           is_favorites: true,
           track_count: 0
         }])
@@ -204,6 +204,15 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
       
       await supabase.from('playlist_tracks').insert([{ playlist_id: playlistId, track_id: trackId, position: pl.track_count }]);
       await supabase.from('playlists').update({ track_count: pl.track_count + 1 }).eq('id', playlistId);
+      
+      if (pl.is_favorites) {
+        setFavoriteTrackIds(prev => {
+          const next = new Set(prev);
+          next.add(trackId);
+          return next;
+        });
+      }
+      
       await fetchUserPlaylists();
       return true;
     } catch (e) {
@@ -220,6 +229,14 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
     try {
       await supabase.from('playlist_tracks').delete().match({ playlist_id: playlistId, track_id: trackId });
       await supabase.from('playlists').update({ track_count: Math.max(0, pl.track_count - 1) }).eq('id', playlistId);
+      if (pl.is_favorites) {
+        setFavoriteTrackIds(prev => {
+          const next = new Set(prev);
+          next.delete(trackId);
+          return next;
+        });
+      }
+      
       await fetchUserPlaylists();
       return true;
     } catch (e) {

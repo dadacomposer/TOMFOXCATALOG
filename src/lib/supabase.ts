@@ -258,39 +258,25 @@ export async function fetchTracksByIds(ids: string[]) {
 }
 
 export async function fetchTrendingTracks() {
-  const trendingTitles = [
-    'Little More Time', 'Oneness', 'Neutral Pulse 1', 'Growing Current',
-    'Ready Current', 'Final Current C', 'Dry Thought', 'Train Runner',
-    'New Formalities', 'Key Message', 'Please No War', 'City Repetitions',
-    'Doors Opening', 'Cause', 'Old Guard', 'Middleman'
-  ];
-
-  // 1. Fetch the exact trending tracks
-  const orQuery = trendingTitles.map(t => `file_name.ilike.%${t}%`).join(',');
-  const { data: exactData, error: exactError } = await supabase
+  // 1. Fetch top tracks by play_count
+  const { data: topTracks, error } = await supabase
     .from('tracks')
-    .select('id, file_name')
+    .select('id')
     .eq('is_hidden', false)
     .is('deleted_at', null)
     .eq('track_type', 'main')
-    .or(orQuery);
-    
-  let fixedIds: string[] = [];
-  if (exactData) {
-    const orderedData: { id: string, file_name: string }[] = [];
-    for (const title of trendingTitles) {
-      const match = exactData.find(d => d.file_name.toLowerCase().includes(title.toLowerCase()));
-      if (match && !orderedData.find(d => d.id === match.id)) {
-        orderedData.push(match);
-      }
-    }
-    fixedIds = orderedData.map(d => d.id);
-  }
+    .order('play_count', { ascending: false, nullsFirst: false })
+    .limit(16);
 
-  const finalIds = Array.from(new Set([...fixedIds]));
-  if (finalIds.length === 0) return [];
+  if (error) {
+    console.error('Error fetching trending track IDs:', error);
+    return [];
+  }
+  if (!topTracks || topTracks.length === 0) return [];
   
-  // 4. Hydrate in exact order
+  const finalIds = topTracks.map(t => t.id);
+  
+  // 2. Hydrate in exact order
   const fullTracks = await fetchTracksByIds(finalIds);
   return fullTracks;
 }
@@ -417,7 +403,8 @@ export async function fetchPlaylists() {
     .from('playlists')
     .select('*')
     .is('user_id', null)
-    .order('created_at', { ascending: true });
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false });
     
   if (error) {
     console.error('Error fetching playlists:', error);

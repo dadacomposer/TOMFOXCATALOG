@@ -5,6 +5,7 @@ export type SiteSettings = {
   subscriptions_enabled: boolean;
   free_watermarks_enabled: boolean;
   free_hd_enabled: boolean;
+  public_artwork_frames_enabled: boolean;
 };
 
 export type PageContent = Record<string, string>;
@@ -17,9 +18,10 @@ type SettingsContextType = {
 };
 
 const defaultSettings: SiteSettings = {
-  subscriptions_enabled: true,
-  free_watermarks_enabled: true,
-  free_hd_enabled: false,
+  subscriptions_enabled: false,
+  free_watermarks_enabled: false,
+  free_hd_enabled: true,
+  public_artwork_frames_enabled: true,
 };
 
 export const DEFAULT_CONTENT: Record<string, PageContent> = {
@@ -79,6 +81,12 @@ export const DEFAULT_CONTENT: Record<string, PageContent> = {
     perk_3_desc: 'Get exclusive early access to unreleased tracks, custom scores, and stems for your sound design.',
     contact_title: "Let's<br />Talk<br />Scale.",
     contact_desc: 'Our enterprise team will reach out within 24 hours.'
+  },
+  top_picks: {
+    card_1: '',
+    card_2: '',
+    card_3: '',
+    card_4: ''
   }
 };
 
@@ -103,7 +111,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (settingsRes.data) {
         console.log("Settings fetched from DB:", settingsRes.data);
-        setSettings(settingsRes.data);
+        setSettings({ ...defaultSettings, ...settingsRes.data });
       } else if (settingsRes.error) {
         console.error("Error fetching settings from DB:", settingsRes.error);
       }
