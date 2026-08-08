@@ -13,7 +13,6 @@ import PlaylistIsland from '../components/PlaylistIsland';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import TrackActionButtons from '../components/TrackActionButtons';
 import SidebarPlaylist from '../components/SidebarPlaylist';
-import CreatePlaylistModal from '../components/CreatePlaylistModal';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 
 import WaveformView from '../components/WaveformView';
@@ -115,9 +114,13 @@ export default function Browse() {
   const { profile } = useAuth();
   const { settings } = useSettings();
   
-  const { playlists: userPlaylists, favoritesPlaylist, createPlaylist } = useUserPlaylists();
+  const { playlists: userPlaylists, favoritesPlaylist, createPlaylist, addTrackToPlaylist } = useUserPlaylists();
   const [dragTarget, setDragTarget] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
+  const [isInlineCreating, setIsInlineCreating] = useState(false);
+  const [inlineCreateTitle, setInlineCreateTitle] = useState('');
+  const [pendingDropTracks, setPendingDropTracks] = useState<string[]>([]);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -437,11 +440,113 @@ export default function Browse() {
     const effectiveSource = source || currentSource;
     if (source) setCurrentSource(source);
     
+    // Se la traccia è tra quelle selezionate, un click senza modificatore svuoterà la selezione e la farà partire
+    if (selectedTrackIds.size > 0) {
+      setSelectedTrackIds(new Set());
+    }
+    
     if (currentTrack?.id === track.id) {
       togglePlay();
     } else {
       const queue = effectiveSource === 'top' ? trendingTracks : displayedTracks;
       playTrack(track, queue, effectiveSource || undefined);
+    }
+  };
+
+  const [lastSelectedTrackId, setLastSelectedTrackId] = useState<string | null>(null);
+
+  const handleTrackClick = (e: React.MouseEvent, track: Track, source: 'top' | 'browse' | 'playlist') => {
+    if (e.shiftKey && lastSelectedTrackId) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const trackList = source === 'top' ? trendingTracks : displayedTracks;
+      const flatList = trackList.flatMap(t => {
+        if (expandedTrackId === t.id && t.versions) return [t, ...t.versions];
+        return [t];
+      });
+
+      const startIdx = flatList.findIndex(t => t.id === lastSelectedTrackId);
+      const endIdx = flatList.findIndex(t => t.id === track.id);
+      
+      if (startIdx !== -1 && endIdx !== -1) {
+        const min = Math.min(startIdx, endIdx);
+        const max = Math.max(startIdx, endIdx);
+        
+        setSelectedTrackIds(prev => {
+          const next = new Set(prev);
+          for (let i = min; i <= max; i++) {
+            next.add(flatList[i].id);
+          }
+          return next;
+        });
+      }
+      setLastSelectedTrackId(track.id);
+    } else if (e.metaKey || e.ctrlKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedTrackIds(prev => {
+        const next = new Set(prev);
+        if (next.has(track.id)) {
+          next.delete(track.id);
+        } else {
+          next.add(track.id);
+        }
+        return next;
+      });
+      setLastSelectedTrackId(track.id);
+    } else {
+      setLastSelectedTrackId(track.id);
+      handlePlayPause(track, source);
+    }
+  };
+
+  const generateDragImage = (count: number) => {
+    const dragImage = document.createElement('div');
+    dragImage.className = 'px-3 py-1.5 bg-black/90 text-white text-[11px] font-bold uppercase tracking-widest rounded-lg shadow-2xl pointer-events-none fixed top-[-1000px] left-[-1000px] z-[9999] flex items-center gap-2 border border-white/10 backdrop-blur';
+    dragImage.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg> ${count} track${count !== 1 ? 's' : ''}`;
+    document.body.appendChild(dragImage);
+    return dragImage;
+  };
+
+  const handleTrackDragStart = (e: React.DragEvent, trackId: string) => {
+    let idsToDrag = [trackId];
+    if (selectedTrackIds.has(trackId)) {
+      idsToDrag = Array.from(selectedTrackIds);
+    }
+    
+    const dragImage = generateDragImage(idsToDrag.length);
+    e.dataTransfer.setDragImage(dragImage, 20, 20);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+    e.dataTransfer.effectAllowed = 'copyMove';
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'tracks', ids: idsToDrag }));
+  };
+
+  const handleInlinePlaylistCreate = async () => {
+    if (!inlineCreateTitle.trim() || isCreatingPlaylist) {
+      setIsInlineCreating(false);
+      setPendingDropTracks([]);
+      return;
+    }
+    
+    setIsCreatingPlaylist(true);
+    try {
+      const newPlaylist = await createPlaylist(inlineCreateTitle.trim());
+      if (newPlaylist && pendingDropTracks.length > 0) {
+        // Add tracks to the new playlist
+        for (const trackId of pendingDropTracks) {
+          await addTrackToPlaylist(newPlaylist.id, trackId);
+        }
+        // Auto expand it since we added tracks
+        setExpandedCategory(`playlist-${newPlaylist.id}`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCreatingPlaylist(false);
+      setIsInlineCreating(false);
+      setInlineCreateTitle('');
+      setPendingDropTracks([]);
     }
   };
 
@@ -477,25 +582,6 @@ export default function Browse() {
           formatTime={formatTime}
           newMusicTrackIds={newMusicTrackIds}
           trendingTrackIds={trendingTrackIds}
-        />
-      )}
-
-      {isCreateModalOpen && (
-        <CreatePlaylistModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreate={async (title) => {
-            setIsCreatingPlaylist(true);
-            try {
-              await createPlaylist(title);
-              setIsCreateModalOpen(false);
-            } catch (err) {
-              console.error(err);
-            } finally {
-              setIsCreatingPlaylist(false);
-            }
-          }}
-          isCreating={isCreatingPlaylist}
         />
       )}
       
@@ -579,8 +665,10 @@ export default function Browse() {
                       return (
                         <div 
                           key={i} 
-                          className="flex items-center gap-4 group cursor-pointer hover:bg-black/5 p-2 -ml-2 rounded transition-colors select-none"
-                          onClick={() => handlePlayPause(track, 'top')}
+                          className={`flex items-center gap-4 group cursor-pointer p-2 -ml-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
+                          onClick={(e) => handleTrackClick(e, track, 'top')}
+                          draggable
+                          onDragStart={(e) => handleTrackDragStart(e, track.id)}
                         >
                           <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
                             <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
@@ -844,8 +932,8 @@ export default function Browse() {
                   <SidebarPlaylist 
                     playlist={favoritesPlaylist}
                     isFavorites={true}
-                    isExpanded={expandedCategory === 'favorites'}
-                    onToggleExpand={() => { setExpandedCategory(expandedCategory === 'favorites' ? null : 'favorites'); setFilterSearch(''); }}
+                    isExpanded={true}
+                    onToggleExpand={() => {}}
                     dragTarget={dragTarget}
                     setDragTarget={setDragTarget}
                   />
@@ -853,12 +941,54 @@ export default function Browse() {
                 
                 <div className="mt-6 mb-2 px-3 flex items-center justify-between group">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-black/30">My Playlists</span>
-                  <button 
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="w-4 h-4 rounded-full flex items-center justify-center bg-black/5 hover:bg-black/10 text-black/40 hover:text-black transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
+                </div>
+                
+                <div 
+                  className={`mx-2 mb-2 flex items-center gap-2 p-2 rounded-lg border-2 transition-colors cursor-pointer ${isInlineCreating || pendingDropTracks.length > 0 ? 'border-black bg-black/5 text-black' : 'border-dashed border-black/20 text-black/40 hover:border-black/40 hover:text-black hover:bg-black/5'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
+                  onClick={() => !isInlineCreating && setIsInlineCreating(true)}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const data = e.dataTransfer.getData('application/json');
+                    if (data) {
+                      try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.type === 'tracks' && Array.isArray(parsed.ids)) {
+                          setPendingDropTracks(parsed.ids);
+                          setIsInlineCreating(true);
+                        }
+                      } catch (err) {}
+                    }
+                  }}
+                >
+                  {isInlineCreating ? (
+                    <input 
+                      type="text" 
+                      autoFocus 
+                      placeholder="Playlist title..." 
+                      className="w-full bg-transparent text-[11px] font-medium outline-none"
+                      value={inlineCreateTitle}
+                      onChange={e => setInlineCreateTitle(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleInlinePlaylistCreate();
+                        else if (e.key === 'Escape') {
+                           setIsInlineCreating(false);
+                           setPendingDropTracks([]);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!inlineCreateTitle.trim() && pendingDropTracks.length === 0) {
+                           setIsInlineCreating(false);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest w-full justify-center">
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Create Playlist</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex flex-col overflow-y-auto hide-scrollbar gap-1 flex-1 pb-16">
@@ -947,19 +1077,10 @@ export default function Browse() {
               displayedTracks.map((track) => (
               <React.Fragment key={track.id}>
               <div 
-              className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none"
-              onClick={() => handlePlayPause(track, 'browse')}
+              className={`flex items-center gap-4 p-2 rounded-xl group transition-colors cursor-pointer select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-[#f6f6f6]'}`}
+              onClick={(e) => handleTrackClick(e, track, 'browse')}
               draggable
-              onDragStart={(e) => {
-                const dragImage = document.createElement('div');
-                dragImage.className = 'px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-widest rounded-lg shadow-xl pointer-events-none fixed top-[-1000px] left-[-1000px] z-[9999]';
-                dragImage.innerText = '1 track';
-                document.body.appendChild(dragImage);
-                e.dataTransfer.setDragImage(dragImage, 10, 10);
-                setTimeout(() => document.body.removeChild(dragImage), 0);
-                e.dataTransfer.effectAllowed = 'copyMove';
-                e.dataTransfer.setData('application/json', JSON.stringify({ type: 'tracks', ids: [track.id] }));
-              }}
+              onDragStart={(e) => handleTrackDragStart(e, track.id)}
             >
               <div 
                 className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
@@ -1111,19 +1232,10 @@ export default function Browse() {
                 {track.versions.map(version => (
                   <div 
                     key={version.id} 
-                    className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group/version transition-colors cursor-pointer select-none"
-                    onClick={() => handlePlayPause(version, 'browse')}
+                    className={`flex items-center gap-4 p-2 rounded-xl group/version transition-colors cursor-pointer select-none border border-transparent ${selectedTrackIds.has(version.id) ? 'bg-black/5 border-black/10' : 'hover:bg-[#f6f6f6]'}`}
+                    onClick={(e) => handleTrackClick(e, version, 'browse')}
                     draggable
-                    onDragStart={(e) => {
-                      const dragImage = document.createElement('div');
-                      dragImage.className = 'px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-widest rounded-lg shadow-xl pointer-events-none fixed top-[-1000px] left-[-1000px] z-[9999]';
-                      dragImage.innerText = '1 track';
-                      document.body.appendChild(dragImage);
-                      e.dataTransfer.setDragImage(dragImage, 10, 10);
-                      setTimeout(() => document.body.removeChild(dragImage), 0);
-                      e.dataTransfer.effectAllowed = 'copyMove';
-                      e.dataTransfer.setData('application/json', JSON.stringify({ type: 'tracks', ids: [version.id] }));
-                    }}
+                    onDragStart={(e) => handleTrackDragStart(e, version.id)}
                   >
                     <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5">
                       <TrackArtwork track={version} className="absolute inset-0 w-full h-full" />
