@@ -569,11 +569,11 @@ export async function updateWorkspace(workspaceId: string, updates: { name?: str
     .from('workspaces')
     .update(updates)
     .eq('id', workspaceId)
-    .select()
-    .single();
+    .select();
     
   if (error) throw error;
-  return data;
+  if (!data || data.length === 0) throw new Error("Permission denied or workspace not found.");
+  return data[0];
 }
 
 export async function getWorkspaceMembers(workspaceId: string) {

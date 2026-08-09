@@ -139,10 +139,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playTrack = (track: Track, playlist?: Track[], source?: 'top' | 'browse' | 'playlist' | 'suggested') => {
     setIsCurrentPreviewDormant(false);
-    if (source === 'top') {
+    if (source === 'top' || source === 'suggested') {
       setIsPreviewMode(false);
       applyPreview(track, false);
-      setCurrentSource('top');
+      setCurrentSource(source);
     } else {
       applyPreview(track);
       if (source) setCurrentSource(source);
@@ -231,7 +231,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setIsPlaying(true);
         setReturnTrackId(null); // Consumed
       }
-    } else if (currentSource === 'top' && fallbackPlaylist.length > 0) {
+    } else if ((currentSource === 'top' || currentSource === 'suggested') && fallbackPlaylist.length > 0) {
       // Fallback to Browse section
       setIsPreviewMode(true);
       setCurrentSource('browse');

@@ -4,6 +4,15 @@ import { UserPlaylist, useUserPlaylists } from '../context/UserPlaylistsContext'
 import { fetchPlaylistTrackIds, fetchTracksByIds } from '../lib/supabase';
 import { usePlayer, Track } from '../context/PlayerContext';
 
+const cleanTitle = (filename: string) => {
+  let base = filename.replace(/\.(mp3|wav|aif|aiff)$/i, '');
+  base = base.replace(/^\d+[\s_-]*/, '');
+  base = base.replace(/^[A-Z0-9]+_/, '');
+  base = base.replace(/_(bpm|key|v\d).*$/i, '');
+  base = base.replace(/_/g, ' ');
+  return base;
+};
+
 interface SidebarPlaylistProps {
   playlist: UserPlaylist;
   isFavorites?: boolean;
@@ -119,7 +128,7 @@ export default function SidebarPlaylist({
                   <Play className="w-2.5 h-2.5 fill-current" />
                 </div>
                 <div className="flex flex-col truncate">
-                  <span className="text-[10px] font-medium text-black truncate">{track.title || track.file_name}</span>
+                  <span className="text-[10px] font-medium text-black truncate">{track.title || cleanTitle(track.file_name)}</span>
                 </div>
               </div>
             ))

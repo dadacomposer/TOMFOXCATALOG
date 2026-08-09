@@ -103,6 +103,7 @@ export default function Browse() {
   const [filterSearch, setFilterSearch] = useState(''); // search within filter panel
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
   const [expandedTags, setExpandedTags] = useState<{trackId: string, tags: any[]} | null>(null);
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
@@ -127,7 +128,7 @@ export default function Browse() {
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay, setProgress, progress, setPendingSeek, isPreviewMode, setIsPreviewMode, setFallbackPlaylist, currentSource, setCurrentSource, setIsCurrentPreviewDormant, currentPlaylist, setCurrentPlaylist, setSelectedTrackForDetails } = usePlayer();
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
-  const { user, profile } = useAuth();
+  const { user, profile, setLoginModalOpen } = useAuth();
   const { settings, content } = useSettings();
   
   const { playlists: userPlaylists, favoritesPlaylist, createPlaylist, addTrackToPlaylist } = useUserPlaylists();
@@ -519,7 +520,10 @@ export default function Browse() {
     if (currentTrack?.id === track.id) {
       togglePlay();
     } else {
-      const queue = effectiveSource === 'top' ? trendingTracks : displayedTracks;
+      let queue = displayedTracks;
+      if (effectiveSource === 'top') queue = trendingTracks;
+      if (effectiveSource === 'suggested') queue = suggestedTracks;
+      
       playTrack(track, queue, effectiveSource || undefined);
     }
   };
@@ -776,48 +780,6 @@ export default function Browse() {
         </div>
       </div>
 
-      {/* Suggested For You */}
-      {suggestedTracks.length > 0 && (
-        <div className="w-full px-8 pt-4 pb-12 flex flex-col">
-          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Suggested for you</h2>
-          
-          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
-            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
-            {suggestedTracks.slice(0, 16).map((track, i) => {
-              const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
-              return (
-                <div 
-                  key={i} 
-                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
-                  onClick={(e) => handleTrackClick(e, track, 'suggested')}
-                  draggable
-                  onDragStart={(e) => handleTrackDragStart(e, track.id)}
-                >
-                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
-                    <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
-                    </div>
-                  </div>
-                  <div className="flex flex-col overflow-hidden w-full">
-                    <div 
-                      className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
-                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
-                    >
-                      {cleanTitle(track.file_name)}
-                    </div>
-                    <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5 truncate">
-                       {track.composers ? (Array.isArray(track.composers) ? track.composers.join(', ') : track.composers) : DEFAULT_COMPOSERS.join(', ')}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Trending Tracks */}
       <div className="w-full px-8 pt-4 pb-12 flex flex-col">
         <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Trending tracks</h2>
@@ -937,6 +899,48 @@ export default function Browse() {
           </div>
         </div>
       </div>
+
+      {/* Suggested For You */}
+      {suggestedTracks.length > 0 && (
+        <div className="w-full px-8 pt-4 pb-12 flex flex-col">
+          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Suggested for you</h2>
+          
+          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
+            {suggestedTracks.slice(0, 16).map((track, i) => {
+              const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
+              return (
+                <div 
+                  key={i} 
+                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
+                  onClick={(e) => handleTrackClick(e, track, 'suggested')}
+                  draggable
+                  onDragStart={(e) => handleTrackDragStart(e, track.id)}
+                >
+                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
+                    <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
+                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
+                    </div>
+                  </div>
+                  <div className="flex flex-col overflow-hidden w-full">
+                    <div 
+                      className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
+                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                    >
+                      {cleanTitle(track.file_name)}
+                    </div>
+                    <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5 truncate">
+                       {track.composers ? (Array.isArray(track.composers) ? track.composers.join(', ') : track.composers) : DEFAULT_COMPOSERS.join(', ')}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div id="main-search-bar" className="scroll-mt-[74px] md:scroll-mt-[82px]" />
       <div 
@@ -1085,11 +1089,22 @@ export default function Browse() {
 
         <div className="flex w-full px-4 md:px-8 gap-8 relative min-h-screen pb-20">
           
-          <div className={`hidden md:flex flex-col shrink-0 sticky top-[170px] h-[calc(100vh-190px)] z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
+          <div className={`hidden md:flex flex-col shrink-0 sticky top-[220px] h-[calc(100vh-240px)] z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
             
             <div className="flex w-full h-full relative">
               
               <div className="w-[130px] flex flex-col gap-1 shrink-0 relative z-20 bg-[#fafafa]">
+                <button 
+                  onClick={() => {
+                    setIsFiltersExpanded(!isFiltersExpanded);
+                    if (isFiltersExpanded) setExpandedCategory(null);
+                  }}
+                  className="flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-black/40 hover:text-black transition-colors rounded-lg hover:bg-black/5 w-full text-left mb-2"
+                >
+                  <span>Filters</span>
+                  <svg className={`w-3 h-3 transition-transform ${isFiltersExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                <div className={`flex flex-col gap-1 overflow-hidden transition-all duration-300 ${isFiltersExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
                 {FILTER_CATEGORIES.map(category => {
                   const count = (activeFilters[category.key] as string[])?.length || 0;
                   const isExpanded = expandedCategory === category.key;
@@ -1122,6 +1137,7 @@ export default function Browse() {
                 >
                   Clear Filters
                 </button>
+                </div>
 
                 {/* YOUR MUSIC */}
                 <div className="mt-8 mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-black/30">
@@ -1142,11 +1158,21 @@ export default function Browse() {
                 
                 <div 
                   className={`mt-4 mx-2 mb-2 flex items-center gap-2 p-2 rounded-lg border-2 transition-colors cursor-pointer ${isInlineCreating || pendingDropTracks.length > 0 ? 'border-black bg-black/5 text-black' : 'border-dashed border-black/20 text-black/40 hover:border-black/40 hover:text-black hover:bg-black/5'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
-                  onClick={() => !isInlineCreating && setIsInlineCreating(true)}
+                  onClick={() => {
+                    if (!user) {
+                      setLoginModalOpen(true);
+                      return;
+                    }
+                    if (!isInlineCreating) setIsInlineCreating(true);
+                  }}
                   onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   onDrop={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    if (!user) {
+                      setLoginModalOpen(true);
+                      return;
+                    }
                     const data = e.dataTransfer.getData('application/json');
                     if (data) {
                       try {

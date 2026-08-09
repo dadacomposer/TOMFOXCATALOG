@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { X, Plus, Check, Settings, Bell, LogOut, FileText, CreditCard, Users, Star, LayoutGrid, Upload, Crown, Search, Download, ExternalLink } from 'lucide-react';
-import { supabase, updateWorkspace, getWorkspaceMembers, createWorkspace, updateWorkspaceMember } from '../lib/supabase';
+import { supabase, updateWorkspace, getWorkspaceMembers, createWorkspace, updateWorkspaceMember, inviteTeamMember } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
 import ProfileSettings from './ProfileSettings';
@@ -15,7 +15,7 @@ export default function AccountPanel() {
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
   
-  const [activeView, setActiveView] = useState<'menu' | 'overview' | 'licenses' | 'team' | 'settings' | 'billing' | 'notifications'>('menu');
+  const [activeView, setActiveView] = useState<'menu' | 'overview' | 'licenses' | 'team' | 'settings' | 'billing'>('menu');
   const [editName, setEditName] = useState('');
   const [editCompany, setEditCompany] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
@@ -25,6 +25,11 @@ export default function AccountPanel() {
   const [members, setMembers] = useState<any[]>([]);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [newOwnerId, setNewOwnerId] = useState<string>('');
+  
+  // Invite Member Modal State
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
   
   // Create Workspace Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -106,7 +111,7 @@ export default function AccountPanel() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       // Do not close panel if a modal is open
-      if (isCreateModalOpen || isTransferModalOpen || isCancelSubModalOpen) return;
+      if (isCreateModalOpen || isTransferModalOpen || isCancelSubModalOpen || isInviteModalOpen) return;
       
       if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
         setAccountPanelOpen(false);
@@ -119,7 +124,7 @@ export default function AccountPanel() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isAccountPanelOpen, setAccountPanelOpen, isCreateModalOpen, isTransferModalOpen, isCancelSubModalOpen]);
+  }, [isAccountPanelOpen, setAccountPanelOpen, isCreateModalOpen, isTransferModalOpen, isCancelSubModalOpen, isInviteModalOpen]);
 
   if (!user) return null;
 
@@ -155,15 +160,10 @@ export default function AccountPanel() {
         throw new Error("Failed to upload image to R2");
       }
 
-      const { error: updateError } = await supabase
-        .from('workspaces')
-        .update({ avatar_url: publicUrl })
-        .eq('id', activeWorkspace.id);
-        
-      if (updateError) throw updateError;
+      const updatedWorkspace = await updateWorkspace(activeWorkspace.id, { avatar_url: publicUrl });
       
       await fetchWorkspaces(user.id);
-      setActiveWorkspace({ ...activeWorkspace, avatar_url: publicUrl });
+      setActiveWorkspace(updatedWorkspace);
       
     } catch (e: any) {
       console.error(e);
@@ -177,25 +177,15 @@ export default function AccountPanel() {
     if (!activeWorkspace) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('workspaces')
-        .update({
-          name: editName,
-          company_name: editCompany,
-          company_industry: editIndustry
-        })
-        .eq('id', activeWorkspace.id);
-        
-      if (error) throw error;
-      
-      setSaveSuccess(true);
-      await fetchWorkspaces(user.id);
-      setActiveWorkspace({
-        ...activeWorkspace,
+      const updatedWorkspace = await updateWorkspace(activeWorkspace.id, {
         name: editName,
         company_name: editCompany,
         company_industry: editIndustry
       });
+      
+      setSaveSuccess(true);
+      await fetchWorkspaces(user.id);
+      setActiveWorkspace(updatedWorkspace);
       
       setTimeout(() => setSaveSuccess(false), 2000);
       toast.success("Changes saved successfully");
@@ -258,6 +248,9 @@ export default function AccountPanel() {
   const personalAvatar = profile?.avatar_url || user.user_metadata?.avatar_url;
   const userName = profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}` : user.email?.split('@')[0];
   const currentOwner = members.find(m => m.role === 'owner');
+  const currentUserRole = members.find(m => m.user_id === user.id)?.role;
+  // In our DB structure, the creator is marked in activeWorkspace.user_id, but might not have an 'owner' role in workspace_members due to legacy setup
+  const isOwnerOrAdmin = activeWorkspace?.user_id === user?.id || currentUserRole === 'owner' || currentUserRole === 'admin';
 
   // When expanding, the panel goes from 384px (max-w-sm) to 1152px (triple width)
   const isExpanded = activeView !== 'menu';
@@ -472,13 +465,7 @@ export default function AccountPanel() {
                     Billing & Plan
                   </button>
                 )}
-                <button 
-                  onClick={() => setActiveView(activeView === 'notifications' ? 'menu' : 'notifications')}
-                  className={`flex items-center gap-3 p-1.5 px-3 rounded-lg transition-all text-left text-xs font-sans text-black/80 disabled:opacity-50 ${activeView === 'notifications' ? 'bg-black/10 font-bold' : 'hover:bg-black/5'}`}
-                >
-                  <Bell className={`w-3.5 h-3.5 ${activeView === 'notifications' ? 'opacity-100' : 'opacity-50'}`} />
-                  Notifications
-                </button>
+
                 <button 
                   onClick={handleSignOut}
                   className="flex items-center gap-3 p-1.5 px-3 rounded-lg hover:bg-black/5 transition-all text-left text-xs font-sans text-black/80 text-red-600/80 hover:text-red-600 hover:bg-red-50 mt-1"
@@ -504,7 +491,8 @@ export default function AccountPanel() {
                 </div>
                 <button 
                   onClick={handleSaveSettings}
-                  disabled={saving}
+                  disabled={saving || !isOwnerOrAdmin}
+                  title={!isOwnerOrAdmin ? "Only workspace admins can save changes" : ""}
                   className="bg-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-black/90 transition-all disabled:opacity-50 min-w-[120px]"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
@@ -547,7 +535,8 @@ export default function AccountPanel() {
                         type="file" 
                         accept="image/*" 
                         onChange={handleWorkspaceAvatarUpload}
-                        disabled={isUploading}
+                        disabled={isUploading || !isOwnerOrAdmin}
+                        title={!isOwnerOrAdmin ? "Only workspace admins can change the avatar" : ""}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                     </div>
@@ -612,7 +601,9 @@ export default function AccountPanel() {
                     </div>
                     <button 
                       onClick={() => setIsTransferModalOpen(true)}
-                      className="text-[10px] border border-black/20 bg-black/5 px-3 py-1.5 hover:bg-black hover:text-white transition-colors"
+                      disabled={!isOwnerOrAdmin}
+                      title={!isOwnerOrAdmin ? "Only workspace admins can transfer ownership" : ""}
+                      className="text-[10px] border border-black/20 bg-black/5 px-3 py-1.5 hover:bg-black hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-black/5 disabled:hover:text-black"
                     >
                       Transfer
                     </button>
@@ -673,11 +664,10 @@ export default function AccountPanel() {
                       <p className="text-[10px] font-sans text-black/50">Viewing 1-{members.length} of {members.length}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      {isIndividualPlan && (
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Upgrade to Business to invite members</span>
-                      )}
                       <button 
-                        disabled={isIndividualPlan}
+                        onClick={() => setIsInviteModalOpen(true)}
+                        disabled={!isOwnerOrAdmin}
+                        title={!isOwnerOrAdmin ? "Only workspace admins can invite members" : ""}
                         className="bg-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-black/90 transition-all flex items-center gap-2 disabled:opacity-50"
                       >
                         <Plus className="w-3 h-3" />
@@ -980,21 +970,7 @@ export default function AccountPanel() {
               <ProfileSettings />
             )}
 
-            {/* NOTIFICATIONS CONTENT */}
-            {activeView === 'notifications' && (
-              <div className="w-full h-full flex flex-col gap-6">
-                <div className="flex items-center justify-between shrink-0">
-                  <div>
-                    <h1 className="text-2xl font-medium tracking-tight">Notifications</h1>
-                    <p className="text-black/50 font-sans text-xs">Manage your email and in-app notifications.</p>
-                  </div>
-                </div>
-                <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] border border-black/10 bg-white">
-                  <Bell className="w-8 h-8 text-black/20 mb-4" />
-                  <p className="text-sm text-black/40 font-sans">You're all caught up.</p>
-                </div>
-              </div>
-            )}
+
 
           </div>
         </div>
@@ -1086,8 +1062,10 @@ export default function AccountPanel() {
                 onClick={async () => {
                   if (!activeWorkspace || !newOwnerId) return;
                   try {
-                    await updateWorkspaceMember(activeWorkspace.id, user.id, { role: 'member' });
+                    // Promote the new owner FIRST to avoid losing RLS permissions mid-transaction
                     await updateWorkspaceMember(activeWorkspace.id, newOwnerId, { role: 'owner' });
+                    // Then demote the current owner
+                    await updateWorkspaceMember(activeWorkspace.id, user.id, { role: 'admin' });
                     setIsTransferModalOpen(false);
                     setNewOwnerId('');
                     await fetchWorkspaces(user.id);
@@ -1149,6 +1127,70 @@ export default function AccountPanel() {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      {/* Invite Member Modal */}
+      <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isInviteModalOpen ? '' : 'pointer-events-none'}`}>
+        <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isInviteModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsInviteModalOpen(false)} />
+        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isInviteModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+          <div className="p-8 flex flex-col items-center text-center">
+            <button onClick={() => setIsInviteModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+            
+            <h2 className="text-xl font-medium tracking-tight mb-2">Invite Team Member</h2>
+            <p className="text-black/60 text-sm mb-8 px-4 leading-relaxed">
+              Send an email invitation to join this workspace.
+            </p>
+
+            <form 
+              className="w-full flex flex-col gap-2 text-left mb-8"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!activeWorkspace || !inviteEmail) return;
+                setIsInviting(true);
+                try {
+                  await inviteTeamMember(activeWorkspace.id, inviteEmail);
+                  toast.success("Invitation sent successfully!");
+                  setIsInviteModalOpen(false);
+                  setInviteEmail('');
+                } catch (err: any) {
+                  console.error(err);
+                  toast.error(err.message || "Failed to send invitation");
+                } finally {
+                  setIsInviting(false);
+                }
+              }}
+            >
+              <label className="text-sm font-medium">Email Address</label>
+              <input 
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="colleague@example.com"
+                required
+                className="w-full bg-white border border-black/10 p-3 text-sm font-sans focus:ring-2 focus:ring-black/20 outline-none"
+              />
+
+              <div className="flex w-full gap-3 mt-6">
+                <button 
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(false)}
+                  className="flex-1 p-4 border border-black/10 text-xs hover:bg-black/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isInviting || !inviteEmail}
+                  className="flex-1 p-4 bg-black text-white text-xs hover:bg-black/90 transition-colors disabled:opacity-50"
+                >
+                  {isInviting ? 'Sending...' : 'Send Invite'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

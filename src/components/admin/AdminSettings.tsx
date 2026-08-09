@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Lock, Eye, EyeOff, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertTriangle, ArrowRight, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminSettings() {
@@ -37,6 +37,20 @@ export default function AdminSettings() {
     } catch (err: any) {
       console.error(err);
       useState_error(err.message || 'An error occurred updating the password');
+    } finally {
+      useState_isLoading(false);
+    }
+  };
+
+  const handleTriggerEmail = async () => {
+    useState_isLoading(true);
+    try {
+      const { error: fnError } = await supabase.functions.invoke('weekly-engagement-email');
+      if (fnError) throw fnError;
+      toast.success('Engagement email triggered successfully');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'An error occurred triggering the email');
     } finally {
       useState_isLoading(false);
     }
@@ -110,6 +124,22 @@ export default function AdminSettings() {
             {!isLoading && <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-black/10 p-8 shadow-sm max-w-md mt-8">
+        <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+          <Mail className="w-5 h-5" /> Weekly Engagement Email
+        </h3>
+        <p className="text-sm text-black/60 mb-6 font-sans leading-relaxed">
+          Manually trigger the weekly engagement email. This will check for new tracks added in the last 7 days and email all users who have opted into notifications.
+        </p>
+        <button
+          onClick={handleTriggerEmail}
+          disabled={isLoading}
+          className="w-full bg-black text-white py-4 rounded-xl font-bold uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-black/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:hover:scale-100"
+        >
+          {isLoading ? 'Processing...' : 'Run Email Script'}
+        </button>
       </div>
     </div>
   );

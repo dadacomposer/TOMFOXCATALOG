@@ -50,6 +50,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const [playlistTitle, setPlaylistTitle] = useState('Playlist');
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [expandedTags, setExpandedTags] = useState<{trackId: string, tags: string[]} | null>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -262,7 +263,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                   </div>
                   
                   {/* TAGS Column */}
-                  <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] overflow-hidden">
+                  <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] relative">
                     {(() => {
                       const human = parseTags(track.human_tags);
                       const subgenres = parseTags(track.subgenre);
@@ -273,14 +274,52 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                       const all = [...human, ...subgenres, ...moods, ...scenarios, ...movement];
                       const unique = Array.from(new Set(all));
                       const tags = unique.slice(0, 2);
+                      const remainingTags = unique.slice(2);
                       
                       if (tags.length === 0) return <span className="text-[10px] text-black/30 font-bold uppercase tracking-widest">Tagging...</span>;
 
-                      return tags.map((t, idx) => (
-                        <span key={idx} onClick={e => e.stopPropagation()} className="px-2 py-1 bg-black/5 rounded text-[10px] font-bold text-black/60 uppercase tracking-widest whitespace-nowrap cursor-default">
-                          {t}
-                        </span>
-                      ));
+                      return (
+                        <div className="flex items-center gap-2">
+                          {tags.map((t, idx) => (
+                            <span 
+                              key={idx} 
+                              onClick={e => e.stopPropagation()} 
+                              className="px-2 py-1 bg-black/5 rounded text-[10px] font-bold text-black/60 uppercase tracking-widest whitespace-nowrap cursor-default"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                          {remainingTags.length > 0 && (
+                            <div className="relative">
+                              <span 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedTags(expandedTags?.trackId === track.id ? null : { trackId: track.id, tags: remainingTags });
+                                }}
+                                className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-bold text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                              >
+                                +{remainingTags.length}
+                              </span>
+                              {expandedTags?.trackId === track.id && (
+                                <>
+                                  <div className="fixed inset-0 z-[20]" onClick={(e) => { e.stopPropagation(); setExpandedTags(null); }} />
+                                  <div className="absolute top-full left-0 mt-2 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
+                                    {expandedTags?.tags.map((t, idx) => (
+                                      <span 
+                                        key={idx} 
+                                        onClick={e => e.stopPropagation()}
+                                        className="px-2 py-1 bg-black/5 rounded text-[10px] font-bold text-black/60 uppercase tracking-widest whitespace-nowrap cursor-default"
+                                      >
+                                        {t}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
                     })()}
                   </div>
 

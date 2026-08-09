@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 
 // ─── Styles per KaleidoscopeBackground ───────────────────────────────────────
 // Estratto dal componente per evitare re-injection ad ogni render
@@ -103,6 +103,26 @@ export const KaleidoscopeBackground = ({
 // ─── Styles per FeaturedSun ───────────────────────────────────────────────────
 // Singleton: iniettato una sola volta nel <head>, non ad ogni render React
 export const FeaturedSun = ({ isHovered }: { isHovered: boolean }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || !svg.pauseAnimations) return;
+    
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          svg.unpauseAnimations();
+        } else {
+          svg.pauseAnimations();
+        }
+      },
+      { threshold: 0 }
+    );
+    
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
   // 4 anelli sfalsati (durata totale 30s)
   const ringDelays = ['0s', '-7.5s', '-15s', '-22.5s'];
   
@@ -121,9 +141,11 @@ export const FeaturedSun = ({ isHovered }: { isHovered: boolean }) => {
 
   return (
     <svg 
+      ref={svgRef}
       className="absolute bottom-0 left-0 w-full h-[80px] z-10 pointer-events-none overflow-visible" 
       viewBox="0 0 400 80" 
       preserveAspectRatio="xMidYMax slice"
+      style={{ willChange: 'transform', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
     >
       <defs>
         <linearGradient id="arch-gradient-dark" x1="0" y1="80" x2="0" y2="0" gradientUnits="userSpaceOnUse">
@@ -136,10 +158,14 @@ export const FeaturedSun = ({ isHovered }: { isHovered: boolean }) => {
           <stop offset="60%"  stopColor="#D5C15E" />
           <stop offset="100%" stopColor="#E9D985" />
         </linearGradient>
+        <radialGradient id="sun-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="96%" stopColor="#E9D985" stopOpacity="1" />
+          <stop offset="100%" stopColor="#E9D985" stopOpacity="0" />
+        </radialGradient>
       </defs>
       
-      {/* Glow Statico: Tailwind CSS blur */}
-      <circle cx="0" cy="640" r="600" fill="#E9D985" className={`blur-[24px] transition-opacity duration-1000 ${isHovered ? 'opacity-30' : 'opacity-0'}`} />
+      {/* Glow Statico: Radial Gradient invece di Tailwind CSS blur per massimizzare le performance GPU */}
+      <circle cx="0" cy="640" r="624" fill="url(#sun-glow)" className={`transition-opacity duration-1000 ${isHovered ? 'opacity-30' : 'opacity-0'}`} />
 
       <g>
         {ringDelays.map((delay, i) => {

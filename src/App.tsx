@@ -75,7 +75,7 @@ function AppLayout() {
   const { settings } = useSettings();
 
   return (
-    <div className={`w-full min-h-screen bg-[#fafafa] text-black font-sans selection:bg-black selection:text-white flex flex-col transition-all duration-500 ease-out overflow-x-hidden overscroll-x-none ${currentTrack && !location.pathname.startsWith('/studio') && !location.pathname.startsWith('/admin') ? 'pb-[90px]' : ''}`}>
+    <div className={`w-full min-h-screen bg-[#fafafa] text-black font-sans selection:bg-black selection:text-white flex flex-col transition-all duration-500 ease-out ${currentTrack && !location.pathname.startsWith('/studio') && !location.pathname.startsWith('/admin') ? 'pb-[90px]' : ''}`}>
       <ScrollToTop />
       {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <Header />}
       

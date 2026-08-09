@@ -5,12 +5,17 @@ import { Play, Plus, Search, ExternalLink, Settings2, UploadCloud, MonitorPlay, 
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import CreateSubscriptionModal from './CreateSubscriptionModal';
 
 export default function AdminTomFoxStudio() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  
+  // Create Subscription Modal State
+  const [isSubscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   
   // Create Project Modal State
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
@@ -102,8 +107,24 @@ export default function AdminTomFoxStudio() {
 
   useEffect(() => {
     fetchProjects();
+    fetchSubscriptions();
     fetchUsers();
   }, []);
+
+  const fetchSubscriptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tf_studio_subscriptions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      if (data) setSubscriptions(data);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to load subscriptions");
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -114,6 +135,22 @@ export default function AdminTomFoxStudio() {
       }
     } catch (e) {
       console.error('Failed to fetch users:', e);
+    }
+  };
+
+  const handleDeleteSubscription = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this subscription from the Studio panel? This will not cancel the actual subscription in Stripe.')) return;
+    try {
+      const { error } = await supabase
+        .from('tf_studio_subscriptions')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      setSubscriptions(prev => prev.filter(s => s.id !== id));
+      toast.success('Subscription removed from Studio');
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || 'Failed to remove subscription');
     }
   };
 
@@ -205,7 +242,7 @@ export default function AdminTomFoxStudio() {
       const { data, error } = await supabase.functions.invoke('admin-create-project', {
         body: {
           isNewUser,
-          email,
+          email: isNewUser ? email : allUsers.find(u => u.id === existingUserId)?.email,
           firstName,
           lastName,
           organization,
@@ -289,16 +326,27 @@ export default function AdminTomFoxStudio() {
             </span>
           </p>
         </div>
-        <button 
-          onClick={() => {
-            resetForm();
-            setCreateModalOpen(true);
-          }}
-          className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-black/80 transition-colors shadow-lg shadow-black/10"
-        >
-          <Plus className="w-4 h-4" />
-          Create Project
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => {
+              setSubscriptionModalOpen(true);
+            }}
+            className="flex items-center gap-2 bg-white border border-black/10 text-black px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-black/5 transition-colors shadow-lg shadow-black/5"
+          >
+            <Plus className="w-4 h-4" />
+            Create Subscription
+          </button>
+          <button 
+            onClick={() => {
+              resetForm();
+              setCreateModalOpen(true);
+            }}
+            className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-black/80 transition-colors shadow-lg shadow-black/10"
+          >
+            <Plus className="w-4 h-4" />
+            Create Project
+          </button>
+        </div>
       </div>
 
       <div className="flex-grow overflow-x-auto">
@@ -449,6 +497,66 @@ export default function AdminTomFoxStudio() {
 
         </div>
       </div>
+
+      {/* Sent Subscriptions Panel */}
+      <div className="mt-8 mb-4 border-t border-black/5 pt-8 shrink-0">
+        <h3 className="font-bold text-sm uppercase tracking-widest text-black/40 flex items-center justify-between mb-4">
+          Sent Subscriptions <span className="bg-black/5 text-black px-2 py-0.5 rounded-full">{subscriptions.length}</span>
+        </h3>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {subscriptions.map(sub => {
+            const user = allUsers.find(u => u.id === sub.user_id);
+            return (
+            <div key={sub.id} className="min-w-[300px] bg-white border border-black/5 p-4 rounded-2xl shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-bold text-black">{user?.first_name || user?.last_name ? `${user?.first_name || ''} ${user?.last_name || ''}` : user?.email}</h4>
+                  <div className="text-xs text-black/50">{user?.email}</div>
+                </div>
+                <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${sub.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-black/5 text-black/60'}`}>
+                  {sub.status}
+                </span>
+              </div>
+              <div className="flex justify-between items-end mt-2">
+                <div>
+                  <div className="text-sm font-bold uppercase tracking-widest">
+                    {sub.amount} {sub.currency?.toUpperCase()} / {sub.interval}
+                  </div>
+                  <div className="text-[10px] text-black/40 uppercase tracking-widest mt-1">
+                    {new Date(sub.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    type="button"
+                    onClick={() => handleDeleteSubscription(sub.id)}
+                    className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
+                    title="Remove from Studio (Does not cancel in Stripe)"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  {sub.invoice_url && (
+                    <a href={sub.invoice_url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center hover:bg-black hover:text-white transition-colors">
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )})}
+          {subscriptions.length === 0 && (
+            <div className="text-sm text-black/30 font-medium italic">No subscriptions sent yet.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Create Subscription Modal */}
+      <CreateSubscriptionModal 
+        isOpen={isSubscriptionModalOpen} 
+        onClose={() => setSubscriptionModalOpen(false)} 
+        onSuccess={fetchSubscriptions} 
+        allUsers={allUsers}
+      />
 
       {/* Create Project Modal */}
       {isCreateModalOpen && createPortal(

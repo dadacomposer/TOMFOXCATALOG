@@ -10,6 +10,7 @@ export default function ProfileSettings() {
   const [firstName, setFirstName] = useState(profile?.first_name || '');
   const [lastName, setLastName] = useState(profile?.last_name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [notifyNewMusic, setNotifyNewMusic] = useState(profile?.notify_new_music ?? true);
   
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -104,7 +105,8 @@ export default function ProfileSettings() {
         .from('profiles')
         .update({
           first_name: firstName,
-          last_name: lastName
+          last_name: lastName,
+          notify_new_music: notifyNewMusic
         })
         .eq('id', user.id);
         
@@ -263,6 +265,30 @@ export default function ProfileSettings() {
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] uppercase tracking-widest font-bold text-black/40">Email Address</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white border border-black/10 p-2 text-xs focus:ring-1 focus:ring-black outline-none" />
+          </div>
+
+          <div className="flex flex-col gap-3 mt-4 border-t border-black/5 pt-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-black/80">Notification Preferences</h3>
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <div className="relative flex items-center justify-center mt-0.5">
+                <input 
+                  type="checkbox" 
+                  checked={notifyNewMusic}
+                  onChange={(e) => setNotifyNewMusic(e.target.checked)}
+                  className="peer sr-only"
+                />
+                <div className="w-4 h-4 border border-black/20 bg-white peer-checked:bg-black peer-checked:border-black transition-colors group-hover:border-black/40"></div>
+                <div className="absolute inset-0 flex items-center justify-center text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 4.5L3.5 7L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-black">Notify me when new music is published</span>
+                <span className="text-xs text-black/50">Receive a weekly email with new releases.</span>
+              </div>
+            </label>
           </div>
         </div>
 

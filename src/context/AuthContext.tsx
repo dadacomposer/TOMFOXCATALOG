@@ -16,6 +16,7 @@ type Profile = {
   billing_interval: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
+  notify_new_music: boolean;
 };
 
 type AuthContextType = {
@@ -103,8 +104,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const ws = await getUserWorkspaces(userId);
       setWorkspaces(ws);
-      if (ws && ws.length > 0 && !activeWorkspace) {
-        setActiveWorkspace(ws[0]);
+      if (ws && ws.length > 0) {
+        setActiveWorkspace((prev: any) => {
+          if (!prev) return ws[0];
+          const updated = ws.find(w => w.id === prev.id);
+          return updated || prev;
+        });
       }
     } catch (e) {
       console.error("Error loading workspaces", e);

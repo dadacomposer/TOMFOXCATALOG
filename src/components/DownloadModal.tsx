@@ -148,7 +148,7 @@ export default function DownloadModal() {
   if (showDropdown) {
     // Subscriber View: Dropdown Popover
     return (
-      <div className={`fixed inset-0 z-[45] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-[100] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         {/* Invisible backdrop to capture outside clicks */}
         <div className={`absolute inset-0 ${isOpen ? 'block' : 'hidden'}`} onClick={closeDownloadModal} />
         
