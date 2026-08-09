@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, useEffect, ReactNod
 import { getPreviewTimings } from '../lib/audioUtils';
 import { supabase } from '../lib/supabase';
 import { analytics } from '../lib/analytics';
+import { useAuth } from './AuthContext';
 
 export type Track = {
   id: string;
@@ -62,6 +63,7 @@ type PlayerContextType = {
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [currentPlaylist, setCurrentPlaylist] = useState<Track[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -103,16 +105,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (error) console.error("Failed to increment play count:", error);
       });
       // Telemetry: Start
-      analytics.trackPlayStart(currentTrack.id);
+      analytics.trackPlayStart(currentTrack.id, user?.id);
     }
-  }, [currentTrack?.id]);
+  }, [currentTrack?.id, user?.id]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isPlaying && currentTrack && audioRef.current) {
       interval = setInterval(() => {
         if (audioRef.current && !audioRef.current.paused) {
-          analytics.trackPlayPing(currentTrack.id, Math.floor(audioRef.current.currentTime));
+          analytics.trackPlayPing(currentTrack.id, Math.floor(audioRef.current.currentTime), user?.id);
         }
       }, 10000); // Ping every 10 seconds
     }

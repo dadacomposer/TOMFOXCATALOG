@@ -50,7 +50,7 @@ BEGIN
     AND t.deleted_at IS NULL
     AND t.track_type = 'main'
     AND t.id NOT IN (
-      SELECT track_id FROM play_events WHERE user_id = p_user_id
+      SELECT pe2.track_id FROM play_events pe2 WHERE pe2.user_id = p_user_id
     )
     AND (
       (t.genre = ANY(top_genres)) OR
