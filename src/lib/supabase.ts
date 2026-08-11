@@ -299,6 +299,40 @@ export async function fetchSuggestedTracks(userId: string) {
   return fullTracks;
 }
 
+export async function fetchSuggestedPlaylists(userId: string) {
+  if (!userId) return [];
+  const { data, error } = await supabase.rpc('get_suggested_playlists', {
+    p_user_id: userId
+  });
+  
+  if (error) {
+    console.error('Error fetching suggested playlists:', error);
+    return [];
+  }
+  
+  if (!data || data.length === 0) return [];
+  
+  const finalIds = data.map((p: { playlist_id: string }) => p.playlist_id);
+  
+  // Now fetch full playlist objects
+  const { data: playlistsData, error: playlistsError } = await supabase
+    .from('playlists')
+    .select('*')
+    .in('id', finalIds);
+    
+  if (playlistsError) {
+    console.error('Error hydrating suggested playlists:', playlistsError);
+    return [];
+  }
+  
+  // Reorder playlists based on the RPC result order
+  const hydratedPlaylists = finalIds
+    .map(id => playlistsData?.find(p => p.id === id))
+    .filter(Boolean);
+    
+  return hydratedPlaylists;
+}
+
 
 export async function searchTracksByTitle(query: string) {
   // Try full text search first (handles stemming: investigation -> investig)

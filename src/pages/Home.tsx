@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedTracks } from '../lib/supabase';
-import { Play, Pause, TrendingUp, Loader2 } from 'lucide-react';
+import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists } from '../lib/supabase';
+import { Play, Pause, TrendingUp, Loader2, Star } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import TrackArtwork from '../components/TrackArtwork';
+import PlaylistArtwork from '../components/PlaylistArtwork';
 import Footer from '../components/Footer';
 import { getComposers } from '../utils/trackUtils';
 import { usePlayer } from '../context/PlayerContext';
@@ -100,7 +101,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [playlists, setPlaylists] = useState<any[]>([]);
   const [trendingTracks, setTrendingTracks] = useState<any[]>([]);
-  const [suggestedTracks, setSuggestedTracks] = useState<any[]>([]);
+  const [suggestedPlaylists, setSuggestedPlaylists] = useState<any[]>([]);
   
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
   const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
@@ -134,10 +135,10 @@ export default function Home() {
   useEffect(() => {
     async function loadSuggested() {
       if (user?.id) {
-        const tracks = await fetchSuggestedTracks(user.id);
-        setSuggestedTracks(tracks);
+        const results = await fetchSuggestedPlaylists(user.id);
+        setSuggestedPlaylists(results as any[]);
       } else {
-        setSuggestedTracks([]);
+        setSuggestedPlaylists([]);
       }
     }
     loadSuggested();
@@ -167,7 +168,7 @@ export default function Home() {
     if (currentTrack?.file_name === track.file_name) {
       togglePlay();
     } else {
-      const list = source === 'top' ? trendingTracks : suggestedTracks;
+      const list = source === 'top' ? trendingTracks : []; // Suggested is now playlists
       playTrack(track, list, source);
     }
   };
@@ -406,45 +407,45 @@ export default function Home() {
 
 
       {/* Suggested For You */}
-      {suggestedTracks.length > 0 && (
+      {suggestedPlaylists.length > 0 && (
         <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Suggested for you</h2>
           
           <div className="w-full relative">
             <ScrollArrows scrollRef={suggestedRef} />
-            <div ref={suggestedRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
-              <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
-              {suggestedTracks.slice(0, 16).map((track, i) => {
-              const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
-              return (
+            <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar">
+              {suggestedPlaylists.map((pl) => (
                 <div 
-                  key={i} 
-                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
-                  onClick={(e) => handleTrackClick(e, track, 'suggested')}
-                  draggable
-                  onDragStart={(e) => handleTrackDragStart(e, track.id)}
+                  key={pl.id} 
+                  className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all duration-300 border border-transparent hover:border-black/5 relative shrink-0 w-[240px] sm:w-[260px] md:w-[280px]"
+                  onClick={() => setSearchParams({ playlist: pl.id })}
                 >
-                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
-                    <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
-                    </div>
+                  <div className={`relative w-full mb-6 ${settings.public_artwork_frames_enabled ? 'aspect-[1.15]' : 'aspect-square'}`}>
+                     {pl.is_featured && (
+                       <div className="absolute bottom-2 left-2 z-30 bg-yellow-400 text-black p-2 rounded-full shadow-lg pointer-events-none">
+                         <Star className="w-4 h-4 fill-black" />
+                       </div>
+                     )}
+                     {settings.public_artwork_frames_enabled ? (
+                      <>
+                        <PlaylistArtwork playlist={pl as any} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-0" />
+                        <PlaylistArtwork playlist={pl as any} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-10" />
+                        <PlaylistArtwork playlist={pl as any} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl group-hover:scale-[1.02] transition-transform cursor-pointer z-20" />
+                      </>
+                    ) : (
+                      <PlaylistArtwork playlist={pl as any} className="absolute top-0 left-0 w-[100%] h-[100%] shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-20 rounded-[32px]" />
+                    )}
                   </div>
-                  <div className="flex flex-col overflow-hidden w-full">
-                    <div 
-                      className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
-                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
-                    >
-                      {cleanTitle(track.file_name)}
-                    </div>
-                    <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5 truncate">
-                       {getComposers(track.composers)}
+                  <div className="flex flex-col px-2 pb-2 mt-2">
+                    <h3 className="font-bold text-[18px] uppercase tracking-tighter text-black truncate mb-1">
+                      {pl.title}
+                    </h3>
+                    <div className="font-sans text-[11px] uppercase tracking-widest text-black/50 line-clamp-2 leading-relaxed">
+                      {pl.track_count || 0} tracks
                     </div>
                   </div>
                 </div>
-              );
-            })}
-              </div>
+              ))}
             </div>
           </div>
         </div>

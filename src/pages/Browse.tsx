@@ -22,7 +22,6 @@ import { useUserPlaylists } from '../context/UserPlaylistsContext';
 
 import WaveformView from '../components/WaveformView';
 import { usePlayer } from '../context/PlayerContext';
-import { useSearchBar } from '../context/SearchBarContext';
 import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS, DEFAULT_ARTIST } from '../config';
 import TrackArtwork from '../components/TrackArtwork';
 import { FeaturedSun } from '../components/TopPicksEffects';
@@ -524,24 +523,16 @@ export default function Browse() {
 
 
 
-  const { setIsAnimating } = useSearchBar();
-
   const handleTagClick = (categoryKey: string, value: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsAnimating(true);
-    
-    // Add a slight delay to allow the animation to play before filtering
-    setTimeout(() => {
-      // Shadow search: add to shadow_tags filter instead of modifying strict categories
-      setActiveFilters(prev => {
-        const tags = (prev.shadow_tags as string[]) || [];
-        if (!tags.includes(value)) {
-          return { ...prev, shadow_tags: [...tags, value] };
-        }
-        return prev;
-      });
-      setIsAnimating(false);
-    }, 400);
+    // Shadow search: add to shadow_tags filter instead of modifying strict categories
+    setActiveFilters(prev => {
+      const tags = (prev.shadow_tags as string[]) || [];
+      if (!tags.includes(value)) {
+        return { ...prev, shadow_tags: [...tags, value] };
+      }
+      return prev;
+    });
   };
 
   const handleLoadMore = async () => {
