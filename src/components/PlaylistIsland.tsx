@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { fetchPlaylistTrackIds, fetchTracksByIds, fetchTracks, supabase } from '../lib/supabase';
 import { Play, Pause, Download, ShoppingBag, X, TrendingUp } from 'lucide-react';
 import WaveformView from './WaveformView';
@@ -116,7 +117,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
     }
   };
 
-  return (
+  const content = (
     <>
       {/* Backdrop */}
       {!inline && <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />}
@@ -375,4 +376,11 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       </div>
     </>
   );
+
+  if (inline) return content;
+  
+  // Return early if no document
+  if (typeof document === 'undefined') return null;
+  
+  return createPortal(content, document.body);
 }
