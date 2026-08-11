@@ -911,8 +911,25 @@ export default function Browse() {
                 
 
                 
+
+                <div className="flex flex-col overflow-y-auto hide-scrollbar gap-1 flex-1 pb-16">
+                  {userPlaylists.filter(p => !p.is_favorites).map(pl => (
+                    <SidebarPlaylist
+                      key={pl.id}
+                      playlist={pl}
+                      isActive={playlistUrlId === pl.id}
+                      onClick={() => {
+                        searchParams.set('playlist', pl.id);
+                        setSearchParams(searchParams);
+                      }}
+                      dragTarget={dragTarget}
+                      setDragTarget={setDragTarget}
+                    />
+                  ))}
+                </div>
+                
                 <div 
-                  className={`mt-4 mb-2 flex items-center justify-between gap-2 px-3 py-2.5 rounded-full transition-colors cursor-pointer text-[10px] font-bold uppercase tracking-widest ${isInlineCreating || pendingDropTracks.length > 0 ? 'bg-black/90 text-white shadow-inner' : 'bg-black text-white hover:bg-black/80 shadow-md hover:shadow-lg'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`mt-auto mb-4 flex items-center justify-between gap-2 mx-3 px-3 py-2.5 rounded-full transition-colors cursor-pointer text-[10px] font-bold uppercase tracking-widest shrink-0 ${isInlineCreating || pendingDropTracks.length > 0 ? 'bg-black/90 text-white shadow-inner' : 'bg-black text-white hover:bg-black/80 shadow-md hover:shadow-lg'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => {
                     if (!user) {
                       setLoginModalOpen(true);
@@ -967,22 +984,6 @@ export default function Browse() {
                       <span>Create Playlist</span>
                     </div>
                   )}
-                </div>
-                
-                <div className="flex flex-col overflow-y-auto hide-scrollbar gap-1 flex-1 pb-16">
-                  {userPlaylists.filter(p => !p.is_favorites).map(pl => (
-                    <SidebarPlaylist
-                      key={pl.id}
-                      playlist={pl}
-                      isActive={playlistUrlId === pl.id}
-                      onClick={() => {
-                        searchParams.set('playlist', pl.id);
-                        setSearchParams(searchParams);
-                      }}
-                      dragTarget={dragTarget}
-                      setDragTarget={setDragTarget}
-                    />
-                  ))}
                 </div>
               </div>
 
