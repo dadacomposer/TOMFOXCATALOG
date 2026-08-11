@@ -841,7 +841,7 @@ export default function Browse() {
       <div className="w-full relative flex-1 flex overflow-hidden">
         
         {/* STATIC SIDEBAR (Does not scroll) */}
-        <div className={`hidden md:flex flex-col shrink-0 z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] pt-8 pl-4 md:pl-8 ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
+        <div className={`hidden md:flex flex-col shrink-0 z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] pt-8 pl-4 md:pl-5 ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
           <div className="flex w-full h-full relative">
             <div className="w-[130px] flex flex-col gap-1 shrink-0 relative z-20 bg-[#fafafa]">
               <button 
@@ -912,7 +912,7 @@ export default function Browse() {
 
                 
                 <div 
-                  className={`mt-4 mx-2 mb-2 flex items-center gap-2 p-2 rounded-lg border-2 transition-colors cursor-pointer ${isInlineCreating || pendingDropTracks.length > 0 ? 'border-black bg-black/5 text-black' : 'border-dashed border-black/20 text-black/40 hover:border-black/40 hover:text-black hover:bg-black/5'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`mt-4 mb-2 flex items-center justify-between gap-2 px-3 py-2.5 rounded-full transition-colors cursor-pointer text-[10px] font-bold uppercase tracking-widest ${isInlineCreating || pendingDropTracks.length > 0 ? 'bg-black/90 text-white shadow-inner' : 'bg-black text-white hover:bg-black/80 shadow-md hover:shadow-lg'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => {
                     if (!user) {
                       setLoginModalOpen(true);
@@ -945,7 +945,7 @@ export default function Browse() {
                       type="text" 
                       autoFocus 
                       placeholder="Playlist title..." 
-                      className="w-full bg-transparent text-[11px] font-medium outline-none"
+                      className="w-full bg-transparent text-[11px] font-medium outline-none text-white placeholder:text-white/50"
                       value={inlineCreateTitle}
                       onChange={e => setInlineCreateTitle(e.target.value)}
                       onKeyDown={e => {
