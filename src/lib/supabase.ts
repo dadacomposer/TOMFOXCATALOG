@@ -327,7 +327,7 @@ export async function fetchSuggestedPlaylists(userId: string) {
   
   // Reorder playlists based on the RPC result order
   const hydratedPlaylists = finalIds
-    .map(id => playlistsData?.find(p => p.id === id))
+    .map((id: string) => playlistsData?.find(p => p.id === id))
     .filter(Boolean);
     
   return hydratedPlaylists;
