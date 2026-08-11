@@ -81,10 +81,11 @@
      - Base HTML structural tags
      - Semantic layout tags (header, main, footer, section, article)
      - .no-radius (navbar, search bar, globalaudioplayer, root wrappers)
+     - .no-radius * (all descendants of .no-radius)
      - .preview-toggle (and children)
      - .is-avatar (and children)
   */
-  *:not(html):not(body):not(#root):not(#root > div):not(header):not(main):not(footer):not(section):not(article):not(.no-radius):not(.preview-toggle):not(.preview-toggle *):not(.is-avatar):not(.is-avatar *):not(.full-bleed) {
+  *:not(html):not(body):not(#root):not(#root > div):not(header):not(main):not(footer):not(section):not(article):not(.no-radius):not(.no-radius *):not(.preview-toggle):not(.preview-toggle *):not(.is-avatar):not(.is-avatar *):not(.full-bleed) {
     border-radius: 7px !important;
   }
 

@@ -66,7 +66,7 @@ export default function Header() {
       window.removeEventListener('scroll', handleScroll);
       if (scrollContainer) scrollContainer.removeEventListener('scroll', handleScroll);
     };
-  }, [location.pathname]);
+  }, [location.pathname, user?.id]);
 
   useEffect(() => {
     // Measure active link for sliding box
