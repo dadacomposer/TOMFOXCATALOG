@@ -112,6 +112,7 @@ export default function Home() {
   const topPicksRef = useRef<HTMLDivElement>(null);
   const trendingRef = useRef<HTMLDivElement>(null);
   const suggestedRef = useRef<HTMLDivElement>(null);
+  const recentlyPlayedRef = useRef<HTMLDivElement>(null);
 
   const { user } = useAuth();
   const { settings } = useSettings();
@@ -149,6 +150,15 @@ export default function Home() {
     }
     loadSuggested();
   }, [user?.id]);
+
+  useEffect(() => {
+    if (currentTrack && user?.id) {
+      setRecentlyPlayedTracks(prev => {
+        const filtered = prev.filter(t => t.id !== currentTrack.id);
+        return [currentTrack, ...filtered].slice(0, 16);
+      });
+    }
+  }, [currentTrack, user?.id]);
 
   const trendingTrackIds = new Set(trendingTracks.map(t => t.id));
 
@@ -462,39 +472,41 @@ export default function Home() {
         <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Recently Played</h2>
           
-          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
-            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-4 content-start min-w-min">
-              {recentlyPlayedTracks.map((track, i) => {
-                const isTrackPlaying = isPlaying && currentTrack?.id === track.id;
-                
-                return (
-                  <div 
-                    key={track.id} 
-                    className="flex items-center gap-4 p-2 rounded select-none cursor-pointer group hover:bg-[#f6f6f6] transition-colors relative"
-                    onClick={(e) => handleTrackClick(e, track, 'top')}
-                  >
-                    <div className="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-black/5">
-                      <TrackArtwork track={track} className="w-full h-full object-cover" />
-                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isTrackPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                        {isTrackPlaying ? (
-                          <Pause className="w-5 h-5 text-white fill-white" />
-                        ) : (
-                          <Play className="w-5 h-5 text-white fill-white ml-0.5" />
-                        )}
+          <div className="w-full relative">
+            <ScrollArrows scrollRef={recentlyPlayedRef} />
+            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+              <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
+                {recentlyPlayedTracks.map((track, i) => {
+                  const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
+                  return (
+                    <div 
+                      key={`${track.id}-${i}`} 
+                      className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
+                      onClick={(e) => handleTrackClick(e, track, 'top')}
+                      draggable
+                      onDragStart={(e) => handleTrackDragStart(e, track.id)}
+                    >
+                      <div className="w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5">
+                        <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
+                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                          {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
+                        </div>
+                      </div>
+                      <div className="flex flex-col overflow-hidden w-full">
+                        <div 
+                          className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
+                          onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                        >
+                          {cleanTitle(track.file_name)}
+                        </div>
+                        <div className="text-[11px] text-black/50 truncate">
+                          {getComposers(track)}
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-col overflow-hidden w-full gap-0.5">
-                      <span className="font-bold text-sm text-black truncate uppercase tracking-tighter">
-                        {track.title}
-                      </span>
-                      <span className="text-[10px] text-black/50 font-bold uppercase tracking-widest truncate">
-                        {getComposers(track)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
