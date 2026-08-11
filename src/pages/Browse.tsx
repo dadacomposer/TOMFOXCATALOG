@@ -57,7 +57,7 @@ type Track = {
   description?: string;
 };
 
-const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement> }) => {
+const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement | null> }) => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 

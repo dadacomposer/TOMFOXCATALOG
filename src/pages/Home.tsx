@@ -33,7 +33,7 @@ const cleanTitle = (filename: string) => {
   return base;
 };
 
-const ScrollArrows = ({ scrollRef, isDark }: { scrollRef: React.RefObject<HTMLDivElement>, isDark?: boolean }) => {
+const ScrollArrows = ({ scrollRef, isDark }: { scrollRef: React.RefObject<HTMLDivElement | null>, isDark?: boolean }) => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -155,7 +155,7 @@ export default function Home() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const handleTrackClick = (e: React.MouseEvent, track: any, source: string) => {
+  const handleTrackClick = (e: React.MouseEvent, track: any, source: "playlist" | "top" | "browse" | "suggested") => {
     if (e.shiftKey || e.metaKey || e.ctrlKey) {
       const next = new Set(selectedTrackIds);
       if (next.has(track.id)) next.delete(track.id);
