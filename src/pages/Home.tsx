@@ -311,7 +311,7 @@ export default function Home() {
                       {/* Bottom Content */}
                       <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col justify-end h-[60%] bg-gradient-to-t from-black/80 via-black/30 to-transparent z-20">
                         <div className="flex items-end justify-between w-full mt-auto">
-                          <span className="text-white font-medium tracking-tight text-lg drop-shadow-md leading-[1.1] max-w-[80%]">
+                          <span className={`text-white font-medium tracking-tight ${!user ? 'text-sm' : 'text-lg'} drop-shadow-md leading-[1.1] max-w-[80%]`}>
                             {pl.title}
                           </span>
                           
