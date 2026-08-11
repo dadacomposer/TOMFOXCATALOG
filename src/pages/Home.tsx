@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists } from '../lib/supabase';
+import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchRecentlyPlayedTracks } from '../lib/supabase';
 import { Play, Pause, TrendingUp, Loader2, Star } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import TrackArtwork from '../components/TrackArtwork';
@@ -102,6 +102,7 @@ export default function Home() {
   const [playlists, setPlaylists] = useState<any[]>([]);
   const [trendingTracks, setTrendingTracks] = useState<any[]>([]);
   const [suggestedPlaylists, setSuggestedPlaylists] = useState<any[]>([]);
+  const [recentlyPlayedTracks, setRecentlyPlayedTracks] = useState<any[]>([]);
   
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
   const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
@@ -135,10 +136,15 @@ export default function Home() {
   useEffect(() => {
     async function loadSuggested() {
       if (user?.id) {
-        const results = await fetchSuggestedPlaylists(user.id);
+        const [results, recentResults] = await Promise.all([
+          fetchSuggestedPlaylists(user.id),
+          fetchRecentlyPlayedTracks(user.id)
+        ]);
         setSuggestedPlaylists(results as any[]);
+        setRecentlyPlayedTracks(recentResults as any[]);
       } else {
         setSuggestedPlaylists([]);
+        setRecentlyPlayedTracks([]);
       }
     }
     loadSuggested();
@@ -446,6 +452,49 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recently Played */}
+      {recentlyPlayedTracks.length > 0 && (
+        <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section">
+          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Recently Played</h2>
+          
+          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-4 content-start min-w-min">
+              {recentlyPlayedTracks.map((track, i) => {
+                const isTrackPlaying = isPlaying && currentTrack?.id === track.id;
+                
+                return (
+                  <div 
+                    key={track.id} 
+                    className="flex items-center gap-4 p-2 rounded select-none cursor-pointer group hover:bg-[#f6f6f6] transition-colors relative"
+                    onClick={(e) => handleTrackClick(e, track, 'top')}
+                  >
+                    <div className="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-black/5">
+                      <TrackArtwork track={track} className="w-full h-full object-cover" />
+                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isTrackPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                        {isTrackPlaying ? (
+                          <Pause className="w-5 h-5 text-white fill-white" />
+                        ) : (
+                          <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col overflow-hidden w-full gap-0.5">
+                      <span className="font-bold text-sm text-black truncate uppercase tracking-tighter">
+                        {track.title}
+                      </span>
+                      <span className="text-[10px] text-black/50 font-bold uppercase tracking-widest truncate">
+                        {getComposers(track)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
