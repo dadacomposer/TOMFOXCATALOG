@@ -1,0 +1,79 @@
+Created At: 2026-08-11T02:27:32+02:00
+Completed At: 2026-08-11T02:27:32+02:00
+File Path: `file:///Users/dada/.gemini/antigravity/scratch/tom-fox-frontend/src/pages/Home.tsx`
+Total Lines: 411
+Total Bytes: 23654
+Showing lines 70 to 140
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+70:   if (!loading && user) {
+71:     return <Navigate to="/browse" replace />;
+72:   }
+73: 
+74:   const handlePlaylistPlay = async (e: React.MouseEvent, playlistId: string) => {
+75:     e.stopPropagation();
+76:     if (playingPlaylistId === playlistId) {
+77:       togglePlay();
+78:     } else {
+79:       setPlayingPlaylistId(playlistId);
+80:       const tracks = await fetchPlaylistTracks(playlistId) as any;
+81:       if (tracks && tracks.length > 0) {
+82:         playPlaylist(tracks);
+83:       }
+84:     }
+85:   };
+86: 
+87:   const handleVideoEnded = () => {
+88:     setCurrentVideoIndex((prev) => (prev + 1) % BACKGROUND_VIDEOS.length);
+89:   };
+90: 
+91:   return (
+92:     <div className="flex flex-col">
+93:       {/* Top Section: Hero sharing the background */}
+94:       <div className="relative w-full overflow-hidden">
+95:         {/* Background Video */}
+96:         <video 
+97:           ref={videoRef}
+98:           src={BACKGROUND_VIDEOS[currentVideoIndex]} 
+99:           autoPlay 
+100:           muted 
+101:           playsInline 
+102:           onEnded={handleVideoEnded}
+103:           className="absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-1000"
+104:         />
+105:         {/* Overlay to ensure text readability */}
+106:         <div className="absolute inset-0 bg-white/70 z-0 pointer-events-none"></div>
+107: 
+108:         {/* HERO */}
+109:         <div className="relative z-10 w-full px-12 md:px-24 lg:px-32 pt-40 md:pt-48 pb-20 md:pb-32">
+110:           <div className="max-w-4xl">
+111:             <h1 
+112:               className="text-5xl md:text-7xl lg:text-8xl font-bold uppercase tracking-tighter mb-8 leading-[0.9]"
+113:               dangerouslySetInnerHTML={{ __html: homeContent.hero_title || 'The Soundtrack <br />For Modern <br />Storytelling.' }}
+114:             />
+115:             
+116:             <p className="font-sans uppercase text-sm mb-10 max-w-md leading-relaxed tracking-wide text-black/50">
+117:               {homeContent.hero_subtitle || 'A meticulously curated library of 2,500+ premium tracks for media, ads, and film.'}
+118:             </p>
+119:             
+120:             <div className="flex flex-col sm:flex-row gap-4">
+121:                <button onClick={() => navigate('/browse')} className="px-8 py-4 bg-black text-white font-bold uppercase text-xs tracking-widest hover:bg-black/80 transition-colors cursor-pointer">
+122:                  {homeContent.hero_btn_1 || 'Browse'}
+123:                </button>
+124:                <button onClick={() => setLoginModalOpen(true)} className="px-8 py-4 border-2 border-black/10 font-bold uppercase text-xs tracking-widest hover:border-black transition-colors">
+125:                  {homeContent.hero_btn_2 || 'Create Free Account'}
+126:                </button>
+127:             </div>
+128:           </div>
+129:         </div>
+130:       </div>
+131: 
+132:       <div id="home-dark-section" className="w-full full-bleed">
+133:         <LogoTicker />
+134: 
+135:         {/* MAIN CONTENT (Dark Mode) */}
+136:         <main className="flex-grow w-full px-12 md:px-24 lg:px-32 py-16 md:py-24 bg-black text-white">
+137:           
+138:           {/* Value Proposition / Showcase */}
+139:           <div className="mb-16">
+140:             <h2 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

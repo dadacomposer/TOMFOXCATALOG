@@ -48,7 +48,7 @@ export default function Admin() {
     <div className={`h-[100dvh] overflow-hidden overscroll-none bg-[#fafafa] text-black pt-20 flex ${currentTrack ? 'pb-[90px]' : ''}`}>
       <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-6 py-6 bg-white border-b-2 border-black/10">
         <div className="flex items-baseline cursor-pointer">
-          <Link to="/browse">
+          <Link to="/">
             <img 
               src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
               alt="Tom Fox" 
@@ -61,6 +61,7 @@ export default function Admin() {
         <nav className="hidden md:flex items-center gap-10 font-bold uppercase text-xs tracking-widest relative z-10">
           {!isAdminTheaterRoute && (
             <>
+              <Link to="/" className="transition-colors hover:text-black/50">Discover</Link>
               <Link to="/browse" className="transition-colors hover:text-black/50">Browse</Link>
               <Link to="/playlists" className="transition-colors hover:text-black/50">Playlists</Link>
               <Link to="/my-music" className="transition-colors hover:text-black/50">My Music</Link>

@@ -2,9 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navig
 import { useEffect } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import Home from './pages/Home';
-import Browse from './pages/Browse';
-
+import DiscoverBrowseWrapper from './pages/DiscoverBrowseWrapper';
 import Pricing from './pages/Pricing';
 import Playlists from './pages/Playlists';
 import Enterprise from './pages/Enterprise';
@@ -34,7 +32,9 @@ import { LicenseProvider } from './context/LicenseContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { UserPlaylistsProvider } from './context/UserPlaylistsContext';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
+import { SearchBarProvider } from './context/SearchBarContext';
 import GlobalPlayer from './components/GlobalPlayer';
+import GlobalSearchBar from './components/GlobalSearchBar';
 import DownloadModal from './components/DownloadModal';
 import LicenseModal from './components/LicenseModal';
 import GlobalLoader from './components/GlobalLoader';
@@ -82,8 +82,8 @@ function AppLayout() {
       <div className="flex-grow flex flex-col">
         <ErrorBoundary>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/browse" element={<Browse />} />
+            <Route path="/" element={<DiscoverBrowseWrapper />} />
+            <Route path="/browse" element={<DiscoverBrowseWrapper />} />
             <Route path="/my-music" element={<MyMusic />} />
             <Route path="/playlists" element={<Playlists />} />
             <Route path="/pricing" element={settings?.subscriptions_enabled ? <Pricing /> : <Navigate to="/" replace />} />
@@ -97,7 +97,6 @@ function AppLayout() {
               <Route index element={<Navigate to="tracks" replace />} />
               <Route path="tracks" element={<AdminTracks />} />
               <Route path="users" element={<AdminUsers />} />
-
               <Route path="tickets" element={<AdminTickets />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="features" element={<AdminFeatures />} />
@@ -113,8 +112,9 @@ function AppLayout() {
           </Routes>
         </ErrorBoundary>
       </div>
-
-      {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <Footer isDark={location.pathname === '/'} />}
+      {location.pathname !== '/' && !location.pathname.startsWith('/browse') && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && (
+        <Footer />
+      )}
       {!location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <GlobalPlayer />}
       {!['/checkout-resume', '/checkout-success', '/checkout-cancel', '/custom-music'].includes(location.pathname) && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/studio') && <OnboardingModal />}
       <AccountPanel />
@@ -160,19 +160,21 @@ export default function App() {
     <UnderConstruction>
       <SettingsProvider>
         <AuthProvider>
-          <UserPlaylistsProvider>
-            <Router>
-              <PlayerProvider>
-                <DownloadProvider>
-                  <LicenseProvider>
-                    <AppLayout />
-                    <DownloadModal />
-                    <LicenseModal />
-                  </LicenseProvider>
-                </DownloadProvider>
-              </PlayerProvider>
-            </Router>
-          </UserPlaylistsProvider>
+          <LicenseProvider>
+            <PlayerProvider>
+              <DownloadProvider>
+                <UserPlaylistsProvider>
+                  <SearchBarProvider>
+                    <Router>
+                      <AppLayout />
+                      <DownloadModal />
+                      <LicenseModal />
+                    </Router>
+                  </SearchBarProvider>
+                </UserPlaylistsProvider>
+              </DownloadProvider>
+            </PlayerProvider>
+          </LicenseProvider>
         </AuthProvider>
       </SettingsProvider>
     </UnderConstruction>

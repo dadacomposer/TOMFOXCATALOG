@@ -1,0 +1,60 @@
+Created At: 2026-08-10T16:35:41+02:00
+Completed At: 2026-08-10T16:35:41+02:00
+File Path: `file:///Users/dada/.gemini/antigravity/scratch/tom-fox-frontend/src/pages/Browse.tsx`
+Total Lines: 1522
+Total Bytes: 78364
+Showing lines 680 to 730
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+680:     return `${m}:${s < 10 ? '0' : ''}${s}`;
+681:   };
+682: 
+683:   return (
+684:     <div className="flex flex-col w-full min-h-screen pt-[88px] bg-[#fafafa] text-black relative">
+685:       {playlistUrlId && (
+686:         <PlaylistIsland 
+687:           id={playlistUrlId}
+688:           onClose={() => {
+689:             searchParams.delete('playlist');
+690:             setSearchParams(searchParams);
+691:           }}
+692:           progress={progress}
+693:           handleSeek={handleSeek}
+694:           formatTime={formatTime}
+695:           trendingTrackIds={trendingTrackIds}
+696:         />
+697:       )}
+698:       
+699:       {/* Top Picks For You */}
+700:       <div className="w-full pt-12 pb-8 relative overflow-hidden group/section">
+701:         {settings?.top_picks_animation_enabled !== false && (
+702:           <div
+703:             className="absolute inset-0 pointer-events-none z-30"
+704:             style={{ mixBlendMode: 'screen', transform: 'translateZ(0)' }}
+705:           >
+706:             <FeaturedSun isHovered={isFeaturedHovered} />
+707:           </div>
+708:         )}
+709:         <div className="w-full relative z-10 px-8">
+710:           <ScrollArrows scrollRef={topPicksRef} />
+711:           <div ref={topPicksRef} className="flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4">
+712:             {loading ? (
+713:               [...Array(4)].map((_, i) => (
+714:                 <div key={i} className="flex flex-col p-4 rounded-[32px] w-[340px] shrink-0 snap-start">
+715:                   <div className="relative w-full aspect-[1.15] mb-6">
+716:                      <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+717:                      <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+718:                      <div className="absolute top-0 right-[18%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+719:                      <div className="absolute top-0 left-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+720:                   </div>
+721:                   <div className="flex flex-col px-2 pb-2 gap-2 mt-2">
+722:                     <div className="h-5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
+723:                     <div className="h-4 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
+724:                   </div>
+725:                 </div>
+726:               ))
+727:             ) : (
+728:               playlists
+729:                 .filter(pl => pl.top_pick_position !== null && pl.top_pick_position !== undefined)
+730:                 .sort((a, b) => (a.top_pick_position || 99) - (b.top_pick_position || 99))
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
+

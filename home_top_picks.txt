@@ -1,0 +1,43 @@
+Created At: 2026-08-11T02:24:06+02:00
+Completed At: 2026-08-11T02:24:21+02:00
+The following changes were made by the replace_file_content tool to: /Users/dada/.gemini/antigravity/scratch/tom-fox-frontend/src/pages/Home.tsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -145,9 +145,11 @@
+     e.dataTransfer.effectAllowed = 'copy';
+   };
+ 
+-  return (
+-    <div className="flex flex-col w-full min-h-screen pt-[88px] pb-[120px] bg-[#fafafa] text-black relative">
+-{playlistUrlId && (
++  const showWelcome = !user;
++
++  return (
++    <div className="w-full flex flex-col pb-32">
++      {playlistUrlId && (
+         <PlaylistIsland 
+           id={playlistUrlId}
+           onClose={() => {
+@@ -160,18 +160,6 @@
+         />
+       )}
+       
+-      {/* Top Picks For You */}
+-      <div className="w-full pt-12 pb-8 relative overflow-hidden group/section">
+-        {settings?.top_picks_animation_enabled !== false && (
+-          <div
+-            className="absolute inset-0 pointer-events-none z-30"
+-            style={{ mixBlendMode: 'screen', transform: 'translateZ(0)' }}
+-          >
+-            <FeaturedSun isHovered={isFeaturedHovered} />
+-          </div>
+-        )}
+-        <div className="w-full relative z-10 px-8">
+-          <ScrollArrows scrollRef={topPicksRef} />
+           <div ref={topPicksRef} className="flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4">
+             {loading ? (
+               [...Array(4)].map((_, i) => (
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+
+We did our best to apply changes despite some inaccuracies. Double check if the edit applied is what you intended.

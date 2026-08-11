@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Track } from '../context/PlayerContext';
+import { getComposers } from '../utils/trackUtils';
 
 interface TrackArtworkProps {
   track: Track;
@@ -34,8 +35,8 @@ export default function TrackArtwork({ track, className = '' }: TrackArtworkProp
              </div>
              {/* Right: Text Block */}
              <div className="flex flex-col text-right w-fit max-w-[60%] justify-end pb-[0.5cqw]">
-                <div className="text-[1.8cqw] text-black/70 pb-[0.3cqw] whitespace-nowrap uppercase">
-                   TOM FOX
+                <div className="text-[1.8cqw] text-black/70 pb-[0.3cqw] whitespace-nowrap uppercase truncate max-w-[40cqw] inline-block">
+                   {getComposers(track.composers).toUpperCase()}
                 </div>
                 <div className="border-t-[max(1px,0.1cqw)] border-black/20 pt-[0.3cqw] pb-[0.3cqw] text-[1.8cqw] text-black/70 whitespace-nowrap uppercase">
                    HELLO@TOMFOX.SITE

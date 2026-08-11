@@ -154,7 +154,7 @@ export default function AdminFeatures() {
         </div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <p className="text-xs font-medium uppercase tracking-widest text-black/40">
-            Assign public playlists to the 4 cards in the Browse page and select their background gradient.
+            Assign public playlists to the 10 cards in the Browse page and select their background gradient.
           </p>
           <div className="flex items-center gap-3 shrink-0">
             <span className="text-[10px] font-bold uppercase tracking-widest text-black/40">SVG Animation</span>
@@ -167,8 +167,8 @@ export default function AdminFeatures() {
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-black/10 shadow-sm p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
-            {[1, 2, 3, 4].map(num => {
+          <div className="flex overflow-x-auto hide-scrollbar gap-6 w-full pb-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => {
               const plId = topPicks[`card_${num}`];
               const pl = publicPlaylists.find(p => p.id === plId);
               
@@ -176,12 +176,18 @@ export default function AdminFeatures() {
                 { baseColor: 'bg-gradient-to-br from-[#1E293B] to-[#0F172A]', bgIdle: 'bg-[#38BDF8]/20', bgHover: 'bg-[#38BDF8]/40' },
                 { baseColor: 'bg-gradient-to-br from-[#3F3F46] to-[#18181B]', bgIdle: 'bg-[#A78BFA]/20', bgHover: 'bg-[#A78BFA]/40' },
                 { baseColor: 'bg-gradient-to-br from-[#1E1B4B] to-[#09090B]', bgIdle: 'bg-[#F472B6]/20', bgHover: 'bg-[#F472B6]/40' },
-                { baseColor: 'bg-gradient-to-br from-[#0F172A] to-[#020617]', bgIdle: 'bg-[#34D399]/20', bgHover: 'bg-[#34D399]/40' }
+                { baseColor: 'bg-gradient-to-br from-[#0F172A] to-[#020617]', bgIdle: 'bg-[#34D399]/20', bgHover: 'bg-[#34D399]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#451A03] to-[#1C0901]', bgIdle: 'bg-[#FBBF24]/20', bgHover: 'bg-[#FBBF24]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#064E3B] to-[#022C22]', bgIdle: 'bg-[#6EE7B7]/20', bgHover: 'bg-[#6EE7B7]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#4C1D95] to-[#2E1065]', bgIdle: 'bg-[#C084FC]/20', bgHover: 'bg-[#C084FC]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#701A75] to-[#4A044E]', bgIdle: 'bg-[#E879F9]/20', bgHover: 'bg-[#E879F9]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#1E3A8A] to-[#172554]', bgIdle: 'bg-[#60A5FA]/20', bgHover: 'bg-[#60A5FA]/40' },
+                { baseColor: 'bg-gradient-to-br from-[#7F1D1D] to-[#450A0A]', bgIdle: 'bg-[#F87171]/20', bgHover: 'bg-[#F87171]/40' }
               ];
               const style = cardStyles[num - 1];
 
               return (
-                <div key={`card_${num}`} className="flex flex-col gap-6 w-full">
+                <div key={`card_${num}`} className="flex flex-col gap-6 w-[280px] shrink-0">
                   {/* Controls */}
                   <div className="flex flex-col gap-3">
                     <label className="text-xs font-medium uppercase tracking-widest text-black/60">
@@ -196,7 +202,7 @@ export default function AdminFeatures() {
                         { value: '', label: '-- No playlist --' },
                         ...publicPlaylists.map(p => ({
                           value: p.id,
-                          label: `${p.title} ${p.is_featured ? '(Featured)' : ''}`
+                          label: p.title
                         }))
                       ]}
                     />

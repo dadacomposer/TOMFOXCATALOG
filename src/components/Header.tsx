@@ -58,7 +58,7 @@ export default function Header() {
   return (
     <header className={`fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-6 py-6 transition-colors duration-300 ${headerBgClass} ${borderClass}`}>
       <div className="flex items-baseline cursor-pointer">
-        <Link to={user ? "/browse" : "/"}>
+        <Link to="/">
           <img 
             src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
             alt="Tom Fox" 
@@ -68,6 +68,7 @@ export default function Header() {
       </div>
       
       <nav className="hidden md:flex items-center gap-10 font-bold uppercase text-xs tracking-widest">
+        <Link to="/" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Discover</Link>
         <Link to="/browse" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Browse</Link>
         <Link to="/playlists" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Playlists</Link>
         {user && (

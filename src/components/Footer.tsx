@@ -89,8 +89,6 @@ export default function Footer({ isDark = false }: { isDark?: boolean }) {
             © {new Date().getFullYear()} Tom Fox Music. All rights reserved.
           </div>
           <div className={`font-sans text-[10px] uppercase tracking-widest ${mutedTextColor} flex items-center gap-4`}>
-            <span className="flex items-center gap-2">Created with <Heart className="w-3 h-3" /> by @dadadesign</span>
-            <span className="hidden sm:inline opacity-30">•</span>
             <span className="flex items-center gap-2">Powered by <DadaLogo className={`w-3 h-3 ${mutedTextColor}`} /> DadaAudio</span>
           </div>
         </div>

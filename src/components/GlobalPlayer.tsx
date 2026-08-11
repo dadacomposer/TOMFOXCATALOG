@@ -3,6 +3,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2, Minimize2, File
 import { useLocation } from 'react-router-dom';
 import WaveformView from './WaveformView';
 import { usePlayer } from '../context/PlayerContext';
+import { getComposers } from '../utils/trackUtils';
 import { getPreviewTimings, parseWaveform } from '../lib/audioUtils';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { useDownload } from '../context/DownloadContext';
@@ -269,9 +270,7 @@ export default function GlobalPlayer() {
             {currentTrack ? cleanTitle(currentTrack.file_name) : ''}
           </div>
           <div className={`font-sans text-[11px] ${secondaryText} truncate`}>
-            {currentTrack?.composers 
-              ? currentTrack.composers.filter(c => c.trim() !== '').join(', ')
-              : 'Tom Fox'}
+            {getComposers(currentTrack?.composers)}
           </div>
         </div>
         {!isSharedPage && currentTrack && (
@@ -405,10 +404,8 @@ export default function GlobalPlayer() {
                   </div>
                   <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
                     <div className={`font-bold truncate text-[14px] ${currentTrack?.id === track.id ? 'text-black' : ''}`}>{cleanTitle(track.file_name)}</div>
-                    <div className="font-sans text-[12px] text-black/50 mt-0.5">
-                      {track.composers 
-                        ? track.composers.filter(c => c.trim() !== '').join(', ')
-                        : 'Tom Fox'}
+                    <div className="font-sans text-[11px] text-black/40 truncate">
+                      {getComposers(track.composers)}
                     </div>
                   </div>
                   

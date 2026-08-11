@@ -1,390 +1,396 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
-import { Play, Pause, Search } from 'lucide-react';
-import LogoTicker from '../components/LogoTicker';
-import { fetchPlaylists, fetchPlaylistTracks } from '../lib/supabase';
-import PlaylistArtwork from '../components/PlaylistArtwork';
+import React, { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedTracks } from '../lib/supabase';
+import { Play, Pause, TrendingUp, Loader2 } from 'lucide-react';
+import PlaylistIsland from '../components/PlaylistIsland';
+import TrackArtwork from '../components/TrackArtwork';
+import Footer from '../components/Footer';
+import { getComposers } from '../utils/trackUtils';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { FeaturedSun } from '../components/TopPicksEffects';
 
-const BACKGROUND_VIDEOS = [
-  "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/videos/Anthropic.mov",
-  "https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/videos/Tunnel%20Vision.mov"
+const cardStyles = [
+  { baseColor: 'bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#38BDF8]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#38BDF8]/20', bgHover: 'bg-[#38BDF8]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#18181B] via-[#3F3F46] to-[#A78BFA]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#A78BFA]/20', bgHover: 'bg-[#A78BFA]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#09090B] via-[#1E1B4B] to-[#F472B6]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#F472B6]/20', bgHover: 'bg-[#F472B6]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#020617] via-[#0F172A] to-[#34D399]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#34D399]/20', bgHover: 'bg-[#34D399]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#1C0901] via-[#451A03] to-[#FBBF24]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#FBBF24]/20', bgHover: 'bg-[#FBBF24]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#022C22] via-[#064E3B] to-[#6EE7B7]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#6EE7B7]/20', bgHover: 'bg-[#6EE7B7]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#2E1065] via-[#4C1D95] to-[#C084FC]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#C084FC]/20', bgHover: 'bg-[#C084FC]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#4A044E] via-[#701A75] to-[#E879F9]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#E879F9]/20', bgHover: 'bg-[#E879F9]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#172554] via-[#1E3A8A] to-[#60A5FA]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#60A5FA]/20', bgHover: 'bg-[#60A5FA]/40' },
+  { baseColor: 'bg-gradient-to-br from-[#450A0A] via-[#7F1D1D] to-[#F87171]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#F87171]/20', bgHover: 'bg-[#F87171]/40' }
 ];
 
+const cleanTitle = (filename: string) => {
+  let base = filename.replace(/\.(mp3|wav|aif|aiff)$/i, '');
+  base = base.replace(/^\d+[\s_-]*/, '');
+  base = base.replace(/^[A-Z0-9]+_/, '');
+  base = base.replace(/_(bpm|key|v\d).*$/i, '');
+  base = base.replace(/_/g, ' ');
+  return base;
+};
+
+const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement> }) => {
+  return (
+    <>
+      <button 
+        className="absolute left-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all opacity-0 group-hover/section:opacity-100"
+        style={{ borderRadius: '50%' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          scrollRef.current?.scrollBy({ left: -600, behavior: 'smooth' });
+        }}
+      >
+        <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+      </button>
+      <button 
+        className="absolute right-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all opacity-0 group-hover/section:opacity-100"
+        style={{ borderRadius: '50%' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          scrollRef.current?.scrollBy({ left: 600, behavior: 'smooth' });
+        }}
+      >
+        <svg className="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+      </button>
+    </>
+  );
+};
+
 export default function Home() {
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const navigate = useNavigate();
-  const { user, loading, setLoginModalOpen, setContactModalOpen, setCustomMusicIntent } = useAuth();
-  const { content } = useSettings();
-  const homeContent = content['home'] || {};
-
-  const [realPlaylists, setRealPlaylists] = useState<any[]>([]);
-  const { isPlaying, togglePlay, playPlaylist, currentTrack } = usePlayer();
-
+  const [searchParams, setSearchParams] = useSearchParams();
+  const playlistUrlId = searchParams.get('playlist');
+  
+  const [loading, setLoading] = useState(true);
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [trendingTracks, setTrendingTracks] = useState<any[]>([]);
+  const [suggestedTracks, setSuggestedTracks] = useState<any[]>([]);
+  
+  const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
+  const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
+  const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
+
+  const topPicksRef = useRef<HTMLDivElement>(null);
+  const trendingRef = useRef<HTMLDivElement>(null);
+  const suggestedRef = useRef<HTMLDivElement>(null);
+
+  const { user } = useAuth();
+  const { settings } = useSettings();
+  const { 
+    playTrack, playPlaylist, currentTrack, isPlaying, togglePlay, 
+    progress, setPendingSeek, setCurrentSource, setSelectedTrackForDetails
+  } = usePlayer();
 
   useEffect(() => {
-    // Check for auth errors in URL
-    const hash = window.location.hash;
-    const params = new URLSearchParams(window.location.search);
-    if (hash.includes('error=') || params.get('error')) {
-      alert("Login failed. Please try again.");
-      navigate('/');
+    async function loadData() {
+      const [pData, tData] = await Promise.all([
+        fetchPlaylists(),
+        fetchTrendingTracks()
+      ]);
+      setPlaylists(pData);
+      setTrendingTracks(tData);
+      setLoading(false);
     }
-
-    if (!currentTrack) setPlayingPlaylistId(null);
-  }, [currentTrack, navigate]);
-
-  useEffect(() => {
-    fetchPlaylists().then(data => {
-      const targetTitles = ['New Music', 'Lo-Fi', 'Exploring Space'];
-      const filtered = data.filter(p => targetTitles.includes(p.title));
-      filtered.sort((a, b) => targetTitles.indexOf(a.title) - targetTitles.indexOf(b.title));
-      setRealPlaylists(filtered);
-    });
+    loadData();
   }, []);
 
-  if (!loading && user) {
-    return <Navigate to="/browse" replace />;
-  }
+  useEffect(() => {
+    async function loadSuggested() {
+      if (user?.id) {
+        const tracks = await fetchSuggestedTracks(user.id);
+        setSuggestedTracks(tracks);
+      } else {
+        setSuggestedTracks([]);
+      }
+    }
+    loadSuggested();
+  }, [user?.id]);
 
-  const handlePlaylistPlay = async (e: React.MouseEvent, playlistId: string) => {
-    e.stopPropagation();
-    if (playingPlaylistId === playlistId) {
+  const trendingTrackIds = new Set(trendingTracks.map(t => t.id));
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPendingSeek(parseFloat(e.target.value));
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  const handleTrackClick = (e: React.MouseEvent, track: any, source: string) => {
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      const next = new Set(selectedTrackIds);
+      if (next.has(track.id)) next.delete(track.id);
+      else next.add(track.id);
+      setSelectedTrackIds(next);
+      return;
+    }
+    
+    if (currentTrack?.file_name === track.file_name) {
       togglePlay();
     } else {
-      setPlayingPlaylistId(playlistId);
-      const tracks = await fetchPlaylistTracks(playlistId) as any;
-      if (tracks && tracks.length > 0) {
-        playPlaylist(tracks);
-      }
+      const list = source === 'top' ? trendingTracks : suggestedTracks;
+      playTrack(track, list, source);
     }
   };
 
-  const handleVideoEnded = () => {
-    setCurrentVideoIndex((prev) => (prev + 1) % BACKGROUND_VIDEOS.length);
+  const handleTrackDragStart = (e: React.DragEvent, trackId: string) => {
+    let idsToDrag = selectedTrackIds.has(trackId) ? Array.from(selectedTrackIds) : [trackId];
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'tracks', ids: idsToDrag }));
+    e.dataTransfer.effectAllowed = 'copy';
   };
 
   return (
-    <div className="flex flex-col">
-      {/* Top Section: Hero sharing the background */}
-      <div className="relative w-full overflow-hidden">
-        {/* Background Video */}
-        <video 
-          ref={videoRef}
-          src={BACKGROUND_VIDEOS[currentVideoIndex]} 
-          autoPlay 
-          muted 
-          playsInline 
-          onEnded={handleVideoEnded}
-          className="absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-1000"
+    <div className="flex flex-col w-full min-h-screen pt-[88px] pb-[120px] bg-[#fafafa] text-black relative">
+{playlistUrlId && (
+        <PlaylistIsland 
+          id={playlistUrlId}
+          onClose={() => {
+            searchParams.delete('playlist');
+            setSearchParams(searchParams);
+          }}
+          progress={progress}
+          handleSeek={handleSeek}
+          formatTime={formatTime}
+          trendingTrackIds={trendingTrackIds}
         />
-        {/* Overlay to ensure text readability */}
-        <div className="absolute inset-0 bg-white/70 z-0 pointer-events-none"></div>
-
-        {/* HERO */}
-        <div className="relative z-10 w-full px-12 md:px-24 lg:px-32 pt-40 md:pt-48 pb-20 md:pb-32">
-          <div className="max-w-4xl">
-            <h1 
-              className="text-5xl md:text-7xl lg:text-8xl font-bold uppercase tracking-tighter mb-8 leading-[0.9]"
-              dangerouslySetInnerHTML={{ __html: homeContent.hero_title || 'The Soundtrack <br />For Modern <br />Storytelling.' }}
-            />
-            
-            <p className="font-sans uppercase text-sm mb-10 max-w-md leading-relaxed tracking-wide text-black/50">
-              {homeContent.hero_subtitle || 'A meticulously curated library of 2,500+ premium tracks for media, ads, and film.'}
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-               <button onClick={() => navigate('/browse')} className="px-8 py-4 bg-black text-white font-bold uppercase text-xs tracking-widest hover:bg-black/80 transition-colors cursor-pointer">
-                 {homeContent.hero_btn_1 || 'Browse'}
-               </button>
-               <button onClick={() => setLoginModalOpen(true)} className="px-8 py-4 border-2 border-black/10 font-bold uppercase text-xs tracking-widest hover:border-black transition-colors">
-                 {homeContent.hero_btn_2 || 'Create Free Account'}
-               </button>
-            </div>
+      )}
+      
+      {/* Top Picks For You */}
+      <div className="w-full pt-12 pb-8 relative overflow-hidden group/section">
+        {settings?.top_picks_animation_enabled !== false && (
+          <div
+            className="absolute inset-0 pointer-events-none z-30"
+            style={{ mixBlendMode: 'screen', transform: 'translateZ(0)' }}
+          >
+            <FeaturedSun isHovered={isFeaturedHovered} />
           </div>
-        </div>
-      </div>
+        )}
+        <div className="w-full relative z-10 px-8">
+          <ScrollArrows scrollRef={topPicksRef} />
+          <div ref={topPicksRef} className="flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4">
+            {loading ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="flex flex-col p-4 rounded-[32px] w-[340px] shrink-0 snap-start">
+                  <div className="relative w-full aspect-[1.15] mb-6">
+                     <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+                     <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+                     <div className="absolute top-0 right-[18%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+                     <div className="absolute top-0 left-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+                  </div>
+                  <div className="flex flex-col px-2 pb-2 gap-2 mt-2">
+                    <div className="h-5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
+                  </div>
+                </div>
+              ))
+            ) : (
+              playlists
+                .filter(pl => pl.top_pick_position !== null && pl.top_pick_position !== undefined)
+                .sort((a, b) => (a.top_pick_position || 99) - (b.top_pick_position || 99))
+                .slice(0, 10)
+                .map((pl, idx) => {
+                  const style = cardStyles[idx % cardStyles.length];
+                  
+                  // Check if this playlist is currently playing
+                  // By tracking if currentSource is 'playlist' and currentPlaylist matches pl.id... wait, currentPlaylist is Track[], we don't store playlist id.
+                  // We can just rely on playingPlaylistId state which we set when we play it here.
+                  const isThisPlaylistPlaying = isPlaying && playingPlaylistId === pl.id;
 
-      <div id="home-dark-section" className="w-full full-bleed">
-        <LogoTicker />
+                  const handlePlayTopPick = async (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (isThisPlaylistPlaying) {
+                      togglePlay();
+                      return;
+                    }
+                    if (playingPlaylistId === pl.id && !isPlaying) {
+                      togglePlay();
+                      return;
+                    }
+                    setLoadingPlaylistId(pl.id);
+                    const tracks = await fetchPlaylistTracks(pl.id);
+                    if (tracks && tracks.length > 0) {
+                      playPlaylist(tracks);
+                      setCurrentSource('playlist');
+                      setPlayingPlaylistId(pl.id);
+                    }
+                    setLoadingPlaylistId(null);
+                  };
 
-        {/* MAIN CONTENT (Dark Mode) */}
-        <main className="flex-grow w-full px-12 md:px-24 lg:px-32 py-16 md:py-24 bg-black text-white">
-          
-          {/* Value Proposition / Showcase */}
-          <div className="mb-16">
-            <h2 
-              className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tighter mb-12 leading-[1.1] max-w-5xl"
-              dangerouslySetInnerHTML={{ __html: homeContent.built_for_title || 'Built for creators, directors, and brands who refuse to compromise on sound.' }}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <video src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/videos/Anthropic.mov" autoPlay loop muted playsInline className="w-full aspect-video object-cover border border-white/10 bg-white/5" />
-              <video src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/videos/Tunnel%20Vision.mov" autoPlay loop muted playsInline className="w-full aspect-video object-cover border border-white/10 bg-white/5" />
-            </div>
-          </div>
+                  return (
+                    <div 
+                      key={pl.id} 
+                      className={`relative w-[340px] shrink-0 snap-start aspect-[3/4] rounded-[32px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-white/10 ${style.baseColor}`}
+                      onClick={() => setSearchParams({ playlist: pl.id })}
+                      onMouseEnter={() => setIsFeaturedHovered(true)}
+                      onMouseLeave={() => setIsFeaturedHovered(false)}
+                    >
+                      {/* Animated Mesh Background (Idle State) */}
+                      <div className="absolute inset-[-100%] animate-[spin_16s_linear_infinite] origin-[45%_55%] pointer-events-none">
+                        <div className={`absolute inset-0 ${style.bgIdle} blur-[100px] scale-150`} />
+                      </div>
+                      
+                      {/* Animated Mesh Background (Active State) */}
+                      <div className="absolute inset-[-100%] animate-[spin_8s_linear_infinite] origin-[45%_55%] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+                        <div className={`absolute inset-0 ${style.bgHover} blur-[100px] scale-150`} />
+                      </div>
+                      
+                      
+                      {/* Logo */}
+                      <img 
+                        src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
+                        alt="Tom Fox" 
+                        className="absolute top-6 right-6 h-[18px] object-contain invert opacity-90 mix-blend-plus-lighter z-20"
+                      />
 
-        </main>
-      </div>
-
-      {/* MAIN CONTENT (White Mode Rest of Page) */}
-      <main className="flex-grow w-full px-12 md:px-24 lg:px-32">
-
-        {/* Curated for your story */}
-        <div className="w-full py-24 md:py-32 flex flex-col lg:flex-row items-stretch gap-16 lg:gap-24 mx-auto border-b border-black/10">
-          <div className="w-full lg:w-1/3 flex flex-col justify-between h-full items-start pt-4 pb-2">
-            <div>
-              <h2 
-                className="text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tighter leading-[1.05] mb-8"
-                dangerouslySetInnerHTML={{ __html: homeContent.curated_title || 'Curated for<br/>your story.' }}
-              />
-            <p className="font-sans text-[14px] md:text-[16px] text-black/60 leading-relaxed mb-10 max-w-sm uppercase tracking-wide">
-              {homeContent.curated_desc || 'Forget generic stock tracks. Dive into hand-picked playlists designed to give your project the exact sound it needs.'}
-            </p>
-            </div>
-            <button 
-              onClick={() => navigate('/browse')}
-              className="px-10 py-5 bg-black text-white font-bold uppercase text-xs tracking-widest hover:bg-black/80 transition-colors rounded-full"
-            >
-              Explore the Collection
-            </button>
-          </div>
-          <div className="w-full lg:w-2/3 grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8">
-            {realPlaylists.map((playlist) => (
-              <div 
-                key={playlist.id} 
-                className="flex flex-col bg-transparent group cursor-pointer w-full transition-all duration-300 relative"
-                onClick={(e) => handlePlaylistPlay(e, playlist.id)}
-              >
-                <div className="relative w-full aspect-[1.15] mb-6">
-                   <PlaylistArtwork playlist={playlist} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-0" />
-                   <PlaylistArtwork playlist={playlist} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md hover:scale-[1.02] transition-transform cursor-pointer z-10" />
-                   
-                   <div className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl hover:scale-[1.02] transition-transform cursor-pointer z-20 group/artwork relative">
-                     <PlaylistArtwork playlist={playlist} className="w-full h-full" />
-                     
-                     <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none opacity-0 group-hover/artwork:opacity-100">
-                        <div className="w-10 h-10 rounded-lg bg-black flex items-center justify-center text-white transition-transform scale-100 group-hover/artwork:scale-105 shadow-xl">
-                          {playingPlaylistId === playlist.id && isPlaying ? (
-                             <Pause className="w-4 h-4 fill-current" />
-                          ) : (
-                             <Play className="w-4 h-4 fill-current" style={{ transform: 'translateX(4.166%)' }} />
-                          )}
+                      {/* Bottom Content */}
+                      <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col justify-end h-[60%] bg-gradient-to-t from-black/80 via-black/30 to-transparent z-20">
+                        <div className="flex items-end justify-between w-full mt-auto">
+                          <span className="text-white font-medium tracking-tight text-lg drop-shadow-md leading-[1.1] max-w-[80%]">
+                            {pl.title}
+                          </span>
+                          
+                          {/* Play Button */}
+                          <button 
+                            className="w-10 h-10 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xl hover:bg-white/30"
+                            onClick={handlePlayTopPick}
+                          >
+                            {loadingPlaylistId === pl.id ? (
+                               <Loader2 className="w-4 h-4 text-white animate-spin" />
+                            ) : isThisPlaylistPlaying ? (
+                               <Pause className="w-4 h-4 text-white fill-white" />
+                            ) : (
+                               <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                            )}
+                          </button>
                         </div>
-                     </div>
-                   </div>
-                </div>
-                <div className="flex flex-col pb-2">
-                  <span className="font-bold text-[18px] text-black">{playlist.title}</span>
-                  <span className="font-sans text-[13px] text-black/50 mt-0.5">{playlist.track_count} tracks</span>
-                </div>
-              </div>
-            ))}
+                      </div>
+                    </div>
+                  );
+                })
+            )}
           </div>
         </div>
-
-        {/* Search less, create more */}
-        <div className="w-full py-24 md:py-32 flex flex-col items-center text-center mx-auto border-b border-black/10 pointer-events-none select-none relative overflow-hidden" aria-hidden="true">
-          
-          {/* HUGE DRIBBBLE LOGO WATERMARK */}
-          <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" className="absolute -bottom-40 -right-20 w-[150%] md:w-[90%] opacity-[0.02] rotate-6 pointer-events-none select-none mix-blend-multiply z-0" alt="" />
-
-          <h2 
-            className="relative z-10 text-4xl md:text-5xl lg:text-7xl font-bold uppercase tracking-tighter leading-[1.05] mb-16"
-            dangerouslySetInnerHTML={{ __html: homeContent.search_title || 'Search less, create more.' }}
-          />
-
-          <div className="w-full max-w-[1400px] px-6 md:px-12 flex flex-col gap-24 mt-8">
-            
-            {/* Feature 1: Intelligent Search */}
-            <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-24 w-full">
-              {/* Preview Box (Left) */}
-              <div className="w-full md:w-[65%] bg-[#f6f6f6] rounded-2xl p-8 md:p-12 flex flex-col h-[400px] relative overflow-hidden border border-black/5 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-widest text-black/40 mb-10 text-left">
-                  {homeContent.search_ai_label || 'Try our AI driven search'}
-                </div>
-                
-                {/* Mock Search Bar */}
-                <div className="bg-white rounded-xl shadow-sm border border-black/10 flex items-center px-5 py-4 mb-8 relative z-10 mx-auto w-full">
-                  <Search className="w-6 h-6 text-black/40 mr-4 shrink-0" />
-                  
-                  {/* Typing container */}
-                  <div className="font-sans text-[14px] md:text-[15px] text-black h-5 relative flex items-center w-full">
-                     <span className="animate-typing-1 absolute left-0 overflow-hidden whitespace-nowrap top-0 bottom-0 flex items-center pr-1">cinematic sci-fi drums</span>
-                     <span className="animate-typing-2 absolute left-0 overflow-hidden whitespace-nowrap top-0 bottom-0 flex items-center pr-1">upbeat corporate acoustic</span>
-                     <span className="animate-typing-3 absolute left-0 overflow-hidden whitespace-nowrap top-0 bottom-0 flex items-center pr-1">dark synthwave chase</span>
-                     <span className="animate-typing-4 absolute left-0 overflow-hidden whitespace-nowrap top-0 bottom-0 flex items-center pr-1">lo-fi chill beats</span>
-                     <span className="animate-typing-5 absolute left-0 overflow-hidden whitespace-nowrap top-0 bottom-0 flex items-center pr-1">epic orchestral trailer</span>
-                  </div>
-                </div>
-
-                {/* Mock Results */}
-                <div className="flex flex-col gap-4 animate-results mx-auto w-full">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="bg-white p-4 rounded-xl border border-black/5 flex items-center gap-5 shadow-sm">
-                      <div className="w-12 h-12 bg-black/5 rounded-md flex-shrink-0" />
-                      <div className="flex flex-col gap-2 w-full">
-                        <div className="h-3 bg-black/20 rounded w-1/3" />
-                        <div className="h-2.5 bg-black/10 rounded w-1/4" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Gradient fade at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#f6f6f6] to-transparent z-10" />
-              </div>
-
-              {/* Description (Right) */}
-              <div className="w-full md:w-[35%] flex flex-col text-left">
-                <h3 className="text-3xl font-bold uppercase tracking-tighter mb-4">
-                  {homeContent.search_find_title || 'Find the exact vibe.'}
-                </h3>
-                <p className="font-sans text-black/60 text-sm leading-relaxed uppercase tracking-wide">
-                  {homeContent.search_find_desc || 'Describe what you need in plain English. Our search engine understands mood, instrumentation, and genre, delivering pinpoint accuracy in seconds.'}
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 2: Toggle Preview */}
-            <div className="flex flex-col md:flex-row-reverse items-center gap-12 lg:gap-24 w-full">
-              {/* Preview Box (Right) */}
-              <div className="w-full md:w-[65%] bg-black text-white rounded-2xl p-8 md:p-12 flex flex-col h-[400px] relative overflow-hidden shadow-2xl">
-                <div className="text-xs font-bold uppercase tracking-widest text-white/40 mb-10 text-left">
-                  {homeContent.search_preview_label || 'Instant Toggle Preview'}
-                </div>
-                
-                {/* Mock Track Row */}
-                <div className="mt-auto mb-auto w-full mx-auto border border-white/10 rounded-2xl p-5 flex flex-col gap-8 bg-white/5 backdrop-blur-md relative">
-                  
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-white/10 rounded flex items-center justify-center">
-                        <Play className="w-5 h-5 fill-white" style={{ transform: 'translateX(4.166%)' }} />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <div className="w-32 h-3.5 bg-white/40 rounded" />
-                        <div className="w-20 h-2.5 bg-white/20 rounded" />
-                      </div>
-                    </div>
-                    
-                    {/* The Animated Toggle */}
-                    <div className="flex items-center gap-3">
-                      <span className="font-sans text-[10px] uppercase tracking-widest text-white/50 hidden sm:inline">Preview</span>
-                      <div className="w-12 h-6 rounded-full relative animate-narrative-bg p-0.5 transition-colors overflow-hidden">
-                        <div className="w-5 h-5 bg-white rounded-full shadow-sm animate-narrative-knob relative z-10" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* The Animated Waveform */}
-                <div className="w-full h-12 relative">
-                  {/* Background Preview Box overlay with Brackets */}
-                  <div className="absolute inset-y-[-25%] left-1/4 w-1/2 bg-white/5 animate-narrative-preview pointer-events-none z-0">
-                    <div className="absolute inset-0 rounded-lg border-[1.5px] border-white/30" />
-                  </div>
-                  
-                  {/* Layer 1: Gray static waveform */}
-                  <div className="absolute inset-0 flex items-center gap-[1px] z-10">
-                    {Array.from({ length: 120 }).map((_, i) => {
-                      const seed = Math.sin(i) * 10000;
-                      const h = 20 + (seed - Math.floor(seed)) * 80;
-                      return (
-                        <div 
-                          key={`bg-${i}`} 
-                          className="flex-1 bg-white/20 rounded-full"
-                          style={{ height: `${h}%` }}
-                        />
-                      )
-                    })}
-                  </div>
-
-                  {/* Layer 2: Colored progress waveform (White Level 2) */}
-                  <div className="absolute inset-0 flex items-center gap-[1px] z-20 animate-track-progress">
-                    {Array.from({ length: 120 }).map((_, i) => {
-                       const seed = Math.sin(i) * 10000;
-                       const h = 20 + (seed - Math.floor(seed)) * 80;
-                       return (
-                         <div 
-                           key={`fg1-${i}`} 
-                           className="flex-1 bg-white/40 rounded-full"
-                           style={{ height: `${h}%` }}
-                         />
-                       )
-                    })}
-                  </div>
-
-                  {/* Layer 3: Vivid progress waveform in the middle (White Level 3), visible only when active */}
-                  <div className="absolute inset-y-0 z-30 animate-narrative-preview overflow-hidden" style={{ left: '25%', width: '50%' }}>
-                    <div className="absolute inset-y-0 left-[-50%] w-[200%] flex items-center gap-[1px] animate-track-progress">
-                      {Array.from({ length: 120 }).map((_, i) => {
-                         const seed = Math.sin(i) * 10000;
-                         const h = 20 + (seed - Math.floor(seed)) * 80;
-                         return (
-                           <div 
-                             key={`fg2-${i}`} 
-                             className="flex-1 bg-white rounded-full"
-                             style={{ height: `${h}%` }}
-                           />
-                         )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Description (Left) */}
-              <div className="w-full md:w-[35%] flex flex-col text-left">
-                <h3 className="text-3xl font-bold uppercase tracking-tighter mb-4">
-                  {homeContent.search_preview_title || 'Preview instantly.'}
-                </h3>
-                <p className="font-sans text-black/60 text-sm leading-relaxed uppercase tracking-wide">
-                  {homeContent.search_preview_desc || "Don't waste time clicking into every track. Flip the preview toggle to instantly scrub through the best parts of any song directly from the search results."}
-                </p>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="mt-20 pointer-events-auto">
-            <button 
-              onClick={() => navigate('/browse')}
-              className="px-10 py-5 bg-black text-white font-bold uppercase text-xs tracking-widest hover:bg-black/80 transition-colors rounded-full shadow-lg"
-            >
-              Browse the Catalog
-            </button>
-          </div>
-        </div>
-
-
-      </main>
-
-      {/* Beyond the Library (Dark Mode) */}
-      <div className="pt-20 pb-24 md:pt-24 md:pb-32 flex flex-col items-center text-center bg-[#111] text-white full-bleed">
-        <h2 
-          className="text-5xl md:text-6xl lg:text-8xl font-bold uppercase tracking-tighter mb-6 leading-[0.9]"
-          dangerouslySetInnerHTML={{ __html: homeContent.beyond_title || 'Beyond the Library' }}
-        />
-        <div className="text-xs md:text-sm font-bold uppercase tracking-widest text-white/50 mb-8 border-b-2 border-white/10 pb-4">
-          {homeContent.beyond_subtitle || 'Custom Music and Sound'}
-        </div>
-        <p className="font-sans text-sm md:text-base uppercase leading-relaxed tracking-wide text-white/50 max-w-2xl mb-12 px-6">
-          {homeContent.beyond_desc || 'Some projects demand a completely original sound. We craft bespoke scores and custom sound design for high-stakes campaigns.'}
-        </p>
-        <a 
-          href="https://calendly.com/dadaaudio"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-10 py-5 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-white/90 transition-colors rounded-full"
-        >
-          Book a Call
-        </a>
       </div>
 
+      {/* Trending Tracks */}
+      <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section">
+        <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Trending tracks</h2>
+        
+        {loading ? (
+          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-4 content-start min-w-min">
+              {[...Array(16)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-2 rounded select-none">
+                  <div className="w-12 h-12 rounded relative overflow-hidden shrink-0 bg-[#e5e5e5] animate-pulse" />
+                  <div className="flex flex-col gap-2 w-full max-w-[160px]">
+                    <div className="h-3.5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
+                    <div className="h-2.5 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : trendingTracks.length === 0 ? (
+          <div className="font-sans text-[11px] uppercase tracking-widest text-black/30">Nessuna traccia trovata.</div>
+        ) : (
+          <div className="w-full relative">
+            <ScrollArrows scrollRef={trendingRef} />
+            <div ref={trendingRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+              <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
+            {trendingTracks.slice(0, 16).map((track, i) => {
+              const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
+              return (
+                <div 
+                  key={i} 
+                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
+                  onClick={(e) => handleTrackClick(e, track, 'top')}
+                  draggable
+                  onDragStart={(e) => handleTrackDragStart(e, track.id)}
+                >
+                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
+                    <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
+                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
+                    </div>
+                    {trendingTrackIds.has(track.id) && (
+                      <div className="absolute bottom-0 right-0 bg-[#facc15] text-black w-3 h-3 rounded-tl flex items-center justify-center z-10 pointer-events-none">
+                        <TrendingUp className="w-2 h-2" strokeWidth={3} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col overflow-hidden w-full">
+                    <div 
+                      className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
+                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                    >
+                      {cleanTitle(track.file_name)}
+                    </div>
+                    <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5 truncate">
+                       {getComposers(track.composers)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+
+      {/* Suggested For You */}
+      {suggestedTracks.length > 0 && (
+        <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section">
+          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Suggested for you</h2>
+          
+          <div className="w-full relative">
+            <ScrollArrows scrollRef={suggestedRef} />
+            <div ref={suggestedRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+              <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
+              {suggestedTracks.slice(0, 16).map((track, i) => {
+              const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
+              return (
+                <div 
+                  key={i} 
+                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
+                  onClick={(e) => handleTrackClick(e, track, 'suggested')}
+                  draggable
+                  onDragStart={(e) => handleTrackDragStart(e, track.id)}
+                >
+                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
+                    <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
+                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
+                    </div>
+                  </div>
+                  <div className="flex flex-col overflow-hidden w-full">
+                    <div 
+                      className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
+                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                    >
+                      {cleanTitle(track.file_name)}
+                    </div>
+                    <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5 truncate">
+                       {getComposers(track.composers)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <Footer />
     </div>
   );
 }

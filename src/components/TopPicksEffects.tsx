@@ -100,111 +100,231 @@ export const KaleidoscopeBackground = ({
   );
 };
 
-// ─── Styles per FeaturedSun ───────────────────────────────────────────────────
-// Singleton: iniettato una sola volta nel <head>, non ad ogni render React
+// ─── FeaturedSun — Canvas 2D (GPU-accelerated) ───────────────────────────────
+// Sostituisce SVG SMIL (~204 animation timers sul CPU main thread) con Canvas 2D:
+//  • Un singolo requestAnimationFrame   → vs 204 SMIL timers separati
+//  • IntersectionObserver               → RAF sospeso quando fuori schermo
+//  • Hover: interpolazione esponenziale → replica CSS transition-opacity 1000ms
+//  • Gradients cachati per resize       → zero allocazioni per frame
+//  • Geometria pianeti pre-computata    → calcolo eseguito una sola volta
+//  • Batch per ring: 1 ctx.fill() per ring invece di 24 chiamate separate
+//
+// Tutta la matematica è identica al SVG originale: stessa formula pianeti,
+// stessi valori (dur=30s, delays, colori, orbite) — solo il renderer cambia.
+
+const TWO_PI = Math.PI * 2;
+const DEG    = Math.PI / 180;
+
 export const FeaturedSun = ({ isHovered }: { isHovered: boolean }) => {
-  const svgRef = useRef<SVGSVGElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef<number>(0);
+  const isVisRef  = useRef(false);
+  const hovRef    = useRef(0);          // 0..1, smooth hover progress
+  const isHovRef  = useRef(isHovered);
+
+  // Sync prop → ref (evita stale closure nel RAF loop)
+  useEffect(() => { isHovRef.current = isHovered; }, [isHovered]);
 
   useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg || !svg.pauseAnimations) return;
-    
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          svg.unpauseAnimations();
-        } else {
-          svg.pauseAnimations();
-        }
-      },
-      { threshold: 0 }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return;
+
+    // ── Geometria pianeti pre-computata (identica al SVG originale) ───────────
+    const RINGS  = 4;
+    const PPS    = 24;              // planets per ring
+    const DUR    = 30;              // secondi — durata ciclo (SVG dur="30s")
+    const DELAYS = [0, 7.5, 15, 22.5]; // corrisponde ai begin negativi del SVG
+    const DIRS   = [1, -1, 1, -1];
+
+    const pDefs = Array.from({ length: RINGS }, (_, ri) =>
+      Array.from({ length: PPS }, (_, pi) => ({
+        angle: -75 + (pi * 150 / 23) + Math.sin(pi * 3.14 + ri) * 1.5,
+        r:     0.5  + Math.abs(Math.sin(pi * 7 + ri)) * 3,
+      }))
     );
-    
-    observer.observe(svg);
-    return () => observer.disconnect();
+
+    // ── Valori cachati per resize (ricalcolati solo se dimensioni cambiano) ───
+    let cacheKey = '';
+    let sc = 1, oy = 0;
+    let sunX = 0, sunY = 0, sunR = 0, glowR = 0;
+    let dGrad: CanvasGradient | null = null; // dark sun gradient
+    let bGrad: CanvasGradient | null = null; // bright sun gradient (hover)
+    let gGrad: CanvasGradient | null = null; // radial glow (hover)
+
+    const rebuild = (W: number, H: number) => {
+      const key = `${W}x${H}`;
+      if (key === cacheKey) return;
+      cacheKey = key;
+
+      // Replica: viewBox="0 0 400 80" preserveAspectRatio="xMidYMax slice"
+      sc       = Math.max(W / 400, H / 80);
+      const ox = (W - 400 * sc) / 2; // xMid
+      oy       = H - 80 * sc;         // YMax
+
+      // Centro sole in canvas pixels (cx=0, cy=640 in viewBox)
+      sunX  = 0 * sc + ox;
+      sunY  = 640 * sc + oy;
+      sunR  = 600 * sc;
+      glowR = 624 * sc;
+
+      // Coordinate gradient in canvas pixels:
+      // viewBox y=80 → gy1 (primo stop, #222E50 scuro)
+      // viewBox y=0  → gy0 (ultimo stop, oro)
+      // Corrisponde a x1="0" y1="80" x2="0" y2="0" gradientUnits="userSpaceOnUse"
+      const gy1 = 80 * sc + oy;
+      const gy0 = oy;
+
+      dGrad = ctx.createLinearGradient(sunX, gy1, sunX, gy0);
+      dGrad.addColorStop(0,   '#222E50');
+      dGrad.addColorStop(0.6, '#7E7036');
+      dGrad.addColorStop(1,   '#9C8942');
+
+      bGrad = ctx.createLinearGradient(sunX, gy1, sunX, gy0);
+      bGrad.addColorStop(0,   '#222E50');
+      bGrad.addColorStop(0.6, '#D5C15E');
+      bGrad.addColorStop(1,   '#E9D985');
+
+      // Glow radiale: opaco al 96%, trasparente al 100% (identico al SVG)
+      gGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, glowR);
+      gGrad.addColorStop(0.96, 'rgba(233,217,133,1)');
+      gGrad.addColorStop(1,    'rgba(233,217,133,0)');
+    };
+
+    // ── Resize: aggiorna dimensioni fisiche canvas (CSS pixel × DPR) ─────────
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      canvas.width  = Math.round(r.width  * (window.devicePixelRatio || 1));
+      canvas.height = Math.round(r.height * (window.devicePixelRatio || 1));
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    // ── IntersectionObserver: sospende RAF quando off-screen ─────────────────
+    const io = new IntersectionObserver(
+      ([e]) => { isVisRef.current = e.isIntersecting; },
+      { threshold: 0, rootMargin: '200px' }
+    );
+    io.observe(canvas);
+
+    // ── Draw loop ─────────────────────────────────────────────────────────────
+    let prevTs = performance.now();
+
+    const draw = (ts: number) => {
+      rafRef.current = requestAnimationFrame(draw);
+      if (!isVisRef.current) { prevTs = ts; return; }
+
+      // dt: tempo reale dall'ultimo frame, cappato a 50ms (recovery da tab inattiva)
+      const dt = Math.min(ts - prevTs, 50);
+      prevTs = ts;
+
+      const W = canvas.width, H = canvas.height;
+      if (!W || !H) return;
+
+      rebuild(W, H);
+      ctx.clearRect(0, 0, W, H);
+
+      const t = (ts / 1000) % DUR;
+
+      // Hover smoothing: interpolazione esponenziale time-based, τ=1000ms
+      // Replica CSS transition-opacity 1000ms indipendentemente dal framerate
+      const tgt = isHovRef.current ? 1 : 0;
+      hovRef.current += (tgt - hovRef.current) * (1 - Math.exp(-dt / 1000));
+      const hov = hovRef.current;
+
+      // ── Glow radiale (hover, opacity-30) ─────────────────────────────────
+      if (hov > 0.001 && gGrad) {
+        ctx.globalAlpha = 0.3 * hov;
+        ctx.fillStyle = gGrad;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, glowR, 0, TWO_PI);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // ── 4 anelli sfalsati di 7.5s ─────────────────────────────────────────
+      for (let ri = 0; ri < RINGS; ri++) {
+        const prog = ((t + DELAYS[ri]) % DUR) / DUR; // 0..1, ciclo continuo
+
+        // Wave ring: r da 580 a 1000, opacity 0→0.8 nel 10%, poi 0.8→0 nel 90%
+        const rOp = prog < 0.1
+          ? (prog / 0.1) * 0.8
+          : ((1 - prog) / 0.9) * 0.8;
+
+        if (rOp > 0.001) {
+          ctx.beginPath();
+          ctx.arc(sunX, sunY, (580 + prog * 420) * sc, 0, TWO_PI);
+          ctx.strokeStyle = `rgba(233,217,133,${rOp.toFixed(3)})`;
+          ctx.lineWidth = 0.3 * sc;
+          ctx.stroke();
+        }
+
+        // Planets: cy da 60 a -360 (viewBox units), opacity 0→1→0
+        const pOp = prog < 0.1 ? prog / 0.1 : (1 - prog) / 0.9;
+
+        if (pOp > 0.001) {
+          const drift = DIRS[ri] * 25 * prog; // drift orbitale accumulato
+          const pY_vb = 60 + prog * (-420);   // cy pianeta in viewBox units
+
+          // Distanza dal centro sole in canvas pixels (dx=0 perché cx=0 nel SVG)
+          const dy = (pY_vb - 640) * sc;      // negativo = sopra il sole
+
+          ctx.fillStyle = '#E9D985';
+          ctx.globalAlpha = pOp;
+
+          // Batch: tutti i 24 pianeti del ring in un unico path → 1 fill() per ring
+          ctx.beginPath();
+          for (const p of pDefs[ri]) {
+            const rad  = (p.angle + drift) * DEG;
+            const sinA = Math.sin(rad);
+            const cosA = Math.cos(rad);
+            // Rotazione di (0, pY_vb) intorno a (0, 640) in viewBox, poi → canvas pixels
+            // Semplificata per dx=0: px = sunX - dy*sin, py = sunY + dy*cos
+            const px = sunX - dy * sinA;
+            const py = sunY + dy * cosA;
+            ctx.moveTo(px + p.r * sc, py); // moveTo previene linee spurie fra archi
+            ctx.arc(px, py, p.r * sc, 0, TWO_PI);
+          }
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // ── Sole scuro (sempre visibile) ──────────────────────────────────────
+      if (dGrad) {
+        ctx.fillStyle = dGrad;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunR, 0, TWO_PI);
+        ctx.fill();
+      }
+
+      // ── Sole luminoso (hover, fade-in/out) ───────────────────────────────
+      if (hov > 0.001 && bGrad) {
+        ctx.globalAlpha = hov;
+        ctx.fillStyle = bGrad;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunR, 0, TWO_PI);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      ro.disconnect();
+      io.disconnect();
+    };
   }, []);
-  // 4 anelli sfalsati (durata totale 30s)
-  const ringDelays = ['0s', '-7.5s', '-15s', '-22.5s'];
-  
-  const generatePlanetsForRing = (ringIndex: number) => {
-    const angles = [];
-    // 24 pianetini: tantissimi, ma matematicamente spaziati per non sovrapporsi
-    for(let i = 0; i < 24; i++) {
-      // 150 gradi divisi in 23 intervalli = ~6.5 gradi garantiti di distanza
-      const angle = -75 + (i * 150 / 23) + (Math.sin(i * 3.14 + ringIndex) * 1.5); 
-      // Variazione drastica: da piccolissima polvere (0.5) a pianeti più grandi (3.5)
-      const r = 0.5 + (Math.abs(Math.sin(i * 7 + ringIndex)) * 3);
-      angles.push({ angle, r });
-    }
-    return angles;
-  };
 
   return (
-    <svg 
-      ref={svgRef}
-      className="absolute bottom-0 left-0 w-full h-[80px] z-10 pointer-events-none overflow-visible" 
-      viewBox="0 0 400 80" 
-      preserveAspectRatio="xMidYMax slice"
-      style={{ willChange: 'transform', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
-    >
-      <defs>
-        <linearGradient id="arch-gradient-dark" x1="0" y1="80" x2="0" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#222E50" />
-          <stop offset="60%"  stopColor="#7E7036" />
-          <stop offset="100%" stopColor="#9C8942" />
-        </linearGradient>
-        <linearGradient id="arch-gradient" x1="0" y1="80" x2="0" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#222E50" />
-          <stop offset="60%"  stopColor="#D5C15E" />
-          <stop offset="100%" stopColor="#E9D985" />
-        </linearGradient>
-        <radialGradient id="sun-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="96%" stopColor="#E9D985" stopOpacity="1" />
-          <stop offset="100%" stopColor="#E9D985" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      
-      {/* Glow Statico: Radial Gradient invece di Tailwind CSS blur per massimizzare le performance GPU */}
-      <circle cx="0" cy="640" r="624" fill="url(#sun-glow)" className={`transition-opacity duration-1000 ${isHovered ? 'opacity-30' : 'opacity-0'}`} />
-
-      <g>
-        {ringDelays.map((delay, i) => {
-          // L'anello ruota in una singola direzione per creare la spirale
-          const dir = i % 2 === 0 ? 1 : -1;
-          const driftDeg = dir * 25; // Ampiezza della curva orbitale
-          const planets = generatePlanetsForRing(i);
-          return (
-            <React.Fragment key={i}>
-              {/* Wave Ring con animazione nativa SVG (SMIL) */}
-              <circle 
-                cx="0" cy="640" r="580" 
-                fill="none" stroke="#E9D985" strokeWidth="0.3" opacity="0" 
-              >
-                <animate attributeName="r" values="580; 1000" dur="30s" begin={delay} repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0; 0.8; 0" keyTimes="0; 0.1; 1" dur="30s" begin={delay} repeatCount="indefinite" />
-              </circle>
-              
-              {/* Planet Rotator: Sincronizzato a 30s, va SOLO in una direzione e poi si resetta in modo invisibile */}
-              <g>
-                <animateTransform attributeName="transform" type="rotate" values={`0 0 640; ${driftDeg} 0 640`} dur="30s" begin={delay} repeatCount="indefinite" />
-                {planets.map((p, pIdx) => (
-                  <g key={pIdx} transform={`rotate(${p.angle}, 0, 640)`}>
-                    <circle cx="0" cy="60" r={p.r} fill="#E9D985" opacity="0">
-                      <animate attributeName="cy" values="60; -360" dur="30s" begin={delay} repeatCount="indefinite" />
-                      <animate attributeName="opacity" values="0; 1; 0" keyTimes="0; 0.1; 1" dur="30s" begin={delay} repeatCount="indefinite" />
-                    </circle>
-                  </g>
-                ))}
-              </g>
-            </React.Fragment>
-          );
-        })}
-      </g>
-
-      {/* Dark Sun (Idle) */}
-      <circle cx="0" cy="640" r="600" fill="url(#arch-gradient-dark)" />
-      {/* Bright Sun (Hover) */}
-      <circle cx="0" cy="640" r="600" fill="url(#arch-gradient)" className={`transition-opacity duration-1000 ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
-    </svg>
+    <canvas
+      ref={canvasRef}
+      className="absolute bottom-0 left-0 w-full h-full pointer-events-none"
+      style={{ transform: 'translateZ(0)' }}
+    />
   );
 };

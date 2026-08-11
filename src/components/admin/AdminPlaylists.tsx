@@ -10,7 +10,6 @@ type Playlist = {
   title: string;
   description: string;
   track_count?: number;
-  is_featured: boolean;
   sort_order: number;
   cover_url?: string;
 };
@@ -29,7 +28,7 @@ export default function AdminPlaylists() {
     try {
       const { data, error } = await supabase
         .from('playlists')
-        .select('id, title, description, track_count, is_featured, sort_order, cover_url')
+        .select('id, title, description, track_count, sort_order, cover_url')
         .is('user_id', null)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
@@ -85,23 +84,6 @@ export default function AdminPlaylists() {
     }
   };
 
-  const toggleFeatured = async (id: string, currentStatus: boolean) => {
-    try {
-      setPlaylists(prev => prev.map(p => p.id === id ? { ...p, is_featured: !currentStatus } : p));
-      const { error } = await supabase
-        .from('playlists')
-        .update({ is_featured: !currentStatus })
-        .eq('id', id);
-
-      if (error) throw error;
-      toast.success(currentStatus ? 'Removed from featured' : 'Marked as featured');
-    } catch (err: any) {
-      console.error('Error toggling featured:', err);
-      toast.error('Failed to update status');
-      fetchPlaylists();
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="w-full h-[50vh] flex items-center justify-center">
@@ -135,7 +117,6 @@ export default function AdminPlaylists() {
           <div className="w-20 shrink-0">Cover</div>
           <div className="flex-grow">Playlist Title</div>
           <div className="w-24 shrink-0 text-center">Tracks</div>
-          <div className="w-32 shrink-0 text-center">Featured</div>
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -186,20 +167,6 @@ export default function AdminPlaylists() {
 
                         <div className="w-24 shrink-0 text-center font-sans text-xs text-black/60">
                           {pl.track_count || 0}
-                        </div>
-
-                        <div className="w-32 shrink-0 flex items-center justify-center">
-                          <button
-                            onClick={() => toggleFeatured(pl.id, pl.is_featured)}
-                            className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${
-                              pl.is_featured 
-                                ? 'bg-yellow-100/50 text-yellow-600 hover:bg-yellow-100' 
-                                : 'text-black/30 hover:bg-black/5 hover:text-black/60'
-                            }`}
-                          >
-                            <Star className={`w-4 h-4 ${pl.is_featured ? 'fill-yellow-500 text-yellow-500' : ''}`} />
-                            {pl.is_featured ? 'Yes' : 'No'}
-                          </button>
                         </div>
                       </div>
                     )}

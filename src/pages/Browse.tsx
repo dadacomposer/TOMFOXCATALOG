@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { toast } from 'react-hot-toast';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase, fetchTracks, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, searchTracksByTitle, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds, fetchFilterOptions, searchTracksByTags, fetchPlaylistTracks, fetchSuggestedTracks } from '../lib/supabase';
 import { analytics } from '../lib/analytics';
 import { useDownload } from '../context/DownloadContext';
@@ -11,10 +12,11 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { generateEmbedding, initEmbeddingModel } from '../lib/embedding';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
-import { ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers, Plus, Heart, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers, Plus, Heart, X, Loader2 } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import TrackActionButtons from '../components/TrackActionButtons';
+import { getComposers } from '../utils/trackUtils';
 import SidebarPlaylist from '../components/SidebarPlaylist';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 
@@ -24,12 +26,7 @@ import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS, DEFAULT_ARTIST } from '../config';
 import TrackArtwork from '../components/TrackArtwork';
 import { FeaturedSun } from '../components/TopPicksEffects';
 
-const cardStyles = [
-  { baseColor: 'bg-gradient-to-br from-[#1E293B] to-[#0F172A]', bgIdle: 'bg-[#38BDF8]/20', bgHover: 'bg-[#38BDF8]/40' },
-  { baseColor: 'bg-gradient-to-br from-[#3F3F46] to-[#18181B]', bgIdle: 'bg-[#A78BFA]/20', bgHover: 'bg-[#A78BFA]/40' },
-  { baseColor: 'bg-gradient-to-br from-[#1E1B4B] to-[#09090B]', bgIdle: 'bg-[#F472B6]/20', bgHover: 'bg-[#F472B6]/40' },
-  { baseColor: 'bg-gradient-to-br from-[#0F172A] to-[#020617]', bgIdle: 'bg-[#34D399]/20', bgHover: 'bg-[#34D399]/40' }
-];
+
 
 type Track = {
   id: string;
@@ -58,6 +55,33 @@ type Track = {
   play_count?: number;
   versions?: Track[];
   description?: string;
+};
+
+const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement> }) => {
+  return (
+    <>
+      <button 
+        className="absolute left-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all opacity-0 group-hover/section:opacity-100"
+        style={{ borderRadius: '50%' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          scrollRef.current?.scrollBy({ left: -600, behavior: 'smooth' });
+        }}
+      >
+        <ChevronLeft className="w-5 h-5 -ml-0.5" />
+      </button>
+      <button 
+        className="absolute right-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all opacity-0 group-hover/section:opacity-100"
+        style={{ borderRadius: '50%' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          scrollRef.current?.scrollBy({ left: 600, behavior: 'smooth' });
+        }}
+      >
+        <ChevronRight className="w-5 h-5 ml-0.5" />
+      </button>
+    </>
+  );
 };
 
 const parseTags = (t: string[] | string | undefined): string[] => {
@@ -95,7 +119,17 @@ export default function Browse() {
   const [loading, setLoading] = useState(true);
   const [isInitialTracksLoaded, setIsInitialTracksLoaded] = useState(false);
   const [hasMoreTracks, setHasMoreTracks] = useState(true);
+  const urlQuery = searchParams.get('q') || '';
+  const [searchQuery, setSearchQuery] = useState(urlQuery);
+  const [isTypingSearch, setIsTypingSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    if (searchQuery !== urlQuery) {
+      setSearchQuery(urlQuery);
+      setIsTypingSearch(true);
+    }
+  }, [urlQuery]);
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({
     genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: []
   });
@@ -110,6 +144,9 @@ export default function Browse() {
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
   const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
   const expandedTagsRef = useRef<HTMLDivElement>(null);
+  const topPicksRef = useRef<HTMLDivElement>(null);
+  const trendingRef = useRef<HTMLDivElement>(null);
+  const suggestedRef = useRef<HTMLDivElement>(null);
 
 
 
@@ -140,15 +177,15 @@ export default function Browse() {
   const [pendingDropTracks, setPendingDropTracks] = useState<string[]>([]);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isTypingSearch, setIsTypingSearch] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [defaultTrackIds, setDefaultTrackIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [expandedPlaylistId, setExpandedPlaylistId] = useState<string | null>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
-  const tracksPerPage = 20;
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const tracksPerPage = 25;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -528,6 +565,29 @@ export default function Browse() {
     }
   };
 
+  const handleLoadMoreRef = useRef(handleLoadMore);
+  useEffect(() => {
+    handleLoadMoreRef.current = handleLoadMore;
+  });
+
+  // Intersection Observer for infinite scrolling
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreTracks && isInitialTracksLoaded && !searchQuery.trim()) {
+          handleLoadMoreRef.current();
+        }
+      },
+      { threshold: 0.1, rootMargin: '0px 0px 400px 0px' }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMoreTracks, isInitialTracksLoaded, searchQuery]);
+
   const [lastSelectedTrackId, setLastSelectedTrackId] = useState<string | null>(null);
 
   const handleTrackClick = (e: React.MouseEvent, track: Track, source: 'top' | 'browse' | 'playlist' | 'suggested') => {
@@ -644,452 +704,115 @@ export default function Browse() {
   };
 
   return (
-    <div className="flex flex-col w-full min-h-screen pt-[88px] bg-[#fafafa] text-black relative">
-      {playlistUrlId && (
-        <PlaylistIsland 
-          id={playlistUrlId}
-          onClose={() => {
-            searchParams.delete('playlist');
-            setSearchParams(searchParams);
-          }}
-          progress={progress}
-          handleSeek={handleSeek}
-          formatTime={formatTime}
-          trendingTrackIds={trendingTrackIds}
-        />
-      )}
+    <div className="flex flex-col w-full h-full bg-[#fafafa] text-black relative">
+      <div id="main-search-bar" />
       
-      {/* Top Picks For You */}
-      <div className="w-full px-8 pt-12 pb-8">
-        <div className="w-full">
-          <div className="grid grid-cols-4 gap-6 w-full">
-            {loading ? (
-              [...Array(4)].map((_, i) => (
-                <div key={i} className="flex flex-col p-4 rounded-[32px] w-full">
-                  <div className="relative w-full aspect-[1.15] mb-6">
-                     <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 right-[18%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 left-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                  </div>
-                  <div className="flex flex-col px-2 pb-2 gap-2 mt-2">
-                    <div className="h-5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
-                  </div>
-                </div>
-              ))
-            ) : (
-              playlists
-                .filter(pl => pl.top_pick_position !== null && pl.top_pick_position !== undefined)
-                .sort((a, b) => (a.top_pick_position || 99) - (b.top_pick_position || 99))
-                .slice(0, 4)
-                .map((pl, idx) => {
-                  const style = cardStyles[idx % cardStyles.length];
-                  
-                  // Check if this playlist is currently playing
-                  // By tracking if currentSource is 'playlist' and currentPlaylist matches pl.id... wait, currentPlaylist is Track[], we don't store playlist id.
-                  // We can just rely on playingPlaylistId state which we set when we play it here.
-                  const isThisPlaylistPlaying = isPlaying && playingPlaylistId === pl.id;
-
-                  const handlePlayTopPick = async (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    if (isThisPlaylistPlaying) {
-                      togglePlay();
-                      return;
-                    }
-                    if (playingPlaylistId === pl.id && !isPlaying) {
-                      togglePlay();
-                      return;
-                    }
-                    setLoadingPlaylistId(pl.id);
-                    const tracks = await fetchPlaylistTracks(pl.id);
-                    if (tracks && tracks.length > 0) {
-                      playPlaylist(tracks);
-                      setCurrentSource('playlist');
-                      setPlayingPlaylistId(pl.id);
-                    }
-                    setLoadingPlaylistId(null);
-                  };
-
-                  return (
-                    <div 
-                      key={pl.id} 
-                      className={`relative w-full aspect-[3/4] rounded-[32px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-white/10 ${style.baseColor}`}
-                      onClick={() => setSearchParams({ playlist: pl.id })}
-                      onMouseEnter={() => setIsFeaturedHovered(true)}
-                      onMouseLeave={() => setIsFeaturedHovered(false)}
-                    >
-                      {/* Animated Mesh Background (Idle State) */}
-                      <div className="absolute inset-[-100%] animate-[spin_16s_linear_infinite] origin-[45%_55%] pointer-events-none">
-                        <div className={`absolute inset-0 ${style.bgIdle} blur-[100px] scale-150`} />
-                      </div>
-                      
-                      {/* Animated Mesh Background (Active State) */}
-                      <div className="absolute inset-[-100%] animate-[spin_8s_linear_infinite] origin-[45%_55%] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-                        <div className={`absolute inset-0 ${style.bgHover} blur-[100px] scale-150`} />
-                      </div>
-
-                      {/* Unified Planet View across all cards */}
-                      {settings?.top_picks_animation_enabled !== false && (
-                        <div 
-                          className="absolute bottom-0 pointer-events-none z-10" 
-                          style={{ 
-                            width: 'calc(400% + 72px)', 
-                            left: `calc(-100% * ${idx} - 24px * ${idx})`,
-                            height: '80px'
-                          }}
-                        >
-                          <FeaturedSun isHovered={isFeaturedHovered} />
-                        </div>
-                      )}
-                      
-                      {/* Logo */}
-                      <img 
-                        src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
-                        alt="Tom Fox" 
-                        className="absolute top-6 right-6 h-[18px] object-contain invert opacity-90 mix-blend-plus-lighter z-20"
-                      />
-
-                      {/* Bottom Content */}
-                      <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col justify-end h-[60%] bg-gradient-to-t from-black/80 via-black/30 to-transparent z-20">
-                        <div className="flex items-end justify-between w-full mt-auto">
-                          <span className="text-white font-medium tracking-tight text-lg drop-shadow-md leading-[1.1] max-w-[80%]">
-                            {pl.title}
-                          </span>
-                          
-                          {/* Play Button */}
-                          <button 
-                            className="w-10 h-10 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xl hover:bg-white/30"
-                            onClick={handlePlayTopPick}
-                          >
-                            {loadingPlaylistId === pl.id ? (
-                               <Loader2 className="w-4 h-4 text-white animate-spin" />
-                            ) : isThisPlaylistPlaying ? (
-                               <Pause className="w-4 h-4 text-white fill-white" />
-                            ) : (
-                               <Play className="w-4 h-4 text-white fill-white ml-0.5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
+      {document.getElementById('searchbar-right-portal') && !playlistUrlId && createPortal(
+        <>
+          {selectedTrackIds.size > 0 && (
+            <div className="flex items-center bg-black text-white px-4 py-2.5 rounded-[14px] shadow-lg animate-in fade-in zoom-in duration-200">
+              <span className="text-[11px] font-medium uppercase tracking-widest mr-4">{selectedTrackIds.size} tracks selected</span>
+              <div className="flex items-center gap-3 border-l border-white/20 pl-4">
+                <button 
+                  className="hover:text-white/70 transition-colors flex items-center justify-center" 
+                  title="Download Selected"
+                  onClick={handleBulkDownload}
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+                <button 
+                  className="hover:text-white/70 transition-colors flex items-center justify-center"
+                  onClick={() => setSelectedTrackIds(new Set())}
+                  title="Clear Selection"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="w-[1px] h-4 bg-black/10" />
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-medium tracking-widest uppercase text-black/40">Sort</span>
+            <button 
+              onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+              className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-black outline-none cursor-pointer"
+            >
+              {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'most_played' ? 'Most Played' : sortBy === 'a-z' ? 'A-Z' : 'Z-A'}
+              <svg className={`w-3 h-3 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            
+            {isSortDropdownOpen && (
+              <div className="absolute top-full left-0 mt-4 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                {[
+                  { id: 'relevance', label: 'Relevance' },
+                  { id: 'newest', label: 'Newest' },
+                  { id: 'oldest', label: 'Oldest' },
+                  { id: 'most_played', label: 'Most Played' },
+                  { id: 'a-z', label: 'A-Z' },
+                  { id: 'z-a', label: 'Z-A' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
+                    className={`w-full text-left px-4 py-2 text-[11px] font-medium uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                  >
+                    {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Trending Tracks */}
-      <div className="w-full px-8 pt-4 pb-12 flex flex-col">
-        <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Trending tracks</h2>
-        
-        {loading ? (
-          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
-            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-4 content-start min-w-min">
-              {[...Array(16)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-2 rounded select-none">
-                  <div className="w-12 h-12 rounded relative overflow-hidden shrink-0 bg-[#e5e5e5] animate-pulse" />
-                  <div className="flex flex-col gap-2 w-full max-w-[160px]">
-                    <div className="h-3.5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
-                    <div className="h-2.5 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : trendingTracks.length === 0 ? (
-          <div className="font-sans text-[11px] uppercase tracking-widest text-black/30">Nessuna traccia trovata.</div>
-        ) : (
-          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
-            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
-            {trendingTracks.slice(0, 16).map((track, i) => {
-              const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
-              return (
-                <div 
-                  key={i} 
-                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
-                  onClick={(e) => handleTrackClick(e, track, 'top')}
-                  draggable
-                  onDragStart={(e) => handleTrackDragStart(e, track.id)}
-                >
-                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
-                    <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
-                    </div>
-                    {trendingTrackIds.has(track.id) && (
-                      <div className="absolute bottom-0 right-0 bg-[#facc15] text-black w-3 h-3 rounded-tl flex items-center justify-center z-10 pointer-events-none">
-                        <TrendingUp className="w-2 h-2" strokeWidth={3} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col overflow-hidden w-full">
-                    <div 
-                      className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
-                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
-                    >
-                      {cleanTitle(track.file_name)}
-                    </div>
-                    <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5 truncate">
-                       {track.composers ? (Array.isArray(track.composers) ? track.composers.join(', ') : track.composers) : DEFAULT_COMPOSERS.join(', ')}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Featured Playlists */}
-      <div className="w-full px-8 pt-0 pb-12">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-[22px] font-medium uppercase tracking-tighter text-black">Featured playlists</h2>
-          <button 
-            onClick={() => navigate('/playlists')}
-            className="font-sans text-[11px] uppercase tracking-widest text-black/50 hover:text-black flex items-center gap-0.5 transition-colors"
-          >
-            See all <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="w-full overflow-x-auto pb-8 hide-scrollbar">
-          <div className="flex gap-6 min-w-max px-8 -mx-8">
-            {loading ? (
-              [...Array(4)].map((_, i) => (
-                <div key={i} className="flex flex-col p-4 rounded-[32px] shrink-0 w-[340px]">
-                  <div className="relative w-full aspect-[1.15] mb-6">
-                     <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 right-[18%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 left-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                  </div>
-                  <div className="flex flex-col px-2 pb-2 gap-2 mt-2">
-                    <div className="h-5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
-                  </div>
-                </div>
-              ))
-            ) : (
-              playlists.filter(pl => pl.is_featured).map((pl) => (
-                <div 
-                  key={pl.id} 
-                  className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer shrink-0 w-[340px] transition-all duration-300 border border-transparent hover:border-black/5"
-                  onClick={() => setSearchParams({ playlist: pl.id })}
-                >
-                  <div className={`relative w-full mb-6 ${settings?.public_artwork_frames_enabled ? 'aspect-[1.15]' : 'aspect-square'}`}>
-                     {settings?.public_artwork_frames_enabled ? (
-                       <>
-                         <PlaylistArtwork playlist={pl} className="absolute top-0 right-0 w-[78%] aspect-square shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-0" />
-                         <PlaylistArtwork playlist={pl} className="absolute top-[3%] right-[11%] w-[78%] aspect-square shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-10" />
-                         <PlaylistArtwork playlist={pl} className="absolute top-[6%] left-0 w-[78%] aspect-square shadow-xl group-hover:scale-[1.02] transition-transform cursor-pointer z-20" />
-                       </>
-                     ) : (
-                       <PlaylistArtwork playlist={pl} className="absolute top-0 left-0 w-full h-full shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer z-20 rounded-[28px]" />
-                     )}
-                  </div>
-                  <div className="flex flex-col px-2 pb-2">
-                    <span className="font-medium text-[18px] text-black">{pl.title}</span>
-                    <span className="font-sans text-[13px] text-black/50 mt-0.5">{pl.track_count} tracks</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Suggested For You */}
-      {suggestedTracks.length > 0 && (
-        <div className="w-full px-8 pt-4 pb-12 flex flex-col">
-          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Suggested for you</h2>
           
-          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
-            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
-            {suggestedTracks.slice(0, 16).map((track, i) => {
-              const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
-              return (
-                <div 
-                  key={i} 
-                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
-                  onClick={(e) => handleTrackClick(e, track, 'suggested')}
-                  draggable
-                  onDragStart={(e) => handleTrackDragStart(e, track.id)}
-                >
-                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
-                    <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                      {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
-                    </div>
-                  </div>
-                  <div className="flex flex-col overflow-hidden w-full">
-                    <div 
-                      className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
-                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
-                    >
-                      {cleanTitle(track.file_name)}
-                    </div>
-                    <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5 truncate">
-                       {track.composers ? (Array.isArray(track.composers) ? track.composers.join(', ') : track.composers) : DEFAULT_COMPOSERS.join(', ')}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="w-[1px] h-4 bg-black/10" />
+
+          <div className="flex items-center gap-3 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+            <span className={`text-[10px] font-medium tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
+            <div 
+              className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
             </div>
           </div>
-        </div>
+        </>,
+        document.getElementById('searchbar-right-portal')!
       )}
 
-      <div id="main-search-bar" className="scroll-mt-[74px] md:scroll-mt-[82px]" />
-      <div 
-        className={`sticky top-[74px] md:top-[82px] z-40 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 flex flex-col border-b border-black/10 py-6 shadow-sm focus-within:border-black/30 transition-[bottom] duration-500 ease-out group/searchbar ${currentTrack ? 'bottom-[90px]' : 'bottom-0'} ${playlistUrlId ? 'hidden' : ''}`}
-      >
-        <div className="flex items-center w-full">
-          <div className="cursor-pointer group-hover/searchbar:text-black/80 group-focus-within/searchbar:text-black transition-colors z-10" onClick={() => executeSearch()}>
-            <Search className={`w-5 h-5 mr-4 shrink-0 transition-colors ${isSearching ? 'text-black animate-pulse' : 'text-black/50'}`} />
-          </div>
-          
-          <div className="relative flex-grow flex items-center">
-            <input 
-              type="text" 
-              placeholder="DESCRIBE THE MUSIC YOU NEED..." 
-              className="w-full bg-transparent outline-none font-medium uppercase text-[13px] tracking-widest placeholder:text-black/30 text-black relative z-10"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setIsTypingSearch(true);
-                if (e.target.value.trim() !== '') {
-                  setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] });
-                  setExpandedCategory(null);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  executeSearch();
-                  document.getElementById('main-search-bar')?.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-            />
-            
-            <div className="absolute left-0 top-0 bottom-0 flex items-center pointer-events-none z-0">
-              <span className="invisible whitespace-pre font-medium uppercase text-[13px] tracking-widest">{searchQuery}</span>
-              {!isSearching && isTypingSearch && searchQuery.trim() !== '' && (
-                <span className="ml-2 text-[10px] uppercase font-medium text-black/40 tracking-widest animate-pulse whitespace-nowrap">Press Enter ↵</span>
-              )}
-              {isSearching && (
-                <span className="ml-2 text-[10px] uppercase font-medium text-black/40 tracking-widest animate-pulse whitespace-nowrap">Thinking...</span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 ml-6 shrink-0 z-10 relative h-[48px]">
-            {selectedTrackIds.size > 0 && (
-              <div className="flex items-center bg-black text-white px-4 py-2.5 rounded-[14px] shadow-lg animate-in fade-in zoom-in duration-200">
-                <span className="text-[11px] font-medium uppercase tracking-widest mr-4">{selectedTrackIds.size} tracks selected</span>
-                <div className="flex items-center gap-3 border-l border-white/20 pl-4">
-                  <button 
-                    className="hover:text-white/70 transition-colors flex items-center justify-center" 
-                    title="Download Selected"
-                    onClick={handleBulkDownload}
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button 
-                    className="hover:text-white/70 transition-colors flex items-center justify-center"
-                    onClick={() => setSelectedTrackIds(new Set())}
-                    title="Clear Selection"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-            <div className="w-[1px] h-4 bg-black/10" />
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-medium tracking-widest uppercase text-black/40">Sort</span>
-              <button 
-                onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-                className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-widest text-black outline-none cursor-pointer"
-              >
-                {sortBy === 'relevance' ? 'Relevance' : sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'most_played' ? 'Most Played' : sortBy === 'a-z' ? 'A-Z' : 'Z-A'}
-                <svg className={`w-3 h-3 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-              </button>
-              
-              {isSortDropdownOpen && (
-                <div className="absolute top-full left-0 mt-4 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1">
-                  {[
-                    { id: 'relevance', label: 'Relevance' },
-                    { id: 'newest', label: 'Newest' },
-                    { id: 'oldest', label: 'Oldest' },
-                    { id: 'most_played', label: 'Most Played' },
-                    { id: 'a-z', label: 'A-Z' },
-                    { id: 'z-a', label: 'Z-A' }
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
-                      className={`w-full text-left px-4 py-2 text-[11px] font-medium uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
-                    >
-                      {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div className="w-[1px] h-4 bg-black/10" />
-
-            <div className="flex items-center gap-3 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
-              <span className={`text-[10px] font-medium tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
-              <div 
-                className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Active filter chips below search bar */}
-        {totalActiveFilterCount > 0 && (
-          <div className="w-full pt-4 flex flex-wrap gap-2 items-center">
-            <span className="text-[10px] font-medium uppercase tracking-widest text-black/40 mr-1">Filtering:</span>
-            {FILTER_CATEGORIES.map(cat =>
-              (activeFilters[cat.key] as string[] || []).map(val => (
-                <button
-                  key={`${cat.key}-${val}`}
-                  onClick={() => toggleFilter(cat.key, val)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
-                >
-                  {val}
-                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              ))
-            )}
-            {(activeFilters.shadow_tags as string[] || []).map(val => (
+      {document.getElementById('searchbar-bottom-portal') && !playlistUrlId && totalActiveFilterCount > 0 && createPortal(
+        <div className="w-full pt-4 flex flex-wrap gap-2 items-center">
+          <span className="text-[10px] font-medium uppercase tracking-widest text-black/40 mr-1">Filtering:</span>
+          {FILTER_CATEGORIES.map(cat =>
+            (activeFilters[cat.key] as string[] || []).map(val => (
               <button
-                key={`shadow-${val}`}
-                onClick={() => setActiveFilters(prev => ({ ...prev, shadow_tags: (prev.shadow_tags as string[]).filter(t => t !== val) }))}
+                key={`${cat.key}-${val}`}
+                onClick={() => toggleFilter(cat.key, val)}
                 className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
               >
                 {val}
                 <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-            ))}
-            <button onClick={() => setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] })} className="text-[10px] font-medium uppercase tracking-wider text-black/40 hover:text-black underline ml-2 transition-colors">Clear all</button>
-          </div>
-        )}
-      </div>
+            ))
+          )}
+          {(activeFilters.shadow_tags as string[] || []).map(val => (
+            <button
+              key={`shadow-${val}`}
+              onClick={() => setActiveFilters(prev => ({ ...prev, shadow_tags: (prev.shadow_tags as string[]).filter(t => t !== val) }))}
+              className="flex items-center gap-1.5 px-3 py-1 bg-black text-white text-[10px] font-medium uppercase tracking-wider rounded-full hover:bg-black/70 transition-colors"
+            >
+              {val}
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          ))}
+          <button onClick={() => setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] })} className="text-[10px] font-medium uppercase tracking-wider text-black/40 hover:text-black underline ml-2 transition-colors">Clear all</button>
+        </div>,
+        document.getElementById('searchbar-bottom-portal')!
+      )}
 
-      <div className="w-full pb-16 pt-8 relative" id="full-catalog-browser">
+      <div className="w-full relative flex-1 overflow-y-auto overscroll-none" id="full-catalog-browser">
 
-        <div className="flex w-full px-4 md:px-8 gap-8 relative min-h-screen pb-20">
+        <div className="flex w-full px-4 md:px-8 gap-8 relative min-h-full pb-8">
           
-          <div className={`hidden md:flex flex-col shrink-0 sticky top-[220px] h-[calc(100vh-240px)] z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
+          <div className={`hidden md:flex flex-col shrink-0 sticky top-0 h-[calc(100vh-240px)] z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
             
             <div className="flex w-full h-full relative">
               
@@ -1139,16 +862,19 @@ export default function Browse() {
                 </button>
                 </div>
 
-                {/* YOUR MUSIC */}
-                <div className="mt-8 mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-black/30">
-                  Your Music
+                {/* MY MUSIC */}
+                <div className="mt-2 mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-black/30">
+                  My Music
                 </div>
                 {profile && favoritesPlaylist && (
                   <SidebarPlaylist 
                     playlist={favoritesPlaylist}
                     isFavorites={true}
-                    isExpanded={true}
-                    onToggleExpand={() => {}}
+                    isActive={playlistUrlId === favoritesPlaylist.id}
+                    onClick={() => {
+                      searchParams.set('playlist', favoritesPlaylist.id);
+                      setSearchParams(searchParams);
+                    }}
                     dragTarget={dragTarget}
                     setDragTarget={setDragTarget}
                   />
@@ -1219,8 +945,11 @@ export default function Browse() {
                     <SidebarPlaylist
                       key={pl.id}
                       playlist={pl}
-                      isExpanded={expandedPlaylistId === pl.id}
-                      onToggleExpand={() => { setExpandedPlaylistId(expandedPlaylistId === pl.id ? null : pl.id); }}
+                      isActive={playlistUrlId === pl.id}
+                      onClick={() => {
+                        searchParams.set('playlist', pl.id);
+                        setSearchParams(searchParams);
+                      }}
                       dragTarget={dragTarget}
                       setDragTarget={setDragTarget}
                     />
@@ -1331,11 +1060,11 @@ export default function Browse() {
                     {cleanTitle(track.file_name)}
                   </div>
                   {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-100 text-blue-700 uppercase tracking-widest shrink-0">New</span>
+                    <span className="text-[8px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider hidden md:inline-block translate-y-[0px]">NEW</span>
                   )}
                 </div>
-                <div className="font-sans text-[12px] text-black/50 mt-0.5">
-                  {track.composers ? (Array.isArray(track.composers) ? track.composers.join(', ') : track.composers) : DEFAULT_COMPOSERS.join(', ')}
+                <div className="text-[11px] text-black/40 truncate font-sans max-w-[200px]">
+                  {getComposers(track.composers)}
                 </div>
               </div>
               
@@ -1518,20 +1247,25 @@ export default function Browse() {
             </div>
           )}
         </div>
-
+          
           {hasMoreTracks && !searchQuery.trim() && isInitialTracksLoaded && (
-            <div className="flex items-center justify-center mt-12 pb-12">
-              <button 
-                onClick={handleLoadMore}
-                className="px-8 py-3 bg-black text-white rounded-full text-xs font-medium uppercase tracking-widest hover:scale-105 transition-transform"
-              >
-                Load more
-              </button>
+            <div ref={observerTarget} className="flex items-center justify-center py-12 w-full">
+              <Loader2 className="w-6 h-6 animate-spin text-black/40" />
             </div>
           )}
+
           </div>
         </div>
       </div>
+
+      {/* Fixed Minimized Footer */}
+      <footer className="w-full border-t border-black/10 py-4 px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-black/40 shrink-0 bg-[#fafafa] z-20">
+        <span>© {new Date().getFullYear()} Tom Fox Catalog</span>
+        <div className="flex gap-4">
+          <Link to="/terms" className="hover:text-black transition-colors">Terms</Link>
+          <Link to="/privacy" className="hover:text-black transition-colors">Privacy</Link>
+        </div>
+      </footer>
 
     </div>
   );
