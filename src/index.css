@@ -77,15 +77,18 @@
   }
 
   /* === GLOBAL RADIUS (7px) === */
-  /* Excluded: 
+  /* Excluded components:
      - Base HTML structural tags
      - Semantic layout tags (header, main, footer, section, article)
-     - .no-radius (navbar, search bar, globalaudioplayer, root wrappers)
-     - .no-radius * (all descendants of .no-radius)
-     - .preview-toggle (and children)
-     - .is-avatar (and children)
+     - Navbar container (.navbar-container)
+     - Global Audio Player container (.global-player)
+     - Search Bar (.search-bar)
+     - Toggle Previews (.preview-toggle and children)
+     - Playlist Artwork and all descendants (.artwork-container and .artwork-container *)
+     - Avatars (.is-avatar and children)
+     - Full bleed elements (.full-bleed)
   */
-  *:not(html):not(body):not(#root):not(#root > div):not(header):not(main):not(footer):not(section):not(article):not(.no-radius):not(.no-radius *):not(.preview-toggle):not(.preview-toggle *):not(.is-avatar):not(.is-avatar *):not(.full-bleed) {
+  *:not(html):not(body):not(#root):not(#root > div):not(header):not(main):not(footer):not(section):not(article):not(.navbar-container):not(.global-player):not(.search-bar):not(.preview-toggle):not(.preview-toggle *):not(.artwork-container):not(.artwork-container *):not(.is-avatar):not(.is-avatar *):not(.full-bleed) {
     border-radius: 7px !important;
   }
 

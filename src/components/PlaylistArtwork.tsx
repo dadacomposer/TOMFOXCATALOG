@@ -14,7 +14,7 @@ export default function PlaylistArtwork({ playlist, className = '', forcePreview
 
   if (!framesEnabled) {
     return (
-      <div className={`relative overflow-hidden aspect-square !rounded-none ${className}`}>
+      <div className={`artwork-container relative overflow-hidden aspect-square !rounded-none ${className}`}>
         {playlist?.cover_url ? (
           <img 
             src={playlist.cover_url} 
@@ -35,7 +35,7 @@ export default function PlaylistArtwork({ playlist, className = '', forcePreview
   }
 
   return (
-    <div className={`@container isolate flex flex-col bg-white border border-black/5 overflow-hidden select-none pointer-events-none !rounded-none ${className}`}>
+    <div className={`artwork-container @container isolate flex flex-col bg-white border border-black/5 overflow-hidden select-none pointer-events-none !rounded-none ${className}`}>
       
       {/* Top Header Section */}
       <div className="flex-none px-[3cqw] pt-[3cqw] pb-[4cqw] bg-white z-10 w-full !rounded-none">
