@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { Wrench } from 'lucide-react';
@@ -7,13 +7,32 @@ import { Wrench } from 'lucide-react';
 export default function Header() {
   const [isHeaderDark, setIsHeaderDark] = useState(false);
   const [isTransparent, setIsTransparent] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeBoxStyle, setActiveBoxStyle] = useState({ left: 0, width: 0, opacity: 0 });
+  const navRef = useRef<HTMLElement>(null);
   const location = useLocation();
   const { user, profile, setAccountPanelOpen, setLoginModalOpen, studioProjects } = useAuth();
   const { settings } = useSettings();
 
   useEffect(() => {
-
     const handleScroll = () => {
+      let scrollContainer = document.getElementById('discover-scroll-container');
+      
+      if (location.pathname.startsWith('/browse')) {
+        setIsHeaderDark(false);
+        setIsTransparent(false);
+        return;
+      }
+
+      // Check scroll position for transparency
+      let scrolledAmount = 0;
+      if (scrollContainer) {
+        scrolledAmount = scrollContainer.scrollTop;
+      } else {
+        scrolledAmount = window.scrollY;
+      }
+      setIsScrolled(scrolledAmount > 10);
+
       // Find the dark section on the home page
       const darkSection = document.getElementById('home-dark-section');
       if (darkSection) {
@@ -26,10 +45,48 @@ export default function Header() {
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Check for the discover-scroll-container in a slight timeout just in case it renders after
+    let scrollContainer = document.getElementById('discover-scroll-container');
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    } else {
+      setTimeout(() => {
+        scrollContainer = document.getElementById('discover-scroll-container');
+        if (scrollContainer) {
+          scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+        }
+      }, 100);
+    }
+    
     handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [location]);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollContainer) scrollContainer.removeEventListener('scroll', handleScroll);
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
+    // Measure active link for sliding box
+    if (navRef.current) {
+      // Need a slight delay to ensure DOM is updated after path change
+      setTimeout(() => {
+        if (!navRef.current) return;
+        const activeLink = navRef.current.querySelector('.active') as HTMLElement;
+        if (activeLink && activeLink.tagName === 'A') { // Ensure it's the anchor tag
+          setActiveBoxStyle({
+            left: activeLink.offsetLeft,
+            width: activeLink.offsetWidth,
+            opacity: 1
+          });
+        } else {
+          setActiveBoxStyle(prev => ({ ...prev, opacity: 0 }));
+        }
+      }, 50);
+    }
+  }, [location.pathname, user]);
 
   const isHomePage = location.pathname === '/';
   const isAdmin = user && (user.email === 'dadacomposer@gmail.com' || user.email === 'licensing@tomfoxcatalog.com');
@@ -42,22 +99,21 @@ export default function Header() {
       headerBgClass = 'bg-transparent text-black';
       borderClass = 'border-transparent';
     } else if (isHeaderDark) {
-      headerBgClass = 'bg-black text-white';
-      borderClass = 'border-b-2 border-white/10';
+      headerBgClass = (!user && !isScrolled) ? 'bg-transparent text-white' : 'bg-black/95 backdrop-blur-xl text-white';
+      borderClass = (!user && !isScrolled) ? 'border-transparent' : 'border-b-2 border-white/10';
     } else {
       headerBgClass = 'bg-[#fafafa]/85 backdrop-blur-xl text-black';
       borderClass = 'border-b-2 border-black/10';
     }
   } else {
-    headerBgClass = isHeaderDark 
-      ? 'bg-black/85 backdrop-blur-xl text-white' 
-      : 'bg-[#fafafa]/85 backdrop-blur-xl text-black';
-    borderClass = isHeaderDark ? 'border-b-2 border-white/10' : 'border-b-2 border-black/10';
+    // Solid light mode (no glass effect)
+    headerBgClass = 'bg-[#fafafa] text-black shadow-sm';
+    borderClass = 'border-b border-black/5';
   }
 
   return (
-    <header className={`fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-6 py-6 transition-colors duration-300 ${headerBgClass} ${borderClass}`}>
-      <div className="flex items-baseline cursor-pointer">
+    <header className={`fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-6 py-6 transition-colors duration-300 no-radius !rounded-none ${headerBgClass} ${borderClass}`}>
+      <div className="flex items-baseline cursor-pointer z-10 !rounded-none">
         <Link to="/">
           <img 
             src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
@@ -67,25 +123,33 @@ export default function Header() {
         </Link>
       </div>
       
-      <nav className="hidden md:flex items-center gap-10 font-bold uppercase text-xs tracking-widest">
-        <Link to="/" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Discover</Link>
-        <Link to="/browse" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Browse</Link>
-        <Link to="/playlists" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Playlists</Link>
+      <nav ref={navRef} className="hidden md:flex items-center gap-10 font-bold uppercase text-xs tracking-widest relative z-10">
+        <div 
+          className={`absolute h-8 top-1/2 -translate-y-1/2 transition-all duration-500 ease-out pointer-events-none ${isHeaderDark ? 'bg-white/20' : 'bg-black/5'}`} 
+          style={{ 
+            left: `${activeBoxStyle.left - 12}px`, 
+            width: `${activeBoxStyle.width + 24}px`, 
+            opacity: activeBoxStyle.opacity 
+          }} 
+        />
+        <NavLink to="/" className={({isActive}) => `transition-colors relative z-10 py-2 ${isActive ? 'active ' + (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Discover</NavLink>
+        <NavLink to="/browse" className={({isActive}) => `transition-colors relative z-10 py-2 ${isActive ? 'active ' + (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Browse</NavLink>
+        <NavLink to="/playlists" className={({isActive}) => `transition-colors relative z-10 py-2 ${isActive ? 'active ' + (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Playlists</NavLink>
         {user && (
           <div className="flex items-center gap-10">
-            <Link to="/my-music" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>My Music</Link>
+            <NavLink to="/my-music" className={({isActive}) => `transition-colors relative z-10 py-2 ${isActive ? 'active ' + (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>My Music</NavLink>
           </div>
         )}
         {(!user || profile?.subscription_status !== 'active') && settings.subscriptions_enabled && (
           <>
-            <Link to="/pricing" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Pricing</Link>
-            <Link to="/enterprise" className={`transition-colors ${isHeaderDark ? 'hover:text-white/50' : 'hover:text-black/50'}`}>Enterprise</Link>
+            <NavLink to="/pricing" className={({isActive}) => `transition-colors relative z-10 py-2 ${isActive ? 'active ' + (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Pricing</NavLink>
+            <NavLink to="/enterprise" className={({isActive}) => `transition-colors relative z-10 py-2 ${isActive ? 'active ' + (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Enterprise</NavLink>
           </>
         )}
         {isAdmin && (
           <Link 
             to="/admin" 
-            className={`flex items-center justify-center ml-4 w-8 h-8 rounded-full transition-colors ${isHeaderDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-black'}`}
+            className={`flex items-center justify-center ml-4 w-8 h-8 rounded-full transition-colors relative z-10 ${isHeaderDark ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-black'}`}
             title="Admin Panel"
           >
             <Wrench className="w-4 h-4" />

@@ -18,7 +18,7 @@ export default function DiscoverBrowseWrapper() {
 
   // Height calculation for translate-y:
   return (
-    <div className="relative w-full overflow-hidden flex flex-col bg-[#fafafa]" style={{ height: '100vh' }}>
+    <div className="relative w-full overflow-hidden flex flex-col bg-[#fafafa] no-radius !rounded-none" style={{ height: '100vh' }}>
       
       {/* Background Layer: Discover (Home) */}
       <div 
@@ -30,19 +30,19 @@ export default function DiscoverBrowseWrapper() {
       
       {/* Foreground Layer: Search Bar + Browse */}
       <div 
-        className={`absolute inset-x-0 bottom-0 z-10 flex flex-col transition-transform duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]`}
+        className={`absolute inset-x-0 bottom-0 z-10 flex flex-col transition-transform duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] no-radius !rounded-none`}
         style={{ 
-          height: `calc(100vh - ${navHeight}px)`,
+          height: `calc(100vh - ${navHeight - 1}px)`,
           transform: isBrowse ? 'translateY(0)' : `translateY(calc(100% - ${currentTrack ? searchBarHeight + playerHeight : searchBarHeight}px))`
         }}
       >
         {/* We keep GlobalSearchBar sticky at the top of this sliding panel */}
-        <div className="shrink-0 bg-[#fafafa]/85 backdrop-blur-xl border-t border-black/10 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+        <div className="shrink-0 bg-[#fafafa] border-t border-black/5 shadow-sm no-radius !rounded-none z-50 relative">
           <GlobalSearchBar />
         </div>
         
         {/* Browse Page Container */}
-        <div className="flex-1 w-full bg-[#fafafa] overflow-hidden flex flex-col">
+        <div className="flex-1 w-full bg-[#fafafa] overflow-hidden flex flex-col no-radius !rounded-none">
           <Browse />
         </div>
       </div>

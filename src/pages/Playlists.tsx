@@ -173,7 +173,7 @@ export default function Playlists() {
                   <button
                     key={opt.id}
                     onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                    className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 no-radius !rounded-none ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
                   >
                     {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
                     {opt.label}

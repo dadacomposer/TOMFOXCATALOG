@@ -70,8 +70,8 @@ export default function GlobalSearchBar() {
   const isAtBottom = isDiscover;
 
   return (
-    <div className="w-full bg-[#fafafa]/85 px-8 flex flex-col py-6 focus-within:border-black/30 group/searchbar relative z-40">
-      <div className="flex items-center w-full">
+    <div className="w-full px-8 flex flex-col py-6 focus-within:border-black/30 group/searchbar relative z-40 no-radius !rounded-none">
+      <div className="flex items-center w-full !rounded-none">
         <div 
           className="cursor-pointer group-hover/searchbar:text-black/80 group-focus-within/searchbar:text-black transition-colors z-10 text-black/50" 
           onClick={() => {

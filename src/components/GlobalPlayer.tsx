@@ -230,7 +230,7 @@ export default function GlobalPlayer() {
   const secondaryText = isSharedPage ? 'text-white/60' : 'text-black/60';
 
   return (
-    <div className={`fixed bottom-0 left-0 w-full flex flex-col ${baseBg} ${baseText} border-t ${baseBorder} z-[90] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${currentTrack ? 'translate-y-0' : 'translate-y-[100%]'} ${isSimilarExpanded ? 'h-[75vh]' : 'h-[90px]'}`}>
+    <div className={`fixed bottom-0 left-0 w-full flex flex-col ${baseBg} ${baseText} border-t ${baseBorder} z-[90] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] no-radius !rounded-none ${currentTrack ? 'translate-y-0' : 'translate-y-[100%]'} ${isSimilarExpanded ? 'h-[75vh]' : 'h-[90px]'}`}>
 
       {/* Main Player Bar FIRST so it's at the top of the expanded panel */}
       <div className={`w-full h-[90px] shrink-0 flex items-center px-4 md:px-6 gap-4 md:gap-8 transition-colors relative z-10 ${isSimilarExpanded ? `border-b ${baseBorder} ${isSharedPage ? 'bg-[#1a1a1a]' : 'bg-white/50'}` : ''}`}>
@@ -312,9 +312,9 @@ export default function GlobalPlayer() {
         <div className="flex items-center gap-3 cursor-pointer group/preview mr-2" onClick={() => setIsPreviewMode(!isPreviewMode)}>
           <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? (isSharedPage ? 'text-white' : 'text-black group-hover/preview:text-black/70') : (isSharedPage ? 'text-white/50' : 'text-black/30 group-hover/preview:text-black/60')}`}>Preview</span>
           <div 
-            className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? (isSharedPage ? 'bg-white/30 group-hover/preview:bg-white/40' : 'bg-[#111111] group-hover/preview:bg-[#333]') : (isSharedPage ? 'bg-white/10 group-hover/preview:bg-white/20' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]')}`}
+            className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${isPreviewMode ? (isSharedPage ? 'bg-white/30 group-hover/preview:bg-white/40' : 'bg-[#111111] group-hover/preview:bg-[#333]') : (isSharedPage ? 'bg-white/10 group-hover/preview:bg-white/20' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]')}`}
           >
-            <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
+            <div className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-4' : 'translate-x-0'}`} />
           </div>
         </div>
         {!isSharedPage && (

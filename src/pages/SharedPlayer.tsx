@@ -188,9 +188,9 @@ export default function SharedPlayer() {
         <div className="flex items-center gap-3 shrink-0 cursor-pointer group/preview z-10" onClick={() => setIsPreviewMode(!isPreviewMode)}>
           <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/40 group-hover/preview:text-black/60'}`}>Preview</span>
           <div 
-            className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-white group-hover/preview:bg-[#eee]' : 'bg-[#333] group-hover/preview:bg-[#444]'}`}
+            className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-white group-hover/preview:bg-[#eee]' : 'bg-[#333] group-hover/preview:bg-[#444]'}`}
           >
-            <div className={`w-5 h-5 bg-[#111] rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
+            <div className={`w-4 h-4 rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-4 bg-black' : 'translate-x-0 bg-white'}`} />
           </div>
         </div>
       </header>

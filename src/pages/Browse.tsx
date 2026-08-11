@@ -58,10 +58,39 @@ type Track = {
 };
 
 const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement> }) => {
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        setCanScrollLeft(scrollLeft > 0);
+        setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2);
+      }
+    };
+
+    checkScroll();
+    
+    // Slight delay to ensure content is fully rendered
+    setTimeout(checkScroll, 100);
+
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScroll, { passive: true });
+      const observer = new ResizeObserver(checkScroll);
+      observer.observe(el);
+      return () => {
+        el.removeEventListener('scroll', checkScroll);
+        observer.disconnect();
+      };
+    }
+  }, [scrollRef]);
+
   return (
     <>
       <button 
-        className="absolute left-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all opacity-0 group-hover/section:opacity-100"
+        className={`absolute left-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         style={{ borderRadius: '50%' }}
         onClick={(e) => {
           e.stopPropagation();
@@ -71,7 +100,7 @@ const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement
         <ChevronLeft className="w-5 h-5 -ml-0.5" />
       </button>
       <button 
-        className="absolute right-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all opacity-0 group-hover/section:opacity-100"
+        className={`absolute right-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         style={{ borderRadius: '50%' }}
         onClick={(e) => {
           e.stopPropagation();
@@ -704,7 +733,7 @@ export default function Browse() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full bg-[#fafafa] text-black relative">
+    <div className="flex flex-col w-full h-full bg-[#fafafa] text-black relative no-radius !rounded-none">
       <div id="main-search-bar" />
       
       {document.getElementById('searchbar-right-portal') && !playlistUrlId && createPortal(
@@ -754,7 +783,7 @@ export default function Browse() {
                   <button
                     key={opt.id}
                     onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text-[11px] font-medium uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                    className={`w-full text-left px-4 py-2 text-[11px] font-medium uppercase tracking-widest transition-colors flex items-center gap-2 no-radius !rounded-none ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
                   >
                     {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
                     {opt.label}
@@ -769,9 +798,9 @@ export default function Browse() {
           <div className="flex items-center gap-3 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
             <span className={`text-[10px] font-medium tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
             <div 
-              className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
+              className={`preview-toggle w-9 h-5 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
             >
-              <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
+              <div className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-4' : 'translate-x-0'}`} />
             </div>
           </div>
         </>,
@@ -808,18 +837,16 @@ export default function Browse() {
         document.getElementById('searchbar-bottom-portal')!
       )}
 
-      <div className="w-full relative flex-1 overflow-y-auto overscroll-none" id="full-catalog-browser">
-
-        <div className="flex w-full px-4 md:px-8 gap-8 relative min-h-full pb-8">
-          
-          <div className={`hidden md:flex flex-col shrink-0 sticky top-0 h-[calc(100vh-240px)] z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
-            
-            <div className="flex w-full h-full relative">
-              
-              <div className="w-[130px] flex flex-col gap-1 shrink-0 relative z-20 bg-[#fafafa]">
-                <button 
-                  onClick={() => {
-                    setIsFiltersExpanded(!isFiltersExpanded);
+      {/* Layout Wrapper */}
+      <div className="w-full relative flex-1 flex overflow-hidden">
+        
+        {/* STATIC SIDEBAR (Does not scroll) */}
+        <div className={`hidden md:flex flex-col shrink-0 z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] pt-8 pl-4 md:pl-8 ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
+          <div className="flex w-full h-full relative">
+            <div className="w-[130px] flex flex-col gap-1 shrink-0 relative z-20 bg-[#fafafa]">
+              <button 
+                onClick={() => {
+                  setIsFiltersExpanded(!isFiltersExpanded);
                     if (isFiltersExpanded) setExpandedCategory(null);
                   }}
                   className="flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-black/40 hover:text-black transition-colors rounded-lg hover:bg-black/5 w-full text-left mb-2"
@@ -827,7 +854,8 @@ export default function Browse() {
                   <span>Filters</span>
                   <svg className={`w-3 h-3 transition-transform ${isFiltersExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div className={`flex flex-col gap-1 overflow-hidden transition-all duration-300 ${isFiltersExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+                <div className={`grid transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isFiltersExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
+                  <div className="overflow-hidden flex flex-col gap-1">
                 {FILTER_CATEGORIES.map(category => {
                   const count = (activeFilters[category.key] as string[])?.length || 0;
                   const isExpanded = expandedCategory === category.key;
@@ -860,6 +888,7 @@ export default function Browse() {
                 >
                   Clear Filters
                 </button>
+                  </div>
                 </div>
 
                 {/* MY MUSIC */}
@@ -1001,8 +1030,11 @@ export default function Browse() {
             </div>
           </div>
 
-          <div className="flex-grow flex flex-col overflow-hidden">
-            <div className="flex flex-col gap-1 mb-8">
+        {/* SCROLL CONTAINER for tracks */}
+        <div className="flex-1 overflow-y-auto overscroll-none" id="full-catalog-browser">
+          <div className="flex flex-col w-full pt-8 pb-8 pr-4 md:pr-8 pl-4 md:pl-8">
+            <div className="flex-grow flex flex-col overflow-hidden">
+              <div className="flex flex-col gap-1 mb-8">
             {loading || !isInitialTracksLoaded || isTypingSearch || isSearching ? (
               [...Array(10)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-2 rounded-xl">
@@ -1256,6 +1288,7 @@ export default function Browse() {
 
           </div>
         </div>
+      </div>
       </div>
 
       {/* Fixed Minimized Footer */}

@@ -167,7 +167,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                     <button
                       key={opt.id}
                       onClick={() => { setSortBy(opt.id); setIsSortDropdownOpen(false); }}
-                      className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+                      className={`w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 no-radius !rounded-none ${sortBy === opt.id ? 'bg-black/5 text-black' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
                     >
                       {sortBy === opt.id ? <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <div className="w-3 h-3 shrink-0" />}
                       {opt.label}
@@ -180,9 +180,9 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
             <div className="flex items-center gap-3 shrink-0 border-l border-black/10 pl-6 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
               <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
               <div 
-                className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
+                className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
               >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                <div className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-4' : 'translate-x-0'}`} />
               </div>
             </div>
             {!inline && (

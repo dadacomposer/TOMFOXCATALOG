@@ -160,9 +160,9 @@ export default function AdminFeatures() {
             <span className="text-[10px] font-bold uppercase tracking-widest text-black/40">SVG Animation</span>
             <button 
               onClick={() => setLocalSettings(prev => ({ ...prev, top_picks_animation_enabled: !prev.top_picks_animation_enabled }))}
-              className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${localSettings.top_picks_animation_enabled !== false ? 'bg-[#111111]' : 'bg-[#e0e0e0]'}`}
+              className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${localSettings.top_picks_animation_enabled !== false ? 'bg-[#111111]' : 'bg-[#e0e0e0]'}`}
             >
-              <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${localSettings.top_picks_animation_enabled !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+              <div className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${localSettings.top_picks_animation_enabled !== false ? 'translate-x-4' : 'translate-x-0'}`} />
             </button>
           </div>
         </div>
@@ -260,9 +260,9 @@ export default function AdminFeatures() {
                
                <button 
                  onClick={() => setLocalSettings(prev => ({ ...prev, public_artwork_frames_enabled: !prev.public_artwork_frames_enabled }))}
-                 className={`preview-toggle w-11 h-6 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner ${localSettings.public_artwork_frames_enabled ? 'bg-[#111111]' : 'bg-[#e0e0e0]'}`}
+                 className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${localSettings.public_artwork_frames_enabled ? 'bg-[#111111]' : 'bg-[#e0e0e0]'}`}
                >
-                 <div className={`w-5 h-5 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${localSettings.public_artwork_frames_enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                 <div className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${localSettings.public_artwork_frames_enabled ? 'translate-x-4' : 'translate-x-0'}`} />
                </button>
              </div>
            </div>

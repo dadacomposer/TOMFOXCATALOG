@@ -33,11 +33,44 @@ const cleanTitle = (filename: string) => {
   return base;
 };
 
-const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement> }) => {
+const ScrollArrows = ({ scrollRef, isDark }: { scrollRef: React.RefObject<HTMLDivElement>, isDark?: boolean }) => {
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        setCanScrollLeft(scrollLeft > 0);
+        setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2);
+      }
+    };
+
+    checkScroll();
+    
+    // Slight delay to ensure content is fully rendered
+    setTimeout(checkScroll, 100);
+
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScroll, { passive: true });
+      const observer = new ResizeObserver(checkScroll);
+      observer.observe(el);
+      return () => {
+        el.removeEventListener('scroll', checkScroll);
+        observer.disconnect();
+      };
+    }
+  }, [scrollRef]);
+
+  const btnClass = isDark 
+    ? "bg-black/50 backdrop-blur border border-white/20 text-white/50 hover:text-white hover:bg-white/10"
+    : "bg-white border border-black/10 text-black/50 hover:text-black hover:bg-white";
+
   return (
     <>
       <button 
-        className="absolute left-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all opacity-0 group-hover/section:opacity-100"
+        className={`absolute left-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%' }}
         onClick={(e) => {
           e.stopPropagation();
@@ -47,14 +80,14 @@ const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement
         <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
       <button 
-        className="absolute right-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full bg-white border border-black/10 shadow-lg flex items-center justify-center text-black/50 hover:text-black hover:bg-white z-30 transition-all opacity-0 group-hover/section:opacity-100"
+        className={`absolute right-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%' }}
         onClick={(e) => {
           e.stopPropagation();
           scrollRef.current?.scrollBy({ left: 600, behavior: 'smooth' });
         }}
       >
-        <svg className="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+        <svg className="w-5 h-5 -mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
     </>
   );
@@ -146,7 +179,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col w-full min-h-screen pt-[88px] pb-[120px] bg-[#fafafa] text-black relative">
+    <div className="flex flex-col w-full min-h-screen pt-[88px] pb-[120px] bg-[#fafafa] text-black relative no-radius !rounded-none">
 {playlistUrlId && (
         <PlaylistIsland 
           id={playlistUrlId}
@@ -161,9 +194,13 @@ export default function Home() {
         />
       )}
       
-      {/* Top Picks For You */}
-      <div className="w-full pt-12 pb-8 relative overflow-hidden group/section">
-        {settings?.top_picks_animation_enabled !== false && (
+      {/* Dark Section Wrapper (Welcome + Top Picks) */}
+      <div 
+        id={!user ? 'home-dark-section' : undefined}
+        className={`w-full flex flex-col transition-colors duration-700 -mt-[88px] pt-[88px] no-radius !rounded-none ${!user ? 'bg-black text-white pb-12 relative overflow-hidden' : 'bg-[#fafafa] text-black'}`}
+      >
+        {/* Full-section Sun Animation (Only when Dark Mode / Unauthenticated) */}
+        {!user && settings?.top_picks_animation_enabled !== false && (
           <div
             className="absolute inset-0 pointer-events-none z-30"
             style={{ mixBlendMode: 'screen', transform: 'translateZ(0)' }}
@@ -171,12 +208,33 @@ export default function Home() {
             <FeaturedSun isHovered={isFeaturedHovered} />
           </div>
         )}
-        <div className="w-full relative z-10 px-8">
-          <ScrollArrows scrollRef={topPicksRef} />
+
+        {/* Welcome Section (Only for Unauthenticated Users) */}
+        {!user && (
+          <div className="w-full pt-4 md:pt-8 pb-4 md:pb-8 flex flex-col md:flex-row items-center md:items-center justify-between px-8 md:px-16 relative z-40 pointer-events-none">
+            <h1 className="text-xl md:text-3xl lg:text-[40px] font-black uppercase tracking-tight text-center md:text-left max-w-4xl z-20 leading-[1.1] text-white">
+              A curated collection of original music.<br/><span className="text-white/60">Press play and explore the sound.</span>
+            </h1>
+          </div>
+        )}
+
+        {/* Top Picks For You */}
+        <div className={`w-full pb-8 relative group/section ${!user ? 'pt-6' : 'pt-12 overflow-hidden'}`}>
+          {/* Constrained Sun Animation (Only when Light Mode / Authenticated) */}
+          {user && settings?.top_picks_animation_enabled !== false && (
+            <div
+              className="absolute inset-0 pointer-events-none z-30"
+              style={{ mixBlendMode: 'screen', transform: 'translateZ(0)' }}
+            >
+              <FeaturedSun isHovered={isFeaturedHovered} />
+            </div>
+          )}
+          <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} px-8`}>
+            <ScrollArrows scrollRef={topPicksRef} isDark={!user} />
           <div ref={topPicksRef} className="flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4">
             {loading ? (
               [...Array(4)].map((_, i) => (
-                <div key={i} className="flex flex-col p-4 rounded-[32px] w-[340px] shrink-0 snap-start">
+                <div key={i} className={`flex flex-col p-4 rounded-[32px] shrink-0 snap-start ${!user ? 'w-[280px]' : 'w-[340px]'}`}>
                   <div className="relative w-full aspect-[1.15] mb-6">
                      <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
                      <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
@@ -198,8 +256,6 @@ export default function Home() {
                   const style = cardStyles[idx % cardStyles.length];
                   
                   // Check if this playlist is currently playing
-                  // By tracking if currentSource is 'playlist' and currentPlaylist matches pl.id... wait, currentPlaylist is Track[], we don't store playlist id.
-                  // We can just rely on playingPlaylistId state which we set when we play it here.
                   const isThisPlaylistPlaying = isPlaying && playingPlaylistId === pl.id;
 
                   const handlePlayTopPick = async (e: React.MouseEvent) => {
@@ -225,11 +281,14 @@ export default function Home() {
                   return (
                     <div 
                       key={pl.id} 
-                      className={`relative w-[340px] shrink-0 snap-start aspect-[3/4] rounded-[32px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-white/10 ${style.baseColor}`}
+                      className={`relative shrink-0 snap-start aspect-[3/4] rounded-[32px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-white/10 ${style.baseColor} ${!user ? 'w-[280px]' : 'w-[340px]'}`}
                       onClick={() => setSearchParams({ playlist: pl.id })}
                       onMouseEnter={() => setIsFeaturedHovered(true)}
                       onMouseLeave={() => setIsFeaturedHovered(false)}
                     >
+                      {/* Dark overlay specifically for Welcome section context */}
+                      {!user && <div className="absolute inset-0 bg-black/40 z-[15] pointer-events-none group-hover:bg-black/20 transition-colors duration-500" />}
+
                       {/* Animated Mesh Background (Idle State) */}
                       <div className="absolute inset-[-100%] animate-[spin_16s_linear_infinite] origin-[45%_55%] pointer-events-none">
                         <div className={`absolute inset-0 ${style.bgIdle} blur-[100px] scale-150`} />
@@ -274,6 +333,7 @@ export default function Home() {
                   );
                 })
             )}
+          </div>
           </div>
         </div>
       </div>
