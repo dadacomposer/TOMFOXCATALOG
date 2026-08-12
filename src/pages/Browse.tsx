@@ -42,14 +42,15 @@ type Track = {
   duration?: number;
   key?: string;
   scale?: string;
-  subgenre?: string[];
-  instruments?: string[];
+  genre?: string[];
   moods?: string[];
-  textures?: string[];
-  scenarios?: string[];
-  human_tags?: string[];
+  instruments?: string[];
+  functions?: string[];
+  music_for?: string[];
+  character?: string[];
+  arrangement?: string[];
   movement?: string[];
-  energy_level?: string;
+  tempo?: string[];
   waveform_data?: number[];
   artwork_url?: string;
   composers?: string[];
@@ -182,14 +183,14 @@ export default function Browse() {
 
   const FILTER_CATEGORIES = useMemo(() => [
     { title: 'Genre',       key: 'genre',        options: filterOptions?.genre || [] },
-    { title: 'Arrangement', key: 'subgenre',     options: filterOptions?.subgenre || [] },
     { title: 'Mood',        key: 'moods',        options: filterOptions?.moods || [] },
-    { title: 'Instruments', key: 'instruments',  options: filterOptions?.instruments || [] },
-    { title: 'Function',    key: 'textures',     options: filterOptions?.textures || [] },
-    { title: 'Music For',   key: 'scenarios',    options: filterOptions?.scenarios || [] },
-    { title: 'Character',   key: 'human_tags',   options: filterOptions?.human_tags || [] },
+    { title: 'Music For',   key: 'music_for',    options: filterOptions?.music_for || [] },
+    { title: 'Function',    key: 'functions',    options: filterOptions?.functions || [] },
+    { title: 'Character',   key: 'character',    options: filterOptions?.character || [] },
+    { title: 'Arrangement', key: 'arrangement',  options: filterOptions?.arrangement || [] },
     { title: 'Movement',    key: 'movement',     options: filterOptions?.movement || [] },
-    { title: 'Tempo',       key: 'energy_level', options: filterOptions?.energy_level || [] },
+    { title: 'Instruments', key: 'instruments',  options: filterOptions?.instruments || [] },
+    { title: 'Tempo',       key: 'tempo',        options: filterOptions?.tempo || [] },
   ], [filterOptions]);
   
   const { playTrack, playPlaylist, currentTrack, isPlaying, togglePlay, setProgress, progress, setPendingSeek, isPreviewMode, setIsPreviewMode, setFallbackPlaylist, currentSource, setCurrentSource, setIsCurrentPreviewDormant, currentPlaylist, setCurrentPlaylist, setSelectedTrackForDetails } = usePlayer();

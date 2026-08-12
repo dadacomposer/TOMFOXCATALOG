@@ -82,10 +82,10 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
     album: track.album || '',
     composers: Array.isArray(track.composers) ? track.composers : (track.composers ? [track.composers] : DEFAULT_COMPOSERS),
     key: track.key || '',
-    subgenre: (() => {
-      if (!track.subgenre) return [];
-      if (Array.isArray(track.subgenre)) return track.subgenre;
-      try { return JSON.parse(track.subgenre); } catch(e) { return [track.subgenre]; }
+    arrangement: (() => {
+      if (!track.arrangement) return [];
+      if (Array.isArray(track.arrangement)) return track.arrangement;
+      try { return JSON.parse(track.arrangement); } catch(e) { return [track.arrangement]; }
     })(),
     genre: (() => {
       if (!track.genre) return [];
@@ -93,10 +93,10 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
       try { return JSON.parse(track.genre); } catch(e) { return track.genre.split(',').map((s:string) => s.trim()).filter(Boolean); }
     })(),
     moods: Array.isArray(track.moods) ? track.moods : (track.moods ? [track.moods] : []),
-    scenarios: Array.isArray(track.scenarios) ? track.scenarios : (track.scenarios ? [track.scenarios] : []),
+    music_for: Array.isArray(track.music_for) ? track.music_for : (track.music_for ? [track.music_for] : []),
     instruments: Array.isArray(track.instruments) ? track.instruments : (track.instruments ? [track.instruments] : []),
-    textures: Array.isArray(track.textures) ? track.textures : (track.textures ? [track.textures] : []),
-    human_tags: Array.isArray(track.human_tags) ? track.human_tags : (track.human_tags ? [track.human_tags] : []),
+    functions: Array.isArray(track.functions) ? track.functions : (track.functions ? [track.functions] : []),
+    character: Array.isArray(track.character) ? track.character : (track.character ? [track.character] : []),
     movement: Array.isArray(track.movement) ? track.movement : (track.movement ? [track.movement] : []),
   });
 
@@ -151,12 +151,12 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         composers: form.composers,
         key: form.key,
         genre: Array.isArray(form.genre) ? form.genre[0] || '' : form.genre,
-        subgenre: form.subgenre,
+        arrangement: form.arrangement,
         moods: form.moods,
-        scenarios: form.scenarios,
+        music_for: form.music_for,
         instruments: form.instruments,
-        textures: form.textures,
-        human_tags: form.human_tags,
+        functions: form.functions,
+        character: form.character,
         movement: form.movement,
       };
 
@@ -398,12 +398,12 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
 
               {[
                 { label: 'Genre', field: 'genre', placeholder: 'e.g. Electronic, Orchestral' },
-                { label: 'Arrangement', field: 'subgenre', placeholder: 'e.g. Ambient Piano, Neoclassical' },
+                { label: 'Arrangement', field: 'arrangement', placeholder: 'e.g. Ambient Piano, Neoclassical' },
                 { label: 'Mood', field: 'moods', placeholder: 'e.g. Peaceful, Melancholic' },
-                { label: 'Music For', field: 'scenarios', placeholder: 'e.g. Late Night Listening, Focus' },
+                { label: 'Music For', field: 'music_for', placeholder: 'e.g. Late Night Listening, Focus' },
                 { label: 'Instruments', field: 'instruments', placeholder: 'e.g. Piano, Synth Pad' },
-                { label: 'Function', field: 'textures', placeholder: 'e.g. Delicate, Organic' },
-                { label: 'Character', field: 'human_tags', placeholder: 'Add custom tags...' },
+                { label: 'Function', field: 'functions', placeholder: 'e.g. Delicate, Organic' },
+                { label: 'Character', field: 'character', placeholder: 'Add custom tags...' },
                 { label: 'Movement', field: 'movement', placeholder: 'e.g. Building, Flowing' },
               ].map(item => (
                 <div key={item.field}>

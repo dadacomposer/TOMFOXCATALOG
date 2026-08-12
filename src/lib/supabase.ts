@@ -55,11 +55,8 @@ export async function fetchTracks(page: number = 1, pageSize: number = 20, filte
       // genre is a plain text column — OR across selected values
       const conditions = (values as string[]).map(v => `genre.ilike.%${v}%`).join(',');
       query = query.or(conditions);
-    } else if (key === 'energy_level') {
-      // energy_level is a plain text column — OR across selected values
-      const conditions = (values as string[]).map(v => `energy_level.eq.${v}`).join(',');
-      query = query.or(conditions);
-    } else if (['subgenre', 'moods', 'instruments', 'textures', 'scenarios', 'human_tags', 'movement'].includes(key)) {
+
+    } else if (['moods', 'instruments', 'functions', 'music_for', 'character', 'movement', 'arrangement', 'tempo'].includes(key)) {
       // All are text[] arrays — use Postgres && operator via .overlaps (OR logic within category)
       query = query.overlaps(key, values as string[]);
     }
@@ -407,14 +404,14 @@ export async function fetchFilterOptions() {
   }
   return data as {
     genre: { value: string; count: number }[];
-    subgenre: { value: string; count: number }[];
     moods: { value: string; count: number }[];
     instruments: { value: string; count: number }[];
-    textures: { value: string; count: number }[];
-    scenarios: { value: string; count: number }[];
-    human_tags: { value: string; count: number }[];
-    energy_level: { value: string; count: number }[];
+    functions: { value: string; count: number }[];
+    music_for: { value: string; count: number }[];
+    character: { value: string; count: number }[];
+    arrangement: { value: string; count: number }[];
     movement: { value: string; count: number }[];
+    tempo: { value: string; count: number }[];
   };
 }
 

@@ -18,14 +18,16 @@ type ImportMode = 'REPLACE' | 'APPEND';
 interface ParsedRow {
   file_name: string;
   genre?: string;
-  subgenre?: string;
   moods?: string;
-  scenarios?: string;
+  music_for?: string;
   instruments?: string;
-  textures?: string;
+  functions?: string;
   movement?: string;
-  human_tags?: string;
-  energy_level?: string;
+  character?: string;
+  tempo?: string;
+  arrangement?: string;
+  "content id"?: string;
+  pro?: string;
   [key: string]: any;
 }
 
@@ -129,7 +131,7 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
       const { track, newTags } = match;
       
       const updateData: any = {};
-      const tagFields = ['genre', 'subgenre', 'moods', 'scenarios', 'instruments', 'textures', 'movement', 'human_tags', 'energy_level'];
+      const tagFields = ['genre', 'moods', 'music_for', 'instruments', 'functions', 'movement', 'character', 'tempo', 'arrangement'];
       
       tagFields.forEach(field => {
         if (newTags[field] !== undefined && newTags[field] !== null && newTags[field] !== '') {
@@ -146,6 +148,22 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
         }
       });
 
+      updateData.humanly_reviewed = true;
+      
+      // Map 'content id' to frequency_audio_registered
+      if (newTags['content id']) {
+        const val = newTags['content id'].toLowerCase().trim();
+        if (val === 'registered') updateData.frequency_audio_registered = true;
+        else if (val === 'unregistered') updateData.frequency_audio_registered = false;
+      }
+      
+      // Map 'pro' to pro_registered
+      if (newTags['pro']) {
+        const val = newTags['pro'].toLowerCase().trim();
+        if (val === 'registered') updateData.pro_registered = true;
+        else if (val === 'needs registration') updateData.pro_registered = false;
+      }
+      
       if (Object.keys(updateData).length > 0) {
         await supabase.from('tracks').update(updateData).eq('id', track.id);
       }
@@ -159,7 +177,7 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
   };
 
   const downloadTemplate = () => {
-    const csvContent = "file_name,genre,subgenre,moods,scenarios,instruments,textures,movement,human_tags,energy_level\nexample_track.wav,\"Electronic, Pop\",\"Synthwave\",\"Happy, Upbeat\",\"Driving, Party\",\"Synth, Drums\",\"Smooth\",\"Flowing\",\"Vocal, Instrumental\",\"High\"";
+    const csvContent = "file_name,genre,moods,music_for,instruments,functions,movement,character,tempo,arrangement,content id,pro\nexample_track.wav,\"Electronic, Pop\",\"Happy, Upbeat\",\"Driving, Party\",\"Synth, Drums\",\"Smooth\",\"Flowing\",\"Vocal, Instrumental\",\"High\",\"Ambient Piano\",\"Registered\",\"Needs Registration\"";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -230,7 +248,7 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
                   <li>The file must be in <strong>.csv</strong> format.</li>
                   <li>Column <strong>file_name</strong> is strictly required (extensions are ignored automatically).</li>
                   <li>Use comma separation for multiple tags in a column (e.g. <code>Happy, Energetic</code>).</li>
-                  <li>Supported columns: genre, subgenre, moods, scenarios, instruments, textures, movement, human_tags, energy_level.</li>
+                  <li>Supported columns: genre, moods, music_for, instruments, functions, movement, character, tempo, arrangement, content id, pro.</li>
                 </ul>
                 <button 
                   onClick={downloadTemplate}

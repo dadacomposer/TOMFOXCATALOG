@@ -541,12 +541,13 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
           const { data: parentTrack } = await supabase.from('tracks').select('*').eq('id', realParentId).single();
           if (parentTrack) {
             updatePayload.genre = parentTrack.genre;
-            updatePayload.subgenre = parentTrack.subgenre;
+            updatePayload.arrangement = parentTrack.arrangement;
             updatePayload.moods = parentTrack.moods;
             updatePayload.instruments = parentTrack.instruments;
-            updatePayload.textures = parentTrack.textures;
-            updatePayload.scenarios = parentTrack.scenarios;
-            updatePayload.human_tags = parentTrack.human_tags;
+            updatePayload.functions = parentTrack.functions;
+            updatePayload.music_for = parentTrack.music_for;
+            updatePayload.character = parentTrack.character;
+            updatePayload.tempo = parentTrack.tempo;
             updatePayload.movement = parentTrack.movement;
             updatePayload.description = parentTrack.description;
           }
@@ -554,12 +555,13 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
 
         if (!enableAutoTag) {
           updatePayload.genre = null;
-          updatePayload.subgenre = null;
+          updatePayload.arrangement = [];
           updatePayload.moods = [];
           updatePayload.instruments = [];
-          updatePayload.textures = [];
-          updatePayload.scenarios = [];
-          updatePayload.human_tags = [];
+          updatePayload.functions = [];
+          updatePayload.music_for = [];
+          updatePayload.character = [];
+          updatePayload.tempo = [];
           updatePayload.movement = [];
           updatePayload.description = null;
         }

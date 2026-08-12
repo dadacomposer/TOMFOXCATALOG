@@ -100,19 +100,20 @@ serve(async (req) => {
         WE NEED A HUGE AMOUNT OF METADATA. Be exhaustive. Generate as many accurate tags as possible for each category.
         
         CRITICAL RULE FOR DIVERSITY: 
-        When generating \`scenarios\` and \`human_tags\`, cast a wide net. Ensure the scenarios cover completely different and disparate contexts that still accurately fit the music. 
+        When generating \`music_for\` and \`character\`, cast a wide net. Ensure the scenarios cover completely different and disparate contexts that still accurately fit the music. 
         For example, if a track is light and bouncy, do not just list 10 variations of "corporate presentation". Include "children's educational video", "cooking tutorial", "morning vlog", "indie puzzle game", etc. 
         Give it diverse use-cases so it appears in many different user searches!
         
         Return a strict JSON object with this exact schema:
         - genre: (string) The main overarching genre.
-        - subgenre: (array of strings) Generate AT LEAST 5 to 8 highly specific subgenres.
         - moods: (array of strings) Generate AT LEAST 10 to 15 exact emotional states and feelings.
+        - music_for: (array of strings) Generate AT LEAST 8 to 12 highly specific, DIAMETRICALLY DIVERSE use-case scenarios (formerly Scenarios). 
+        - functions: (array of strings) Generate AT LEAST 8 to 12 sonic qualities (e.g. ethereal, gritty, warm, driving, delicate).
+        - character: (array of strings) Generate AT LEAST 15 to 20 other relevant comma-separated tags (styles, cultural vibes, human elements).
+        - arrangement: (array of strings) Generate AT LEAST 5 to 8 highly specific subgenres or structural arrangements (e.g. Ambient Piano, Neoclassical, Orchestral).
+        - movement: (array of strings) Generate AT LEAST 3 to 5 movement descriptors (e.g. Building, Flowing).
         - instruments: (array of strings) Generate AT LEAST 8 to 12 prominent instruments and how they are played.
-        - textures: (array of strings) Generate AT LEAST 8 to 12 sonic qualities (e.g. ethereal, gritty, warm).
-        - scenarios: (array of strings) Generate AT LEAST 8 to 12 highly specific, DIAMETRICALLY DIVERSE use-case scenarios. 
-        - energy_level: (string) "Low", "Medium", or "High".
-        - human_tags: (array of strings) Generate AT LEAST 15 to 20 other relevant comma-separated tags (tempo feelings, era, specific styles, cultural vibes).
+        - tempo: (array of strings) Generate strings like "High", "Medium", "Low", "Fast", "Slow".
         - description: (string) A rich, evocative 2-3 sentence narrative description.
         
         Respond ONLY with valid JSON.
@@ -156,19 +157,21 @@ serve(async (req) => {
 
     console.log(`Tags generated successfully. Saving to database...`)
 
-    const mergedSubgenre = JSON.stringify(tags.subgenre || [])
+    const mergedArrangement = JSON.stringify(tags.arrangement || [])
 
     // Update the track in Supabase using the service role key (bypasses RLS)
     const { error: updateError } = await supabase
       .from('tracks')
       .update({
-        subgenre: mergedSubgenre,
+        arrangement: mergedArrangement,
         moods: tags.moods || [],
         instruments: tags.instruments || [],
-        textures: tags.textures || [],
-        scenarios: tags.scenarios || [],
-        human_tags: tags.human_tags || [],
+        functions: tags.functions || [],
+        music_for: tags.music_for || [],
+        character: tags.character || [],
+        tempo: tags.tempo || [],
         genre: tags.genre || "",
+        movement: tags.movement || [],
         description: tags.description || ""
       })
       .eq('id', trackId)

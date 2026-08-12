@@ -22,12 +22,12 @@ export type AdminTrack = {
   deleted_at: string | null;
   created_at?: string;
   release_date?: string;
-  subgenre?: string | string[];
+  arrangement?: string | string[];
   moods?: string | string[];
-  scenarios?: string | string[];
+  music_for?: string | string[];
   instruments?: string | string[];
-  textures?: string | string[];
-  human_tags?: string | string[];
+  functions?: string | string[];
+  character?: string | string[];
   movement?: string | string[];
   artwork_url?: string | null;
   r2_url?: string;
@@ -48,7 +48,7 @@ export type AdminTrack = {
   scale?: string;
   duration?: number;
   genre?: string;
-  energy_level?: string;
+  tempo?: string | string[];
   description?: string;
   humanly_reviewed?: boolean;
   pro_registered?: boolean;
@@ -70,9 +70,9 @@ export default function AdminTracks() {
   const [visibleCount, setVisibleCount] = useState(20);
   const [editingTrack, setEditingTrack] = useState<AdminTrack | null>(null);
   const [editForm, setEditForm] = useState({ 
-    file_name: '', subgenre: '', moods: '', 
-    scenarios: '', instruments: '', textures: '', 
-    human_tags: '', artwork_url: '' 
+    file_name: '', arrangement: '', moods: '', 
+    music_for: '', instruments: '', functions: '', 
+    character: '', artwork_url: '', tempo: '' 
   });
   const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<'none' | 'playlist' | 'share' | 'trash' | 'delete' | 'restore' | 'artwork'>('none');
@@ -420,7 +420,7 @@ export default function AdminTracks() {
     try {
       let query = supabase
         .from('tracks')
-        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, subgenre, moods, scenarios, instruments, textures, human_tags, movement, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, energy_level, description, humanly_reviewed, pro_registered, frequency_audio_registered')
+        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, arrangement, moods, music_for, instruments, functions, character, movement, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, tempo, description, humanly_reviewed, pro_registered, frequency_audio_registered')
         .order('release_date', { ascending: false });
 
       let allTracks: AdminTrack[] = [];
@@ -491,14 +491,14 @@ export default function AdminTracks() {
         };
 
         const tags = [
-          ...parse(t.subgenre),
+          ...parse(t.arrangement),
           ...parse(t.moods),
-          ...parse(t.scenarios),
+          ...parse(t.music_for),
           ...parse(t.instruments),
-          ...parse(t.textures),
-          ...parse(t.human_tags),
+          ...parse(t.functions),
+          ...parse(t.character),
           t.genre || '',
-          t.energy_level || ''
+          t.tempo || ''
         ].map(tag => typeof tag === 'string' ? tag.toLowerCase() : '');
 
         if (tags.some(tag => tag === q)) score += 8;
@@ -687,12 +687,12 @@ toast.success('Track restored successfully');
     setEditingTrack(track);
     setEditForm({
       file_name: track.file_name,
-      subgenre: Array.isArray(track.subgenre) ? track.subgenre.join(', ') : (track.subgenre || ''),
+      arrangement: Array.isArray(track.arrangement) ? track.arrangement.join(', ') : (track.arrangement || ''),
       moods: Array.isArray(track.moods) ? track.moods.join(', ') : (track.moods || ''),
-      scenarios: Array.isArray(track.scenarios) ? track.scenarios.join(', ') : (track.scenarios || ''),
+      music_for: Array.isArray(track.music_for) ? track.music_for.join(', ') : (track.music_for || ''),
       instruments: Array.isArray(track.instruments) ? track.instruments.join(', ') : (track.instruments || ''),
-      textures: Array.isArray(track.textures) ? track.textures.join(', ') : (track.textures || ''),
-      human_tags: Array.isArray(track.human_tags) ? track.human_tags.join(', ') : (track.human_tags || ''),
+      functions: Array.isArray(track.functions) ? track.functions.join(', ') : (track.functions || ''),
+      character: Array.isArray(track.character) ? track.character.join(', ') : (track.character || ''),
       artwork_url: track.artwork_url || ''
     });
   };
@@ -700,21 +700,21 @@ toast.success('Track restored successfully');
   const handleSaveEdit = async () => {
     if (!editingTrack) return;
     try {
-      const parsedSubgenre = editForm.subgenre.split(',').map(s => s.trim()).filter(Boolean);
+      const parsedArrangement = editForm.arrangement.split(',').map(s => s.trim()).filter(Boolean);
       const parsedMoods = editForm.moods.split(',').map(s => s.trim()).filter(Boolean);
-      const parsedScenarios = editForm.scenarios.split(',').map(s => s.trim()).filter(Boolean);
+      const parsedMusicFor = editForm.music_for.split(',').map(s => s.trim()).filter(Boolean);
       const parsedInstruments = editForm.instruments.split(',').map(s => s.trim()).filter(Boolean);
-      const parsedTextures = editForm.textures.split(',').map(s => s.trim()).filter(Boolean);
-      const parsedHumanTags = editForm.human_tags.split(',').map(s => s.trim()).filter(Boolean);
+      const parsedFunctions = editForm.functions.split(',').map(s => s.trim()).filter(Boolean);
+      const parsedCharacter = editForm.character.split(',').map(s => s.trim()).filter(Boolean);
       
       const updateData = { 
         file_name: editForm.file_name,
-        subgenre: parsedSubgenre,
+        arrangement: parsedArrangement,
         moods: parsedMoods,
-        scenarios: parsedScenarios,
+        music_for: parsedMusicFor,
         instruments: parsedInstruments,
-        textures: parsedTextures,
-        human_tags: parsedHumanTags,
+        functions: parsedFunctions,
+        character: parsedCharacter,
         artwork_url: editForm.artwork_url || null
       };
 
@@ -1255,12 +1255,12 @@ toast.success('Track restored successfully');
               <tbody className="divide-y divide-black/5">
                 {displayedTracks.map((track) => {
                   const allTags = [
-                    ...parseTags(track.subgenre),
+                    ...parseTags(track.arrangement),
                     ...parseTags(track.moods),
-                    ...parseTags(track.scenarios),
+                    ...parseTags(track.music_for),
                     ...parseTags(track.instruments),
-                    ...parseTags(track.textures),
-                    ...parseTags(track.human_tags),
+                    ...parseTags(track.functions),
+                    ...parseTags(track.character),
                     ...(track.movement ? parseTags(track.movement) : [])
                   ];
 
@@ -2010,12 +2010,12 @@ toast.success('Track restored successfully');
                                     };
                                     
                                     const tags = [
-                                      ...parse(t.subgenre),
+                                      ...parse(t.arrangement),
                                       ...parse(t.moods),
-                                      ...parse(t.scenarios),
+                                      ...parse(t.music_for),
                                       ...parse(t.instruments),
-                                      ...parse(t.textures),
-                                      ...parse(t.human_tags)
+                                      ...parse(t.functions),
+                                      ...parse(t.character)
                                     ].map(tag => typeof tag === 'string' ? tag.toLowerCase() : '');
                                     
                                     return tags.some(tag => tag.includes(q));
