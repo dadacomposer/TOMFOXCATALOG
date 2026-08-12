@@ -433,8 +433,8 @@ export default function AdminTracks() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchTracks = async () => {
-    setIsLoading(true);
+  const fetchTracks = async (showLoader = true) => {
+    if (showLoader) setIsLoading(true);
     try {
       let query = supabase
         .from('tracks')
@@ -468,12 +468,22 @@ export default function AdminTracks() {
       console.error('Error fetching tracks:', error);
       toast.error('Failed to load tracks');
     } finally {
-      setIsLoading(false);
+      if (showLoader) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchTracks();
+
+    const channel = supabase.channel('admin_tracks_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tracks' }, () => {
+        fetchTracks(false);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
