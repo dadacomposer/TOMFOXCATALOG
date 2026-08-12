@@ -34,16 +34,24 @@ export default function WaveformView({ data, isPlaying = false, progress = 0, on
 
   React.useEffect(() => {
     if (!containerRef.current) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
         // 2px bar + 2px gap = 4px per bar
         const maxBars = Math.floor(width / 4);
-        setBarCount(maxBars);
+        
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          setBarCount(maxBars);
+        }, 100); // 100ms debounce to prevent layout thrashing during animations
       }
     });
     resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const resampledData = React.useMemo(() => {

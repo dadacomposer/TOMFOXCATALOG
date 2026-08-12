@@ -1027,7 +1027,8 @@ export default function Browse() {
           <div className="flex flex-col w-full pt-8 pb-8 pr-4 md:pr-8 pl-4 md:pl-8">
             <div className="flex-grow flex flex-col overflow-hidden">
               <div className="flex flex-col gap-1 mb-8">
-            {loading || !isInitialTracksLoaded || isTypingSearch || isSearching ? (
+            {React.useMemo(() => (
+              loading || !isInitialTracksLoaded || isTypingSearch || isSearching ? (
               [...Array(10)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-2 rounded-xl">
                   <div className="w-10 h-10 rounded-lg shrink-0 bg-[#e5e5e5] animate-pulse" />
@@ -1267,7 +1268,7 @@ export default function Browse() {
             )}
             </React.Fragment>
             ))
-            )}
+            )), [loading, isInitialTracksLoaded, isTypingSearch, isSearching, displayedTracks, selectedTrackIds, currentTrack, isPlaying, trendingTrackIds, expandedTrackId, expandedTags, profile, isPreviewMode, progress])}
           {displayedTracks.length === 0 && !loading && (
             <div className="py-16 text-center text-black/40 text-xs">
               No tracks found matching "{searchQuery}"
