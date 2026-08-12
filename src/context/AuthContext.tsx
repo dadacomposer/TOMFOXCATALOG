@@ -17,6 +17,7 @@ type Profile = {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   notify_new_music: boolean;
+  can_download?: boolean;
 };
 
 type AuthContextType = {
