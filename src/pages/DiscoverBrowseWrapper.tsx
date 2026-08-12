@@ -14,6 +14,7 @@ export default function DiscoverBrowseWrapper() {
   const navHeight = isMobile ? 74 : 82;
   const playerHeight = 90;
 
+  const isDiscover = location.pathname === '/';
   const searchBarHeight = 69; // 68px for py-6 + input, 1px for border-t
 
   // Height calculation for translate-y:

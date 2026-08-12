@@ -40,6 +40,7 @@ import LicenseModal from './components/LicenseModal';
 import GlobalLoader from './components/GlobalLoader';
 import AccountPanel from './components/AccountPanel';
 import ContactSalesModal from './components/ContactSalesModal';
+import ContactModal from './components/ContactModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 import UnderConstruction from './components/UnderConstruction';
@@ -113,7 +114,7 @@ function AppLayout() {
         </ErrorBoundary>
       </div>
       {location.pathname !== '/' && !location.pathname.startsWith('/browse') && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && (
-        <Footer />
+        <Footer isMinimized={true} />
       )}
       {!location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <GlobalPlayer />}
       {!['/checkout-resume', '/checkout-success', '/checkout-cancel', '/custom-music'].includes(location.pathname) && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/studio') && <OnboardingModal />}
@@ -121,6 +122,7 @@ function AppLayout() {
       <Login />
       <UpdatePasswordModal />
       <ContactSalesModal />
+      <ContactModal />
       <GlobalLoader />
       <Toaster 
         position="bottom-right"

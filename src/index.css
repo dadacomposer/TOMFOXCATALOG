@@ -76,20 +76,22 @@
     box-shadow: none;
   }
 
-  /* === GLOBAL RADIUS (7px) === */
+  /* === GLOBAL RADIUS (6px) === */
   /* Excluded components:
      - Base HTML structural tags
-     - Semantic layout tags (header, main, footer, section, article)
+     - Semantic layout tags (header, main, footer, nav, section, article)
      - Navbar container (.navbar-container)
      - Global Audio Player container (.global-player)
      - Search Bar (.search-bar)
      - Toggle Previews (.preview-toggle and children)
-     - Playlist Artwork and all descendants (.artwork-container and .artwork-container *)
+     - Playlist Artwork and all descendants (.artwork-container and .artwork-container *, [class*="artwork"])
      - Avatars (.is-avatar and children)
      - Full bleed elements (.full-bleed)
+     - Section containers ([class*="group/section"])
+     - Explicit no-radius tags (.no-radius, .rounded-none, .\!rounded-none)
   */
-  *:not(html):not(body):not(#root):not(#root > div):not(header):not(main):not(footer):not(section):not(article):not(.navbar-container):not(.global-player):not(.search-bar):not(.preview-toggle):not(.preview-toggle *):not(.artwork-container):not(.artwork-container *):not(.is-avatar):not(.is-avatar *):not(.full-bleed) {
-    border-radius: 7px !important;
+  *:not(html):not(body):not(#root):not(#root > div):not(header):not(main):not(footer):not(nav):not(section):not(article):not(.navbar-container):not(.global-player):not(.search-bar):not(.preview-toggle):not(.preview-toggle *):not(.artwork-container):not(.artwork-container *):not([class*="artwork"]):not(.is-avatar):not(.is-avatar *):not(.full-bleed):not([class*="group/section"]):not(.no-radius):not(.rounded-none):not(.\!rounded-none) {
+    border-radius: 6px !important;
   }
 
   .is-avatar, .is-avatar img, .is-avatar svg {

@@ -6,13 +6,27 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { DadaLogo } from './shared/DadaLogo';
 
-export default function Footer({ isDark = false }: { isDark?: boolean }) {
+export default function Footer({ isDark = false, isMinimized = false }: { isDark?: boolean, isMinimized?: boolean }) {
   const textColor = isDark ? 'text-white' : 'text-black';
   const bgColor = isDark ? 'bg-[#111]' : 'bg-[#fafafa]/85 backdrop-blur-xl';
   const mutedTextColor = isDark ? 'text-white/50' : 'text-black/50';
   const borderColor = isDark ? 'border-white/10' : 'border-black/10';
-  const { setContactModalOpen } = useAuth();
+  const hoverTextColor = isDark ? 'hover:text-white' : 'hover:text-black';
+  const { setGeneralContactModalOpen } = useAuth();
   const { settings } = useSettings();
+
+  if (isMinimized) {
+    return (
+      <footer className={`w-full border-t ${borderColor} py-4 px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-widest ${mutedTextColor} shrink-0 ${bgColor} z-20`}>
+        <span>© {new Date().getFullYear()} Tom Fox Catalog</span>
+        <div className="flex gap-4">
+          <Link to="/terms" className={`${hoverTextColor} transition-colors`}>Terms</Link>
+          <Link to="/privacy" className={`${hoverTextColor} transition-colors`}>Privacy</Link>
+          <button onClick={() => setGeneralContactModalOpen(true)} className={`${hoverTextColor} transition-colors uppercase`}>Contact</button>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className={`w-full ${bgColor} ${textColor} pt-16 md:pt-24 pb-8 border-t ${borderColor} z-10 relative`}>
@@ -49,7 +63,7 @@ export default function Footer({ isDark = false }: { isDark?: boolean }) {
             <div className="flex flex-col gap-4">
               <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Support</h4>
               <Link to="/faq" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>FAQ</Link>
-              <button onClick={() => setContactModalOpen(true)} className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold text-left`}>Contact Us</button>
+              <button onClick={() => setGeneralContactModalOpen(true)} className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold text-left`}>Contact Us</button>
             </div>
 
             <div className="flex flex-col gap-4">

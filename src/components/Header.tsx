@@ -34,14 +34,21 @@ export default function Header() {
       setIsScrolled(scrolledAmount > 10);
 
       // Find the dark section on the home page
-      const darkSection = document.getElementById('home-dark-section');
-      if (darkSection) {
-        const rect = darkSection.getBoundingClientRect();
-        setIsHeaderDark(rect.top <= 88 && rect.bottom >= 88);
-        setIsTransparent(rect.top > 88);
-      } else {
-        setIsHeaderDark(false);
+      const isHomePage = location.pathname === '/';
+      
+      if (!user && isHomePage) {
+        setIsHeaderDark(true);
         setIsTransparent(false);
+      } else {
+        const darkSection = document.getElementById('home-dark-section');
+        if (darkSection) {
+          const rect = darkSection.getBoundingClientRect();
+          setIsHeaderDark(rect.top <= 88 && rect.bottom >= 88);
+          setIsTransparent(rect.top > 88);
+        } else {
+          setIsHeaderDark(false);
+          setIsTransparent(false);
+        }
       }
     };
 

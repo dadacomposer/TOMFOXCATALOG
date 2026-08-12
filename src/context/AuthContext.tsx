@@ -36,6 +36,8 @@ type AuthContextType = {
   setLoginModalOpen: (val: boolean) => void;
   isContactModalOpen: boolean;
   setContactModalOpen: (val: boolean) => void;
+  isGeneralContactModalOpen: boolean;
+  setGeneralContactModalOpen: (val: boolean) => void;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   setWorkspaces: (ws: any[]) => void;
@@ -66,6 +68,8 @@ const AuthContext = createContext<AuthContextType>({
   setLoginModalOpen: () => {},
   isContactModalOpen: false,
   setContactModalOpen: () => {},
+  isGeneralContactModalOpen: false,
+  setGeneralContactModalOpen: () => {},
   customMusicIntent: false,
   setCustomMusicIntent: () => {},
   isUpdatePasswordModalOpen: false,
@@ -94,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAccountPanelOpen, setAccountPanelOpen] = useState(false);
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [isContactModalOpen, setContactModalOpen] = useState(false);
+  const [isGeneralContactModalOpen, setGeneralContactModalOpen] = useState(false);
   const [customMusicIntent, setCustomMusicIntent] = useState(false);
   const [isUpdatePasswordModalOpen, setUpdatePasswordModalOpen] = useState(() => {
     return typeof window !== 'undefined' && window.location.hash.includes('type=invite');
@@ -217,6 +222,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoginModalOpen,
       isContactModalOpen,
       setContactModalOpen,
+      isGeneralContactModalOpen,
+      setGeneralContactModalOpen,
       isUpdatePasswordModalOpen,
       setUpdatePasswordModalOpen,
       signOut,

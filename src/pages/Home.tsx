@@ -34,7 +34,7 @@ const cleanTitle = (filename: string) => {
   return base;
 };
 
-const ScrollArrows = ({ scrollRef, isDark }: { scrollRef: React.RefObject<HTMLDivElement | null>, isDark?: boolean }) => {
+const ScrollArrows = ({ scrollRef, isDark, offsetY = 0 }: { scrollRef: React.RefObject<HTMLDivElement | null>, isDark?: boolean, offsetY?: number }) => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -71,8 +71,8 @@ const ScrollArrows = ({ scrollRef, isDark }: { scrollRef: React.RefObject<HTMLDi
   return (
     <>
       <button 
-        className={`absolute left-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
-        style={{ borderRadius: '50%' }}
+        className={`absolute left-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
           scrollRef.current?.scrollBy({ left: -600, behavior: 'smooth' });
@@ -81,8 +81,8 @@ const ScrollArrows = ({ scrollRef, isDark }: { scrollRef: React.RefObject<HTMLDi
         <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
       <button 
-        className={`absolute right-12 top-1/2 -translate-y-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
-        style={{ borderRadius: '50%' }}
+        className={`absolute right-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
           scrollRef.current?.scrollBy({ left: 600, behavior: 'smooth' });
@@ -114,7 +114,7 @@ export default function Home() {
   const suggestedRef = useRef<HTMLDivElement>(null);
   const recentlyPlayedRef = useRef<HTMLDivElement>(null);
 
-  const { user } = useAuth();
+  const { user, setGeneralContactModalOpen } = useAuth();
   const { settings } = useSettings();
   const { 
     playTrack, playPlaylist, currentTrack, isPlaying, togglePlay, 
@@ -196,7 +196,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col w-full min-h-screen pt-[88px] pb-[120px] bg-[#fafafa] text-black relative no-radius !rounded-none">
+    <div className={`flex flex-col w-full min-h-screen pt-[88px] ${!user ? 'pb-[69px] bg-black text-white' : 'pb-[120px] bg-[#fafafa] text-black'} relative no-radius !rounded-none`}>
 {playlistUrlId && (
         <PlaylistIsland 
           id={playlistUrlId}
@@ -214,7 +214,7 @@ export default function Home() {
       {/* Dark Section Wrapper (Welcome + Top Picks) */}
       <div 
         id={!user ? 'home-dark-section' : undefined}
-        className={`w-full flex flex-col transition-colors duration-700 -mt-[88px] pt-[88px] no-radius !rounded-none ${!user ? 'bg-black text-white pb-12 relative overflow-hidden' : 'bg-[#fafafa] text-black'}`}
+        className={`w-full flex flex-col transition-colors duration-700 -mt-[88px] pt-[88px] no-radius !rounded-none ${!user ? 'bg-black text-white pb-12 relative overflow-hidden' : 'bg-[#fafafa] text-black pb-12'}`}
       >
         {/* Full-section Sun Animation (Only when Dark Mode / Unauthenticated) */}
         {!user && settings?.top_picks_animation_enabled !== false && (
@@ -236,7 +236,7 @@ export default function Home() {
         )}
 
         {/* Top Picks For You */}
-        <div className={`w-full pb-8 relative group/section ${!user ? 'pt-6' : 'pt-12 overflow-hidden'}`}>
+        <div className={`w-full pb-8 relative group/section no-radius !rounded-none ${!user ? 'pt-6' : 'pt-12 overflow-hidden'}`}>
           {/* Constrained Sun Animation (Only when Light Mode / Authenticated) */}
           {user && settings?.top_picks_animation_enabled !== false && (
             <div
@@ -247,7 +247,7 @@ export default function Home() {
             </div>
           )}
           <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} px-8`}>
-            <ScrollArrows scrollRef={topPicksRef} isDark={!user} />
+            <ScrollArrows scrollRef={topPicksRef} isDark={!user} offsetY={8} />
           <div ref={topPicksRef} className="flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4">
             {loading ? (
               [...Array(4)].map((_, i) => (
@@ -356,28 +356,28 @@ export default function Home() {
       </div>
 
       {/* Trending Tracks */}
-      <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section">
-        <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Trending tracks</h2>
+      <div className={`w-full px-8 pt-12 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
+        <h2 className={`text-[22px] font-medium uppercase tracking-tighter mb-6 ${!user ? 'text-white' : 'text-black'}`}>Trending tracks</h2>
         
         {loading ? (
           <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
             <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-4 content-start min-w-min">
               {[...Array(16)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-2 rounded select-none">
-                  <div className="w-12 h-12 rounded relative overflow-hidden shrink-0 bg-[#e5e5e5] animate-pulse" />
+                  <div className={`w-12 h-12 rounded relative overflow-hidden shrink-0 animate-pulse ${!user ? 'bg-white/10' : 'bg-[#e5e5e5]'}`} />
                   <div className="flex flex-col gap-2 w-full max-w-[160px]">
-                    <div className="h-3.5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
-                    <div className="h-2.5 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
+                    <div className={`h-3.5 rounded w-3/4 animate-pulse ${!user ? 'bg-white/10' : 'bg-[#e5e5e5]'}`} />
+                    <div className={`h-2.5 rounded w-1/2 animate-pulse ${!user ? 'bg-white/10' : 'bg-[#e5e5e5]'}`} />
                   </div>
                 </div>
               ))}
             </div>
           </div>
         ) : trendingTracks.length === 0 ? (
-          <div className="font-sans text-[11px] uppercase tracking-widest text-black/30">Nessuna traccia trovata.</div>
+          <div className={`font-sans text-[11px] uppercase tracking-widest ${!user ? 'text-white/30' : 'text-black/30'}`}>Nessuna traccia trovata.</div>
         ) : (
           <div className="w-full relative">
-            <ScrollArrows scrollRef={trendingRef} />
+            <ScrollArrows scrollRef={trendingRef} isDark={!user} offsetY={8} />
             <div ref={trendingRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
               <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
             {trendingTracks.slice(0, 16).map((track, i) => {
@@ -385,12 +385,12 @@ export default function Home() {
               return (
                 <div 
                   key={i} 
-                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
+                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border ${selectedTrackIds.has(track.id) ? (!user ? 'bg-white/10 border-white/20' : 'bg-black/5 border-black/10') : (!user ? 'border-transparent hover:bg-white/5 hover:border-white/10' : 'border-transparent hover:bg-black/5 hover:border-black/5')}`}
                   onClick={(e) => handleTrackClick(e, track, 'top')}
                   draggable
                   onDragStart={(e) => handleTrackDragStart(e, track.id)}
                 >
-                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5`}>
+                  <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 ${!user ? 'bg-white/5' : 'bg-black/5'}`}>
                     <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
                     <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
@@ -403,12 +403,12 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col overflow-hidden w-full">
                     <div 
-                      className="font-medium text-[14px] truncate text-black/90 hover:underline underline-offset-2 cursor-pointer"
+                      className={`font-medium text-[14px] truncate hover:underline underline-offset-2 cursor-pointer ${!user ? 'text-white/90' : 'text-black/90'}`}
                       onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
                     >
                       {cleanTitle(track.file_name)}
                     </div>
-                    <div className="font-sans text-[12px] text-black/50 flex items-center gap-1 mt-0.5 truncate">
+                    <div className={`font-sans text-[12px] flex items-center gap-1 mt-0.5 truncate ${!user ? 'text-white/50' : 'text-black/50'}`}>
                        {getComposers(track.composers)}
                     </div>
                   </div>
@@ -424,11 +424,11 @@ export default function Home() {
 
       {/* Suggested For You */}
       {suggestedPlaylists.length > 0 && (
-        <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section">
+        <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section no-radius !rounded-none">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Suggested for you</h2>
           
           <div className="w-full relative">
-            <ScrollArrows scrollRef={suggestedRef} />
+            <ScrollArrows scrollRef={suggestedRef} offsetY={8} />
             <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar">
               {suggestedPlaylists.map((pl) => (
                 <div 
@@ -469,12 +469,12 @@ export default function Home() {
 
       {/* Recently Played */}
       {recentlyPlayedTracks.length > 0 && (
-        <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section">
+        <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section no-radius !rounded-none">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Recently Played</h2>
           
           <div className="w-full relative">
-            <ScrollArrows scrollRef={recentlyPlayedRef} />
-            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+            <ScrollArrows scrollRef={recentlyPlayedRef} offsetY={16} />
+            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-8 hide-scrollbar -mx-4 px-4">
               <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
                 {recentlyPlayedTracks.map((track, i) => {
                   const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
@@ -512,7 +512,48 @@ export default function Home() {
         </div>
       )}
       
-      <Footer />
+      {/* About Section (Unauthenticated Only) */}
+      {!user && (
+        <div className="w-full bg-[#111] text-white pt-32 pb-32 px-8 flex flex-col items-center justify-center group/section no-radius !rounded-none">
+          <h2 className="text-sm font-bold uppercase tracking-[0.2em] mb-16 text-center text-white/50">About</h2>
+          
+          <div className="w-full max-w-[1400px] flex flex-col md:flex-row items-center justify-between gap-12 md:gap-24 mb-16 px-4 md:px-12">
+            <div className="w-full md:w-[45%] flex justify-start">
+              <img 
+                src="/assets/tom-fox-about.jpg" 
+                alt="Tom Fox" 
+                className="w-full aspect-[4/3] object-cover rounded-[32px] shadow-2xl border border-white/10 grayscale hover:grayscale-0 transition-all duration-700" 
+              />
+            </div>
+            
+            <div className="w-full md:w-[55%] flex flex-col justify-center gap-8 text-left py-4">
+              <p className="font-sans text-base md:text-[17px] leading-[2.2] text-white/80 font-light tracking-wide">
+                Tom Fox is a US based composer and sound designer who has worked with brands like Adidas and Anthropic.
+              </p>
+              <p className="font-sans text-base md:text-[17px] leading-[2.2] text-white/80 font-light tracking-wide">
+                His most important work, however, is giving YouTubers and creators music designed to move, push, thrill, and provide propulsion.
+              </p>
+              <p className="font-sans text-base md:text-[17px] leading-[2.2] text-white/80 font-light tracking-wide">
+                His musical research is hybrid—blending traditional instruments with electronic elements, minimalism, and distortion.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center mt-8">
+            <span className="font-sans text-sm uppercase tracking-widest text-white/50">
+              If you need to get in touch for licensing or just to learn more,
+            </span>
+            <button 
+              onClick={() => setGeneralContactModalOpen(true)}
+              className="font-sans text-sm uppercase tracking-widest font-bold border-b border-white hover:text-white/60 hover:border-white/60 transition-colors"
+            >
+              click here
+            </button>
+          </div>
+        </div>
+      )}
+
+      <Footer isMinimized={!!user} isDark={!user} />
     </div>
   );
 }

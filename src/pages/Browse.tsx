@@ -13,6 +13,7 @@ import { useSettings } from '../context/SettingsContext';
 import { generateEmbedding, initEmbeddingModel } from '../lib/embedding';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
 import { ChevronLeft, ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers, Plus, Heart, X, Loader2 } from 'lucide-react';
+import Footer from '../components/Footer';
 import PlaylistIsland from '../components/PlaylistIsland';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import TrackActionButtons from '../components/TrackActionButtons';
@@ -1293,13 +1294,7 @@ export default function Browse() {
       </div>
 
       {/* Fixed Minimized Footer */}
-      <footer className="w-full border-t border-black/10 py-4 px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-black/40 shrink-0 bg-[#fafafa] z-20">
-        <span>© {new Date().getFullYear()} Tom Fox Catalog</span>
-        <div className="flex gap-4">
-          <Link to="/terms" className="hover:text-black transition-colors">Terms</Link>
-          <Link to="/privacy" className="hover:text-black transition-colors">Privacy</Link>
-        </div>
-      </footer>
+      <Footer isMinimized={true} />
 
     </div>
   );
