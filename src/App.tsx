@@ -15,12 +15,12 @@ import Privacy from './pages/Privacy';
 import Admin from './pages/Admin';
 import AdminTracks from './components/admin/AdminTracks';
 import AdminUsers from './components/admin/AdminUsers';
+import AdminLicensing from './components/admin/AdminLicensing';
 import AdminTickets from './components/admin/AdminTickets';
 import AdminSettings from './components/admin/AdminSettings';
 import AdminFeatures from './components/admin/AdminFeatures';
 import AdminTomFoxStudio from './components/admin/AdminTomFoxStudio';
 import AdminTheater from './components/admin/AdminTheater';
-import AdminTags from './components/admin/AdminTags';
 import AdminPlaylists from './components/admin/AdminPlaylists';
 import AdminStatistics from './components/admin/AdminStatistics';
 import SharedPlayer from './pages/SharedPlayer';
@@ -80,7 +80,7 @@ function AppLayout() {
       <ScrollToTop />
       {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <Header />}
       
-      <div className="flex-grow flex flex-col">
+      <div className="flex-grow flex flex-col min-h-0">
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<DiscoverBrowseWrapper />} />
@@ -98,13 +98,12 @@ function AppLayout() {
               <Route index element={<Navigate to="tracks" replace />} />
               <Route path="tracks" element={<AdminTracks />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="licensing" element={<AdminLicensing />} />
               <Route path="tickets" element={<AdminTickets />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="features" element={<AdminFeatures />} />
               <Route path="studio" element={<AdminTomFoxStudio />} />
               <Route path="studio/:projectId" element={<AdminTheater />} />
-              <Route path="playlists" element={<AdminPlaylists />} />
-              <Route path="tags" element={<AdminTags />} />
               <Route path="statistics" element={<AdminStatistics />} />
             </Route>
             <Route path="/studio/:project_id" element={<TomFoxStudio />} />

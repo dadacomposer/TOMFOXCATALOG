@@ -12,14 +12,14 @@ export default function DiscoverBrowseWrapper() {
   
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const navHeight = isMobile ? 74 : 82;
-  const playerHeight = 90;
+  const playerHeight = currentTrack ? 90 : 0;
 
   const isDiscover = location.pathname === '/';
   const searchBarHeight = 69; // 68px for py-6 + input, 1px for border-t
 
   // Height calculation for translate-y:
   return (
-    <div className="relative w-full overflow-hidden flex flex-col bg-[#fafafa] no-radius !rounded-none" style={{ height: '100vh' }}>
+    <div className="relative flex-1 w-full overflow-hidden flex flex-col bg-[#fafafa] no-radius !rounded-none">
       
       {/* Background Layer: Discover (Home) */}
       <div 
@@ -33,8 +33,8 @@ export default function DiscoverBrowseWrapper() {
       <div 
         className={`absolute inset-x-0 bottom-0 z-10 flex flex-col transition-transform duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] no-radius !rounded-none`}
         style={{ 
-          height: `calc(100vh - ${navHeight - 1}px)`,
-          transform: isBrowse ? 'translateY(0)' : `translateY(calc(100% - ${currentTrack ? searchBarHeight + playerHeight : searchBarHeight}px))`
+          height: `calc(100vh - ${navHeight - 1}px - ${playerHeight}px)`,
+          transform: isBrowse ? 'translateY(0)' : `translateY(calc(100% - ${searchBarHeight}px))`
         }}
       >
         {/* We keep GlobalSearchBar sticky at the top of this sliding panel */}

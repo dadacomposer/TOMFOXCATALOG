@@ -12,7 +12,8 @@ import { DEFAULT_ARTWORK } from '../../config';
 import CopyMetadataModal from './CopyMetadataModal';
 import AdminUploadModal from './AdminUploadModal';
 import TrackFormatsModal from './TrackFormatsModal';
-
+import ImportTagsModal from './ImportTagsModal';
+import { Settings, CheckSquare, Square } from 'lucide-react';
 
 export type AdminTrack = {
   id: string;
@@ -49,6 +50,9 @@ export type AdminTrack = {
   genre?: string;
   energy_level?: string;
   description?: string;
+  humanly_reviewed?: boolean;
+  pro_registered?: boolean;
+  frequency_audio_registered?: boolean;
 };
 
 
@@ -83,6 +87,28 @@ export default function AdminTracks() {
   const [copySourceTrack, setCopySourceTrack] = useState<AdminTrack | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [formatManagerTrack, setFormatManagerTrack] = useState<AdminTrack | null>(null);
+
+  // --- Tags Management State ---
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [editingTagsTrack, setEditingTagsTrack] = useState<AdminTrack | null>(null);
+  const [reviewedFilter, setReviewedFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [proFilter, setProFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [freqFilter, setFreqFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [isTagsFilterDropdownOpen, setIsTagsFilterDropdownOpen] = useState(false);
+  const tagsFilterDropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [visibleColumns, setVisibleColumns] = useState({
+    trackInfo: true,
+    tags: true,
+    rev: true,
+    pro: true,
+    freq: true,
+    formats: true,
+    status: true,
+    actions: true
+  });
+  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
+  const columnDropdownRef = useRef<HTMLDivElement>(null);
 
   const observer = useRef<IntersectionObserver | null>(null);
   const lastElementRef = useCallback((node: HTMLDivElement) => {
@@ -371,6 +397,12 @@ export default function AdminTracks() {
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
         setIsSortDropdownOpen(false);
       }
+      if (tagsFilterDropdownRef.current && !tagsFilterDropdownRef.current.contains(event.target as Node)) {
+        setIsTagsFilterDropdownOpen(false);
+      }
+      if (columnDropdownRef.current && !columnDropdownRef.current.contains(event.target as Node)) {
+        setIsColumnDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -388,7 +420,7 @@ export default function AdminTracks() {
     try {
       let query = supabase
         .from('tracks')
-        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, subgenre, moods, scenarios, instruments, textures, human_tags, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, energy_level, description')
+        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, subgenre, moods, scenarios, instruments, textures, human_tags, movement, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, energy_level, description, humanly_reviewed, pro_registered, frequency_audio_registered')
         .order('release_date', { ascending: false });
 
       let allTracks: AdminTrack[] = [];
@@ -428,6 +460,15 @@ export default function AdminTracks() {
 
   useEffect(() => {
     let filtered = allFetchedTracks;
+    
+    // Tags Management Filters
+    if (reviewedFilter === 'yes') filtered = filtered.filter(t => t.humanly_reviewed);
+    if (reviewedFilter === 'no') filtered = filtered.filter(t => !t.humanly_reviewed);
+    if (proFilter === 'yes') filtered = filtered.filter(t => t.pro_registered);
+    if (proFilter === 'no') filtered = filtered.filter(t => !t.pro_registered);
+    if (freqFilter === 'yes') filtered = filtered.filter(t => t.frequency_audio_registered);
+    if (freqFilter === 'no') filtered = filtered.filter(t => !t.frequency_audio_registered);
+
     const scores = new Map<string, number>();
 
     if (debouncedQuery) {
@@ -505,7 +546,28 @@ export default function AdminTracks() {
 
     setTracks(sorted);
     setVisibleCount(20);
-  }, [debouncedQuery, allFetchedTracks, sortBy]);
+  }, [debouncedQuery, allFetchedTracks, sortBy, reviewedFilter, proFilter, freqFilter]);
+
+  const parseTags = (val: any) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    try { return JSON.parse(val); } catch { return []; }
+  };
+
+  const toggleBoolean = async (trackId: string, field: 'humanly_reviewed' | 'pro_registered' | 'frequency_audio_registered', currentValue: boolean) => {
+    try {
+      const newValue = !currentValue;
+      setAllFetchedTracks(prev => prev.map(t => t.id === trackId ? { ...t, [field]: newValue } : t));
+      const { error } = await supabase.from('tracks').update({ [field]: newValue }).eq('id', trackId);
+      if (error) throw error;
+      toast.success(`${field} updated`);
+    } catch (error) {
+      console.error(error);
+      toast.error(`Failed to update ${field}`);
+      // Revert on error
+      setAllFetchedTracks(prev => prev.map(t => t.id === trackId ? { ...t, [field]: currentValue } : t));
+    }
+  };
 
   const handleToggleHide = async (id: string, currentHidden: boolean) => {
     try {
@@ -1014,16 +1076,66 @@ toast.success('Track restored successfully');
             </div>
           )}
         </div>
+
+        {/* Tags Filters Dropdown */}
+        <div className="relative flex items-center gap-2 px-4 bg-white border border-black/10 rounded-xl shadow-sm shrink-0 h-12" ref={tagsFilterDropdownRef}>
+          <span className="text-[10px] font-bold tracking-widest uppercase text-black/40">Filters</span>
+          <button 
+            onClick={() => setIsTagsFilterDropdownOpen(!isTagsFilterDropdownOpen)}
+            className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-black outline-none cursor-pointer"
+          >
+            Tags & Status
+            <svg className={`w-3 h-3 transition-transform ${isTagsFilterDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          
+          {isTagsFilterDropdownOpen && (
+            <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-2">
+              <div className="px-4 py-2 border-b border-black/5">
+                <div className="text-[10px] font-bold text-black/40 uppercase tracking-widest mb-2">Humanly Reviewed</div>
+                <div className="flex gap-2">
+                  {['all', 'yes', 'no'].map(val => (
+                    <button key={val} onClick={() => setReviewedFilter(val as any)} className={`flex-1 py-1 text-[10px] font-bold uppercase rounded ${reviewedFilter === val ? 'bg-black text-white' : 'bg-black/5 text-black hover:bg-black/10'}`}>{val}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="px-4 py-2 border-b border-black/5">
+                <div className="text-[10px] font-bold text-black/40 uppercase tracking-widest mb-2">PRO Registered</div>
+                <div className="flex gap-2">
+                  {['all', 'yes', 'no'].map(val => (
+                    <button key={val} onClick={() => setProFilter(val as any)} className={`flex-1 py-1 text-[10px] font-bold uppercase rounded ${proFilter === val ? 'bg-black text-white' : 'bg-black/5 text-black hover:bg-black/10'}`}>{val}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="px-4 py-2">
+                <div className="text-[10px] font-bold text-black/40 uppercase tracking-widest mb-2">Freq Registered</div>
+                <div className="flex gap-2">
+                  {['all', 'yes', 'no'].map(val => (
+                    <button key={val} onClick={() => setFreqFilter(val as any)} className={`flex-1 py-1 text-[10px] font-bold uppercase rounded ${freqFilter === val ? 'bg-black text-white' : 'bg-black/5 text-black hover:bg-black/10'}`}>{val}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Import Tags Button */}
+        <button 
+          onClick={() => setIsImportModalOpen(true)}
+          className="flex items-center justify-center gap-2 px-4 bg-black text-white rounded-xl shadow-sm shrink-0 h-12 hover:bg-black/80 transition-colors"
+        >
+          <Upload className="w-4 h-4" />
+          <span className="text-[11px] font-bold tracking-widest uppercase">Import CSV</span>
+        </button>
         <div className="flex items-center bg-black/5 p-1 rounded-xl h-12 shrink-0">
           <button
             onClick={() => setActiveTab('active')}
-            className={`px-4 text-sm font-medium rounded-lg transition-all h-full flex items-center justify-center ${activeTab === 'active' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black'}`}
+            className={`px-4 text-[11px] font-bold tracking-widest uppercase rounded-lg transition-all h-full flex items-center justify-center ${activeTab === 'active' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/5'}`}
           >
             Active ({tracks.filter(t => !t.deleted_at).length})
           </button>
           <button
             onClick={() => setActiveTab('trash')}
-            className={`px-4 text-sm rounded-lg transition-all flex items-center justify-center h-full ${activeTab === 'trash' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black'}`}
+            className={`px-4 rounded-lg transition-all flex items-center justify-center h-full ${activeTab === 'trash' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/5'}`}
             title={`Trash (${tracks.filter(t => t.deleted_at).length})`}
           >
             <Trash2 className="w-4 h-4" />
@@ -1096,168 +1208,283 @@ toast.success('Track restored successfully');
                       }}
                     />
                   </th>
-                  <th className="px-6 py-4 font-bold">Track Name</th>
-                  <th className="px-6 py-4 font-bold">Files Format</th>
-                  <th className="px-6 py-4 font-bold">Status</th>
-                  <th className="px-6 py-4 font-bold text-right">Actions</th>
+                  {visibleColumns.trackInfo && <th className="px-6 py-4 font-bold">Track Name</th>}
+                  {visibleColumns.tags && <th className="px-6 py-4 font-bold w-1/4">Tags</th>}
+                  {visibleColumns.rev && <th className="px-2 py-4 font-bold text-center" title="Humanly Reviewed">Rev</th>}
+                  {visibleColumns.pro && <th className="px-2 py-4 font-bold text-center" title="PRO Registered">PRO</th>}
+                  {visibleColumns.freq && <th className="px-2 py-4 font-bold text-center" title="Frequency Audio Registered">Freq</th>}
+                  {visibleColumns.formats && <th className="px-6 py-4 font-bold">Files Format</th>}
+                  {visibleColumns.status && <th className="px-6 py-4 font-bold">Status</th>}
+                  {visibleColumns.actions && (
+                    <th className="px-6 py-4 font-bold text-right relative">
+                      <div className="flex items-center justify-end gap-2">
+                        <span>Actions</span>
+                        <div className="relative" ref={columnDropdownRef}>
+                          <button onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)} className="p-1 hover:bg-black/10 rounded-full transition-colors text-black/40 hover:text-black">
+                            <Settings className="w-4 h-4" />
+                          </button>
+                          {isColumnDropdownOpen && (
+                            <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1 text-left">
+                              {Object.entries({
+                                trackInfo: 'Track Name',
+                                tags: 'Tags',
+                                rev: 'Humanly Reviewed (Rev)',
+                                pro: 'PRO Registered',
+                                freq: 'Freq Registered',
+                                formats: 'Files Format',
+                                status: 'Status'
+                              }).map(([key, label]) => (
+                                <label key={key} className="flex items-center gap-3 px-4 py-2 hover:bg-black/5 cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    className="w-3.5 h-3.5 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer"
+                                    checked={visibleColumns[key as keyof typeof visibleColumns]}
+                                    onChange={(e) => setVisibleColumns(prev => ({ ...prev, [key]: e.target.checked }))}
+                                  />
+                                  <span className="text-[11px] font-bold uppercase tracking-wider text-black/80">{label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/5">
-                {displayedTracks.map((track) => (
-                  <React.Fragment key={track.id}>
-                    <tr className={`transition-colors ${selectedTracks.has(track.id) ? 'bg-black/5' : 'hover:bg-black/[0.02]'}`}>
-                      <td className="px-6 py-4">
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer"
-                        checked={selectedTracks.has(track.id)}
-                        onChange={(e) => {
-                          const newSet = new Set(selectedTracks);
-                          if (e.target.checked) newSet.add(track.id);
-                          else newSet.delete(track.id);
-                          setSelectedTracks(newSet);
-                        }}
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 overflow-hidden relative group/play cursor-pointer" onClick={() => currentTrack?.id === track.id ? togglePlay() : playTrack(track as any, currentViewList as any[])}>
-                          <TrackArtwork track={track as any} className="w-full h-full object-cover" />
-                          <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/play:opacity-100'}`}>
-                            {currentTrack?.id === track.id && isPlaying ? (
-                              <Pause className="w-4 h-4 fill-white text-white" />
+                {displayedTracks.map((track) => {
+                  const allTags = [
+                    ...parseTags(track.subgenre),
+                    ...parseTags(track.moods),
+                    ...parseTags(track.scenarios),
+                    ...parseTags(track.instruments),
+                    ...parseTags(track.textures),
+                    ...parseTags(track.human_tags),
+                    ...(track.movement ? parseTags(track.movement) : [])
+                  ];
+
+                  return (
+                    <React.Fragment key={track.id}>
+                      <tr className={`transition-colors ${selectedTracks.has(track.id) ? 'bg-black/5' : 'hover:bg-black/[0.02]'}`}>
+                        <td className="px-6 py-4">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer"
+                          checked={selectedTracks.has(track.id)}
+                          onChange={(e) => {
+                            const newSet = new Set(selectedTracks);
+                            if (e.target.checked) newSet.add(track.id);
+                            else newSet.delete(track.id);
+                            setSelectedTracks(newSet);
+                          }}
+                        />
+                      </td>
+                      {visibleColumns.trackInfo && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 overflow-hidden relative group/play cursor-pointer" onClick={() => currentTrack?.id === track.id ? togglePlay() : playTrack(track as any, currentViewList as any[])}>
+                              <TrackArtwork track={track as any} className="w-full h-full object-cover" />
+                              <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/play:opacity-100'}`}>
+                                {currentTrack?.id === track.id && isPlaying ? (
+                                  <Pause className="w-4 h-4 fill-white text-white" />
+                                ) : (
+                                  <Play className="w-4 h-4 fill-white text-white translate-x-[1px]" />
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-black truncate max-w-[200px] sm:max-w-md flex items-center gap-2">
+                                {track.file_name.replace(/\.[^/.]+$/, '')}
+                                {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 uppercase tracking-widest shrink-0">New</span>
+                                )}
+                                {track.versions && track.versions.length > 0 && (
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setExpandedTrackId(expandedTrackId === track.id ? null : track.id); }}
+                                    className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${expandedTrackId === track.id ? 'bg-black/10 text-black' : 'text-black/40 hover:bg-black/5 hover:text-black'}`}
+                                    title={`${track.versions.length} alternative versions`}
+                                  >
+                                    <Layers className="w-3.5 h-3.5" />
+                                    <span className="font-bold text-[10px]">{track.versions.length}</span>
+                                  </button>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                      )}
+                      
+                      {visibleColumns.tags && (
+                        <td className="px-6 py-4">
+                          <div 
+                            className="flex flex-wrap gap-1.5 cursor-pointer p-2 -ml-2 rounded-xl hover:bg-black/5 transition-colors"
+                            onClick={() => handleEditClick(track)}
+                            title="Click to edit tags"
+                          >
+                            {allTags.length > 0 ? (
+                               allTags.slice(0, 10).map((t, i) => (
+                                 <span key={i} className="px-2 py-0.5 bg-black/5 text-black rounded-lg text-xs whitespace-nowrap">
+                                   {t}
+                                 </span>
+                               ))
                             ) : (
-                              <Play className="w-4 h-4 fill-white text-white translate-x-[1px]" />
+                               <span className="text-xs text-black/30 italic">No tags</span>
+                            )}
+                            {allTags.length > 10 && (
+                              <span className="px-2 py-0.5 bg-black/5 text-black/50 rounded-lg text-xs whitespace-nowrap">
+                                +{allTags.length - 10}
+                              </span>
                             )}
                           </div>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-black truncate max-w-[200px] sm:max-w-md flex items-center gap-2">
-                            {track.file_name.replace(/\.[^/.]+$/, '')}
-                            {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 uppercase tracking-widest shrink-0">New</span>
-                            )}
-                            {track.versions && track.versions.length > 0 && (
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setExpandedTrackId(expandedTrackId === track.id ? null : track.id); }}
-                                className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${expandedTrackId === track.id ? 'bg-black/10 text-black' : 'text-black/40 hover:bg-black/5 hover:text-black'}`}
-                                title={`${track.versions.length} alternative versions`}
-                              >
-                                <Layers className="w-3.5 h-3.5" />
-                                <span className="font-bold text-[10px]">{track.versions.length}</span>
-                              </button>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5">
-                        <div className="relative group/tooltip flex items-center">
-                          <button onClick={() => setFormatManagerTrack(track)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${track.has_mp3 ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 'bg-black/5 text-black/30 hover:bg-black/10 hover:text-black'}`}>MP3</button>
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">{track.has_mp3 ? 'Original MP3' : 'Missing MP3 (Click to add)'}</div>
-                        </div>
-                        <div className="relative group/tooltip flex items-center">
-                          <button onClick={() => setFormatManagerTrack(track)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${track.has_watermarked ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-black/5 text-black/30 hover:bg-black/10 hover:text-black'}`}>W</button>
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">{track.has_watermarked ? 'Watermarked MP3' : 'Missing Watermark (Click to add)'}</div>
-                        </div>
-                        <div className="relative group/tooltip flex items-center">
-                          <button onClick={() => setFormatManagerTrack(track)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${track.has_wav ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-black/5 text-black/30 hover:bg-black/10 hover:text-black'}`}>WAV</button>
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">{track.has_wav ? 'HD WAV' : 'Missing WAV (Click to add)'}</div>
-                        </div>
-                        <div className="relative group/tooltip flex items-center">
-                          <button onClick={() => setFormatManagerTrack(track)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${track.has_aiff ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-black/5 text-black/30 hover:bg-black/10 hover:text-black'}`}>AIFF</button>
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">{track.has_aiff ? 'HD AIFF' : 'Missing AIFF (Click to add)'}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {activeTab === 'active' ? (
-                        track.is_hidden ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-yellow-500/10 text-yellow-600">
-                            <EyeOff className="w-3 h-3" /> Hidden
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-500/10 text-green-600">
-                            <Eye className="w-3 h-3" /> Public
-                          </span>
-                        )
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600">
-                          <AlertTriangle className="w-3 h-3" /> {getDaysRemaining(track.deleted_at!)} days left
-                        </span>
+                        </td>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {activeTab === 'active' ? (
-                          <>
-                            <button
-                              onClick={() => handleAdminDownload([track])}
-                              className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
-                              title="Download track"
-                            >
-                              <Download className="w-4 h-4" />
+
+                      {visibleColumns.rev && (
+                        <td className="px-2 py-4">
+                          <div className="flex justify-center">
+                            <button onClick={() => toggleBoolean(track.id, 'humanly_reviewed', track.humanly_reviewed || false)} className={`p-2 rounded-lg transition-colors ${track.humanly_reviewed ? 'text-green-500 hover:bg-green-50' : 'text-black/20 hover:text-black/60 hover:bg-black/5'}`}>
+                              {track.humanly_reviewed ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
                             </button>
-                            <button
-                              onClick={() => handleEditClick(track)}
-                              className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
-                              title="Edit metadata"
-                            >
-                              <Edit2 className="w-4 h-4" />
+                          </div>
+                        </td>
+                      )}
+
+                      {visibleColumns.pro && (
+                        <td className="px-2 py-4">
+                          <div className="flex justify-center">
+                            <button onClick={() => toggleBoolean(track.id, 'pro_registered', track.pro_registered || false)} className={`p-2 rounded-lg transition-colors ${track.pro_registered ? 'text-blue-500 hover:bg-blue-50' : 'text-black/20 hover:text-black/60 hover:bg-black/5'}`}>
+                              {track.pro_registered ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
                             </button>
-                            <button
-                              onClick={() => handleShare(track.id)}
-                              className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
-                              title="Share specific track link"
-                            >
-                              <Share2 className="w-4 h-4" />
+                          </div>
+                        </td>
+                      )}
+
+                      {visibleColumns.freq && (
+                        <td className="px-2 py-4">
+                          <div className="flex justify-center">
+                            <button onClick={() => toggleBoolean(track.id, 'frequency_audio_registered', track.frequency_audio_registered || false)} className={`p-2 rounded-lg transition-colors ${track.frequency_audio_registered ? 'text-purple-500 hover:bg-purple-50' : 'text-black/20 hover:text-black/60 hover:bg-black/5'}`}>
+                              {track.frequency_audio_registered ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
                             </button>
-                            <button
-                              onClick={() => setCopySourceTrack(track)}
-                              className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
-                              title="Copy metadata to other tracks"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleToggleHide(track.id, track.is_hidden)}
-                              className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
-                              title={track.is_hidden ? 'Make public' : 'Hide from public'}
-                            >
-                              {track.is_hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                            </button>
-                            <button
-                              onClick={() => handleMoveToTrash(track.id)}
-                              className="p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all ml-2"
-                              title="Move to trash"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleRestore(track.id)}
-                              className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-black hover:bg-black/5 border border-black/10 rounded-lg transition-all flex items-center gap-2"
-                            >
-                              <RefreshCw className="w-3 h-3" /> Restore
-                            </button>
-                            <button
-                              onClick={() => handleForceDelete(track.id)}
-                              className="p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all ml-2"
-                              title="Delete permanently"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedTrackId === track.id && track.versions && track.versions.length > 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-0 bg-black/[0.02] border-t-0">
+                          </div>
+                        </td>
+                      )}
+
+                      {visibleColumns.formats && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <div className="relative group/tooltip flex items-center">
+                              <button onClick={() => setFormatManagerTrack(track)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${track.has_mp3 ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 'bg-black/5 text-black/30 hover:bg-black/10 hover:text-black'}`}>MP3</button>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">{track.has_mp3 ? 'Original MP3' : 'Missing MP3 (Click to add)'}</div>
+                            </div>
+                            <div className="relative group/tooltip flex items-center">
+                              <button onClick={() => setFormatManagerTrack(track)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${track.has_watermarked ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-black/5 text-black/30 hover:bg-black/10 hover:text-black'}`}>W</button>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">{track.has_watermarked ? 'Watermarked MP3' : 'Missing Watermark (Click to add)'}</div>
+                            </div>
+                            <div className="relative group/tooltip flex items-center">
+                              <button onClick={() => setFormatManagerTrack(track)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${track.has_wav ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-black/5 text-black/30 hover:bg-black/10 hover:text-black'}`}>WAV</button>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">{track.has_wav ? 'HD WAV' : 'Missing WAV (Click to add)'}</div>
+                            </div>
+                            <div className="relative group/tooltip flex items-center">
+                              <button onClick={() => setFormatManagerTrack(track)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${track.has_aiff ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'bg-black/5 text-black/30 hover:bg-black/10 hover:text-black'}`}>AIFF</button>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-bold rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">{track.has_aiff ? 'HD AIFF' : 'Missing AIFF (Click to add)'}</div>
+                            </div>
+                          </div>
+                        </td>
+                      )}
+                      
+                      {visibleColumns.status && (
+                        <td className="px-6 py-4">
+                          {activeTab === 'active' ? (
+                            track.is_hidden ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-yellow-500/10 text-yellow-600">
+                                <EyeOff className="w-3 h-3" /> Hidden
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-500/10 text-green-600">
+                                <Eye className="w-3 h-3" /> Public
+                              </span>
+                            )
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600">
+                              <AlertTriangle className="w-3 h-3" /> {getDaysRemaining(track.deleted_at!)} days left
+                            </span>
+                          )}
+                        </td>
+                      )}
+
+                      {visibleColumns.actions && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            {activeTab === 'active' ? (
+                              <>
+                                <button
+                                  onClick={() => handleAdminDownload([track])}
+                                  className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
+                                  title="Download track"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditClick(track)}
+                                  className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
+                                  title="Edit metadata"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleShare(track.id)}
+                                  className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
+                                  title="Share specific track link"
+                                >
+                                  <Share2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => setCopySourceTrack(track)}
+                                  className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
+                                  title="Copy metadata to other tracks"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleToggleHide(track.id, track.is_hidden)}
+                                  className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
+                                  title={track.is_hidden ? 'Make public' : 'Hide from public'}
+                                >
+                                  {track.is_hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                </button>
+                                <button
+                                  onClick={() => handleMoveToTrash(track.id)}
+                                  className="p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all ml-2"
+                                  title="Move to trash"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleRestore(track.id)}
+                                  className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-black hover:bg-black/5 border border-black/10 rounded-lg transition-all flex items-center gap-2"
+                                >
+                                  <RefreshCw className="w-3 h-3" /> Restore
+                                </button>
+                                <button
+                                  onClick={() => handleForceDelete(track.id)}
+                                  className="p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all ml-2"
+                                  title="Delete permanently"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                    {expandedTrackId === track.id && track.versions && track.versions.length > 0 && (
+                      <tr>
+                        <td colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="px-6 py-0 bg-black/[0.02] border-t-0">
                         <div className="border-l-[3px] border-black/5 ml-14 pl-4 py-2 space-y-1 mb-2">
                           {track.versions.map(version => (
                             <div 
@@ -1306,7 +1533,8 @@ toast.success('Track restored successfully');
                     </tr>
                   )}
                   </React.Fragment>
-                ))}
+                );
+              })}
                 
                 {!isLoading && currentViewList.length === 0 && (
                   <tr>
@@ -1351,6 +1579,15 @@ toast.success('Track restored successfully');
             setCopySourceTrack(null);
             setSelectedTracks(new Set());
           }}
+        />
+      )}
+
+      {/* Import Tags Modal */}
+      {isImportModalOpen && (
+        <ImportTagsModal
+          onClose={() => setIsImportModalOpen(false)}
+          onSuccess={fetchTracks}
+          existingTracks={allFetchedTracks}
         />
       )}
 

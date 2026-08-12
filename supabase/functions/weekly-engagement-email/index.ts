@@ -32,6 +32,8 @@ serve(async (req) => {
       .from('tracks')
       .select('file_name')
       .or(`created_at.gte.${sevenDaysAgo.toISOString()},release_date.gte.${sevenDaysAgo.toISOString()}`)
+      .is('deleted_at', null)
+      .eq('is_hidden', false)
 
     if (tracksError) throw tracksError
 

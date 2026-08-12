@@ -12,6 +12,7 @@ import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 
 type Track = any;
 
@@ -67,6 +68,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const { removeTrackFromPlaylist, favoritesPlaylist } = useUserPlaylists();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
+  const { profile } = useAuth();
 
   useEffect(() => {
     async function load() {
@@ -357,14 +359,14 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                       </button>
                     ) : (
                       <>
-                        <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
-                          <Download className="w-4 h-4" />
-                        </button>
-                        {settings.free_watermarks_enabled && (
-                          <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>
-                            <ShoppingBag className="w-3.5 h-3.5" /> License
+                        {profile?.can_download !== false && (
+                          <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
+                            <Download className="w-4 h-4" />
                           </button>
                         )}
+                        <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>
+                          <ShoppingBag className="w-3.5 h-3.5" /> License
+                        </button>
                       </>
                     )}
                   </div>

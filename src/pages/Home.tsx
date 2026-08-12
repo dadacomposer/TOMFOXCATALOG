@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import { getComposers } from '../utils/trackUtils';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
+import { useLicense } from '../context/LicenseContext';
 import { useSettings } from '../context/SettingsContext';
 import { FeaturedSun } from '../components/TopPicksEffects';
 
@@ -114,7 +115,8 @@ export default function Home() {
   const suggestedRef = useRef<HTMLDivElement>(null);
   const recentlyPlayedRef = useRef<HTMLDivElement>(null);
 
-  const { user, setGeneralContactModalOpen } = useAuth();
+  const { user } = useAuth();
+  const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
   const { 
     playTrack, playPlaylist, currentTrack, isPlaying, togglePlay, 
@@ -544,7 +546,7 @@ export default function Home() {
               If you need to get in touch for licensing or just to learn more,
             </span>
             <button 
-              onClick={() => setGeneralContactModalOpen(true)}
+              onClick={() => openLicenseModal()}
               className="font-sans text-sm uppercase tracking-widest font-bold border-b border-white hover:text-white/60 hover:border-white/60 transition-colors"
             >
               click here

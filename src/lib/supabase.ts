@@ -353,32 +353,10 @@ export async function fetchSuggestedPlaylists(userId: string) {
 
 
 export async function searchTracksByTitle(query: string) {
-  // Try full text search first (handles stemming: investigation -> investig)
-  const { data: ftsData, error: ftsError } = await supabase
-    .from('tracks')
-    .select('*, versions:tracks!parent_track_id(*)')
-    .eq('is_hidden', false)
-    .is('deleted_at', null)
-    .eq('track_type', 'main')
-    .textSearch('file_name', query, {
-      type: 'websearch',
-      config: 'english'
-    })
-    .limit(100);
-    
-  if (!ftsError && ftsData && ftsData.length > 0) {
-    return filterDeletedVersions(ftsData);
-  }
-
-  // Fallback to simple ilike if full text search returns nothing
+  // Use fuzzy search RPC which handles both exact matches, ilike, and trigram similarity
   const { data, error } = await supabase
-    .from('tracks')
-    .select('*, versions:tracks!parent_track_id(*)')
-    .eq('is_hidden', false)
-    .is('deleted_at', null)
-    .eq('track_type', 'main')
-    .ilike('file_name', `%${query}%`)
-    .limit(100);
+    .rpc('search_tracks_fuzzy', { search_query: query })
+    .select('*, versions:tracks!parent_track_id(*)');
     
   if (error) {
     console.error('Error fetching tracks by title:', error);

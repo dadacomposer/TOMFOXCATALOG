@@ -6,6 +6,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { getComposers } from '../utils/trackUtils';
 import { getPreviewTimings, parseWaveform } from '../lib/audioUtils';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
+import { useAuth } from '../context/AuthContext';
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import TrackActionButtons from './TrackActionButtons';
@@ -48,6 +49,7 @@ export default function GlobalPlayer() {
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
+  const { profile } = useAuth();
   const [isSimilarExpanded, setIsSimilarExpanded] = React.useState(false);
   const [referenceTrack, setReferenceTrack] = React.useState<Track | null>(null);
   const [similarTracks, setSimilarTracks] = React.useState<Track[]>([]);
@@ -338,11 +340,13 @@ export default function GlobalPlayer() {
         <button className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} ml-2`}><Volume2 className="w-5 h-5" /></button>
         {!isSharedPage && (
           <div className="flex gap-2 ml-4">
-            <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
-              <Download className="w-4 h-4" />
-            </button>
-            {location.pathname !== '/admin' && settings.free_watermarks_enabled && (
-              <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={() => { if (currentTrack) { openLicenseModal(currentTrack); } }}>
+            {profile?.can_download !== false && (
+              <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
+                <Download className="w-4 h-4" />
+              </button>
+            )}
+            {location.pathname !== '/admin' && (
+              <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={() => { if (currentTrack) openLicenseModal(currentTrack); }}>
                 <ShoppingBag className="w-3.5 h-3.5" /> License
               </button>
             )}
@@ -446,14 +450,14 @@ export default function GlobalPlayer() {
 
                   {/* Download and License buttons */}
                   <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[280px]">
-                    <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { e.stopPropagation(); openDownloadModal(track, e); }}>
-                      <Download className="w-4 h-4" />
-                    </button>
-                    {settings.free_watermarks_enabled && (
-                      <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] uppercase tracking-widest" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>
-                        <ShoppingBag className="w-3 h-3" /> License
+                    {profile?.can_download !== false && (
+                      <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { e.stopPropagation(); openDownloadModal(track, e); }}>
+                        <Download className="w-4 h-4" />
                       </button>
                     )}
+                    <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] uppercase tracking-widest" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>
+                      <ShoppingBag className="w-3 h-3" /> License
+                    </button>
                   </div>
                 </div>
               ))}

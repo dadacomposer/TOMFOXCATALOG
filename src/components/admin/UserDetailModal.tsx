@@ -11,8 +11,9 @@ type UserDetailModalProps = {
 export default function UserDetailModal({ user, onClose }: UserDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'overview'|'billing'|'workspaces'|'compliance'|'activity'>('overview');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUpdatingDL, setIsUpdatingDL] = useState(false);
+  const [canDownload, setCanDownload] = useState(user.can_download !== false);
 
-  
   const [logs, setLogs] = useState<any[]>([]);
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [memberWorkspaces, setMemberWorkspaces] = useState<any[]>([]);
@@ -66,6 +67,21 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
       console.error(e);
     }
     setIsLoading(false);
+  };
+
+  const handleToggleDownload = async () => {
+    setIsUpdatingDL(true);
+    const newVal = !canDownload;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ can_download: newVal })
+      .eq('id', user.id);
+      
+    if (!error) {
+      setCanDownload(newVal);
+      user.can_download = newVal; // Update parent prop reference optimistically
+    }
+    setIsUpdatingDL(false);
   };
 
 
@@ -152,6 +168,25 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
                     <div>
                       <p className="text-xs font-bold uppercase tracking-widest text-black/40 mb-1">Role</p>
                       <p>{user.role || 'Member'}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-black/40 mb-4">Permissions</h3>
+                  <div className="bg-white rounded-2xl border border-black/10 p-6 space-y-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-sm">Download Tracks</p>
+                        <p className="text-xs text-black/50 mt-1">Allow user to download tracks.</p>
+                      </div>
+                      <button
+                        onClick={handleToggleDownload}
+                        disabled={isUpdatingDL}
+                        className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${canDownload !== false ? 'bg-[#111111]' : 'bg-[#e0e0e0]'} disabled:opacity-50`}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 ${canDownload !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </button>
                     </div>
                   </div>
                 </div>

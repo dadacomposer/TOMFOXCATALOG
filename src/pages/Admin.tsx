@@ -120,21 +120,14 @@ export default function Admin() {
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Users</span>
           </NavLink>
           <NavLink
-            to="/admin/tags"
+            to="/admin/licensing"
             className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
-            title="Tags"
+            title="Licensing"
           >
-            <div className="w-6 h-6 shrink-0 flex items-center justify-center"><Tag className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Tags</span>
+            <div className="w-6 h-6 shrink-0 flex items-center justify-center"><FileText className="w-5 h-5" /></div>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Licensing</span>
           </NavLink>
-          <NavLink
-            to="/admin/playlists"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
-            title="Playlists"
-          >
-            <div className="w-6 h-6 shrink-0 flex items-center justify-center"><ListMusic className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Playlists</span>
-          </NavLink>
+
           <NavLink
             to="/admin/statistics"
             className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}

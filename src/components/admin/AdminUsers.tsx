@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Search, UserCheck, UserX, User, Shield, Calendar, DollarSign, Loader2 } from 'lucide-react';
+import { Search, UserCheck, UserX, User, Shield, Calendar, DollarSign, Loader2, Download, CheckSquare, Square } from 'lucide-react';
 import UserDetailModal from './UserDetailModal';
 
 export type ProfileData = {
@@ -18,6 +18,7 @@ export type ProfileData = {
   banned_at: string | null;
   current_period_end: string | null;
   billing_interval?: string | null;
+  can_download: boolean;
 };
 
 export default function AdminUsers() {
@@ -28,6 +29,25 @@ export default function AdminUsers() {
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedUser, setSelectedUser] = useState<ProfileData | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [isUpdatingBulk, setIsUpdatingBulk] = useState(false);
+
+  const handleBulkToggleDownload = async (enable: boolean) => {
+    if (selectedUserIds.size === 0) return;
+    setIsUpdatingBulk(true);
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ can_download: enable })
+      .in('id', Array.from(selectedUserIds));
+      
+    if (!error) {
+      setUsers(users.map(u => selectedUserIds.has(u.id) ? { ...u, can_download: enable } : u));
+    }
+    
+    setIsUpdatingBulk(false);
+    setSelectedUserIds(new Set());
+  };
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -124,6 +144,27 @@ export default function AdminUsers() {
               className="w-full bg-black/5 border border-black/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-black/20"
             />
           </div>
+
+          {selectedUserIds.size > 0 && (
+            <div className="flex items-center gap-2 border-l border-black/10 pl-4 ml-4">
+              <span className="text-xs font-bold text-black/50 uppercase tracking-widest">{selectedUserIds.size} selected</span>
+              <button
+                onClick={() => handleBulkToggleDownload(true)}
+                disabled={isUpdatingBulk}
+                className="px-3 py-1.5 rounded-lg bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-black/80 disabled:opacity-50 transition-colors flex items-center gap-1"
+              >
+                <Download className="w-3 h-3" /> Allow DL
+              </button>
+              <button
+                onClick={() => handleBulkToggleDownload(false)}
+                disabled={isUpdatingBulk}
+                className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-600 text-xs font-bold uppercase tracking-widest hover:bg-red-500/20 disabled:opacity-50 transition-colors flex items-center gap-1"
+              >
+                Revoke DL
+              </button>
+            </div>
+          )}
+
           <div className="relative flex items-center gap-2 px-4 bg-white border border-black/10 rounded-xl shadow-sm shrink-0 h-10" ref={filterDropdownRef}>
             <button 
               onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
@@ -170,6 +211,20 @@ export default function AdminUsers() {
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-white shadow-sm z-10">
                 <tr>
+                  <th className="px-6 py-4 border-b border-black/10 w-12">
+                    <button 
+                      onClick={() => {
+                        if (selectedUserIds.size === filteredUsers.length) {
+                          setSelectedUserIds(new Set());
+                        } else {
+                          setSelectedUserIds(new Set(filteredUsers.map(u => u.id)));
+                        }
+                      }}
+                      className="text-black/40 hover:text-black transition-colors"
+                    >
+                      {selectedUserIds.size === filteredUsers.length && filteredUsers.length > 0 ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                    </button>
+                  </th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-black/50 border-b border-black/10">User</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-black/50 border-b border-black/10">Status</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-black/50 border-b border-black/10">Role</th>
@@ -180,9 +235,27 @@ export default function AdminUsers() {
                 {filteredUsers.map((user) => (
                   <tr 
                     key={user.id} 
-                    onClick={() => setSelectedUser(user)}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest('.user-checkbox')) return;
+                      setSelectedUser(user);
+                    }}
                     className="border-b border-black/5 hover:bg-black/[0.02] cursor-pointer transition-colors"
                   >
+                    <td className="px-6 py-4">
+                      <button
+                        className="user-checkbox text-black/40 hover:text-black transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newSet = new Set(selectedUserIds);
+                          if (newSet.has(user.id)) newSet.delete(user.id);
+                          else newSet.add(user.id);
+                          setSelectedUserIds(newSet);
+                        }}
+                      >
+                        {selectedUserIds.has(user.id) ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                      </button>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img 
@@ -191,7 +264,12 @@ export default function AdminUsers() {
                           className="w-8 h-8 rounded-full"
                         />
                         <div>
-                          <p className="font-bold">{user.first_name} {user.last_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold">{user.first_name} {user.last_name}</p>
+                            {user.can_download === false && (
+                              <span className="bg-red-500/10 text-red-600 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md">DL Revoked</span>
+                            )}
+                          </div>
                           <p className="text-xs text-black/50 truncate max-w-[200px]">{user.id}</p>
                         </div>
                       </div>

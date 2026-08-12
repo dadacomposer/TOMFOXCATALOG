@@ -743,6 +743,7 @@ export default function Browse() {
             <div className="flex items-center bg-black text-white px-4 py-2.5 rounded-[14px] shadow-lg animate-in fade-in zoom-in duration-200">
               <span className="text-[11px] font-medium uppercase tracking-widest mr-4">{selectedTrackIds.size} tracks selected</span>
               <div className="flex items-center gap-3 border-l border-white/20 pl-4">
+              {profile?.can_download !== false && (
                 <button 
                   className="hover:text-white/70 transition-colors flex items-center justify-center" 
                   title="Download Selected"
@@ -750,7 +751,8 @@ export default function Browse() {
                 >
                   <Download className="w-4 h-4" />
                 </button>
-                <button 
+              )}
+              <button 
                   className="hover:text-white/70 transition-colors flex items-center justify-center"
                   onClick={() => setSelectedTrackIds(new Set())}
                   title="Clear Selection"
@@ -1205,14 +1207,14 @@ export default function Browse() {
                     </button>
                   )}
                 </div>
-                <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
-                  <Download className="w-4 h-4" />
-                </button>
-                {settings.free_watermarks_enabled && (
-                  <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(track); }}>
-                    <ShoppingBag className="w-3.5 h-3.5" /> License
+                {profile?.can_download !== false && (
+                  <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
+                    <Download className="w-4 h-4" />
                   </button>
                 )}
+                <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(track); }}>
+                  <ShoppingBag className="w-3.5 h-3.5" /> License
+                </button>
               </div>
             </div>
             
@@ -1262,7 +1264,7 @@ export default function Browse() {
                       <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-10 text-right mr-2">
                         {version.duration ? formatTime(version.duration) : '0:00'}
                       </div>
-                      {currentTrack?.id !== version.id && (
+                      {currentTrack?.id !== version.id && profile?.can_download !== false && (
                         <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(version, e); }} title="Download">
                           <Download className="w-4 h-4" />
                         </button>
@@ -1282,19 +1284,20 @@ export default function Browse() {
           )}
         </div>
           
-          {hasMoreTracks && !searchQuery.trim() && isInitialTracksLoaded && (
-            <div ref={observerTarget} className="flex items-center justify-center py-12 w-full">
-              <Loader2 className="w-6 h-6 animate-spin text-black/40" />
+            {hasMoreTracks && !searchQuery.trim() && isInitialTracksLoaded && (
+              <div ref={observerTarget} className="flex items-center justify-center py-12 w-full">
+                <Loader2 className="w-6 h-6 animate-spin text-black/40" />
+              </div>
+            )}
+            
+            <div className="mt-auto pt-16">
+              <Footer isMinimized={true} />
             </div>
-          )}
 
           </div>
         </div>
       </div>
       </div>
-
-      {/* Fixed Minimized Footer */}
-      <Footer isMinimized={true} />
 
     </div>
   );
