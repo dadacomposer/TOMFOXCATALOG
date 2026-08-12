@@ -693,6 +693,7 @@ toast.success('Track restored successfully');
       instruments: Array.isArray(track.instruments) ? track.instruments.join(', ') : (track.instruments || ''),
       functions: Array.isArray(track.functions) ? track.functions.join(', ') : (track.functions || ''),
       character: Array.isArray(track.character) ? track.character.join(', ') : (track.character || ''),
+      tempo: Array.isArray(track.tempo) ? track.tempo.join(', ') : (track.tempo || ''),
       artwork_url: track.artwork_url || ''
     });
   };

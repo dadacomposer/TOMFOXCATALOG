@@ -124,14 +124,14 @@ const parseTags = (t: string[] | string | undefined): string[] => {
 type FilterOption = { value: string; count: number };
 type FilterOptions = {
   genre: FilterOption[];
-  subgenre: FilterOption[];
   moods: FilterOption[];
   instruments: FilterOption[];
-  textures: FilterOption[];
-  scenarios: FilterOption[];
-  human_tags: FilterOption[];
-  energy_level: FilterOption[];
+  functions: FilterOption[];
+  music_for: FilterOption[];
+  character: FilterOption[];
+  arrangement: FilterOption[];
   movement: FilterOption[];
+  tempo: FilterOption[];
 };
 
 export default function Browse() {
@@ -996,7 +996,7 @@ export default function Browse() {
                   const cat = FILTER_CATEGORIES.find(c => c.key === expandedCategory);
                   if (!cat) return null;
                   const filteredOpts = filterSearch
-                    ? cat.options.filter(o => o.value.toLowerCase().includes(filterSearch.toLowerCase()))
+                    ? cat.options.filter((o: FilterOption) => o.value.toLowerCase().includes(filterSearch.toLowerCase()))
                     : cat.options;
                   return (
                     <div className="flex flex-col h-full w-full">
@@ -1013,7 +1013,7 @@ export default function Browse() {
                       </div>
                       <div className="text-black/40 text-[10px] font-medium uppercase tracking-widest mb-3 shrink-0">Select {cat.title}</div>
                       <div className="flex flex-col gap-2.5 overflow-y-auto pb-24 pr-2 hide-scrollbar">
-                        {filteredOpts.map(opt => {
+                        {filteredOpts.map((opt: FilterOption) => {
                           const isActive = (activeFilters[expandedCategory] as string[])?.includes(opt.value);
                           return (
                             <label key={opt.value} className="flex items-center gap-3 cursor-pointer group" onClick={() => toggleFilter(expandedCategory, opt.value)}>
@@ -1108,9 +1108,9 @@ export default function Browse() {
               <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] overflow-visible relative">
                 {(() => {
                   const human = parseTags((track as any).human_tags);
-                  const subgenres = parseTags(track.subgenre);
+                  const subgenres = parseTags(track.arrangement);
                   const moods = parseTags(track.moods);
-                  const scenarios = parseTags(track.scenarios);
+                  const scenarios = parseTags(track.music_for);
                   
                   const tagMap = [
                     ...human.map(t => ({ category: 'human_tags', val: t })),
