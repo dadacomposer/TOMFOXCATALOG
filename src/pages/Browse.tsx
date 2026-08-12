@@ -1085,7 +1085,7 @@ export default function Browse() {
                     {cleanTitle(track.file_name)}
                   </div>
                   {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
-                    <span className="text-[8px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider hidden md:inline-block translate-y-[0px]">NEW</span>
+                    <span className="ml-2 text-[10px] bg-blue-500/10 text-blue-500 border border-blue-500/20 px-1.5 py-0.5 rounded font-medium tracking-wide uppercase hidden md:inline-block">New</span>
                   )}
                 </div>
                 <div className="text-[11px] text-black/40 truncate font-sans max-w-[200px]">
