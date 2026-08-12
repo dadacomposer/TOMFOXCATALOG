@@ -53,6 +53,15 @@ export type AdminTrack = {
   humanly_reviewed?: boolean;
   pro_registered?: boolean;
   frequency_audio_registered?: boolean;
+  id_number?: string;
+  pub_admin?: string;
+  writer?: string;
+  role?: string;
+  pro_org?: string;
+  ipi_number?: string;
+  publisher?: string;
+  share?: string;
+  sub_pub?: string;
 };
 
 
@@ -99,6 +108,15 @@ export default function AdminTracks() {
   
   const [visibleColumns, setVisibleColumns] = useState({
     trackInfo: true,
+    id_number: false,
+    pub_admin: false,
+    writer: false,
+    role: false,
+    pro_org: false,
+    ipi_number: false,
+    publisher: false,
+    share: false,
+    sub_pub: false,
     tags: true,
     rev: true,
     pro: true,
@@ -498,7 +516,16 @@ export default function AdminTracks() {
           ...parse(t.functions),
           ...parse(t.character),
           t.genre || '',
-          t.tempo || ''
+          t.tempo || '',
+          t.id_number || '',
+          t.pub_admin || '',
+          t.writer || '',
+          t.role || '',
+          t.pro_org || '',
+          t.ipi_number || '',
+          t.publisher || '',
+          t.share || '',
+          t.sub_pub || ''
         ].map(tag => typeof tag === 'string' ? tag.toLowerCase() : '');
 
         if (tags.some(tag => tag === q)) score += 8;
@@ -552,6 +579,21 @@ export default function AdminTracks() {
     if (!val) return [];
     if (Array.isArray(val)) return val;
     try { return JSON.parse(val); } catch { return []; }
+  };
+
+  
+  const updateTrackValue = async (trackId: string, field: string, value: string) => {
+    try {
+      setAllFetchedTracks(prev => prev.map(t => t.id === trackId ? { ...t, [field]: value } : t));
+      const { error } = await supabase.from('tracks').update({ [field]: value }).eq('id', trackId);
+      if (error) throw error;
+      toast.success(`${field} updated`);
+    } catch (error) {
+      console.error(error);
+      toast.error(`Failed to update ${field}`);
+      // We don't easily revert local state here as we don't have the old value in scope, 
+      // but it will refresh eventually.
+    }
   };
 
   const toggleBoolean = async (trackId: string, field: 'humanly_reviewed' | 'pro_registered' | 'frequency_audio_registered', currentValue: boolean) => {
@@ -1210,6 +1252,15 @@ toast.success('Track restored successfully');
                     />
                   </th>
                   {visibleColumns.trackInfo && <th className="px-6 py-4 font-bold">Track Name</th>}
+                  {visibleColumns.id_number && <th className="px-6 py-4 font-bold">ID #</th>}
+                  {visibleColumns.pub_admin && <th className="px-6 py-4 font-bold">Pub Admin</th>}
+                  {visibleColumns.writer && <th className="px-6 py-4 font-bold">Writer</th>}
+                  {visibleColumns.role && <th className="px-6 py-4 font-bold">Role</th>}
+                  {visibleColumns.pro_org && <th className="px-6 py-4 font-bold">PRO Org</th>}
+                  {visibleColumns.ipi_number && <th className="px-6 py-4 font-bold">IPI #</th>}
+                  {visibleColumns.publisher && <th className="px-6 py-4 font-bold">Publisher</th>}
+                  {visibleColumns.share && <th className="px-6 py-4 font-bold">Share</th>}
+                  {visibleColumns.sub_pub && <th className="px-6 py-4 font-bold">Sub Pub</th>}
                   {visibleColumns.tags && <th className="px-6 py-4 font-bold w-1/4">Tags</th>}
                   {visibleColumns.rev && <th className="px-2 py-4 font-bold text-center" title="Humanly Reviewed">Rev</th>}
                   {visibleColumns.pro && <th className="px-2 py-4 font-bold text-center" title="PRO Registered">PRO</th>}
@@ -1228,6 +1279,15 @@ toast.success('Track restored successfully');
                             <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1 text-left">
                               {Object.entries({
                                 trackInfo: 'Track Name',
+                                id_number: 'ID #',
+                                pub_admin: 'Pub Admin',
+                                writer: 'Writer',
+                                role: 'Role',
+                                pro_org: 'PRO Org',
+                                ipi_number: 'IPI #',
+                                publisher: 'Publisher',
+                                share: 'Share',
+                                sub_pub: 'Sub Pub',
                                 tags: 'Tags',
                                 rev: 'Humanly Reviewed (Rev)',
                                 pro: 'PRO Registered',
@@ -1313,6 +1373,51 @@ toast.success('Track restored successfully');
                               </span>
                             </div>
                           </div>
+                        </td>
+                      )}
+                      {visibleColumns.id_number && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.id_number || ''} onBlur={(e) => updateTrackValue(track.id, 'id_number', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.pub_admin && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.pub_admin || ''} onBlur={(e) => updateTrackValue(track.id, 'pub_admin', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.writer && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.writer || ''} onBlur={(e) => updateTrackValue(track.id, 'writer', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.role && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.role || ''} onBlur={(e) => updateTrackValue(track.id, 'role', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.pro_org && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.pro_org || ''} onBlur={(e) => updateTrackValue(track.id, 'pro_org', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.ipi_number && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.ipi_number || ''} onBlur={(e) => updateTrackValue(track.id, 'ipi_number', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.publisher && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.publisher || ''} onBlur={(e) => updateTrackValue(track.id, 'publisher', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.share && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.share || ''} onBlur={(e) => updateTrackValue(track.id, 'share', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.sub_pub && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.sub_pub || ''} onBlur={(e) => updateTrackValue(track.id, 'sub_pub', e.target.value)} />
                         </td>
                       )}
                       

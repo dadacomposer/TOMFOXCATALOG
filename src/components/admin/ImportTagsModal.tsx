@@ -61,12 +61,21 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (header, index) => {
+        // We make headers unique so duplicate columns aren't overwritten
+        return header.trim() + '___' + index;
+      },
       complete: (results) => {
         const rows = results.data as ParsedRow[];
         
         // Validate
-        if (rows.length > 0 && !('file_name' in rows[0])) {
-          toast.error("CSV must contain a 'file_name' column");
+        // Find the exact key for file_name or track title
+        let fileNameKey = Object.keys(rows[0] || {}).find(k => {
+          const lower = k.toLowerCase();
+          return lower.startsWith('file_name___') || lower.startsWith('track title___') || lower.startsWith('track_title___') || lower.startsWith('title___');
+        });
+        if (rows.length > 0 && !fileNameKey) {
+          toast.error("CSV must contain a 'Track Title' or 'file_name' column");
           return;
         }
 
@@ -93,8 +102,13 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
     });
 
     rows.forEach(row => {
-      if (!row.file_name) return;
-      const norm = normalizeString(row.file_name);
+      let fileNameKey = Object.keys(row).find(k => {
+        const lower = k.toLowerCase();
+        return lower.startsWith('file_name___') || lower.startsWith('track title___') || lower.startsWith('track_title___') || lower.startsWith('title___');
+      });
+      let fileName = fileNameKey ? row[fileNameKey] : '';
+      if (!fileName) return;
+      const norm = normalizeString(fileName);
       const track = trackMap.get(norm);
       
       if (track) {
@@ -126,43 +140,81 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
 
     let completed = 0;
     
-    // We update in batches or sequentially. Since it might be hundreds, sequentially is safer for UI progress.
     for (const match of matchedTracks) {
       const { track, newTags } = match;
       
       const updateData: any = {};
       const tagFields = ['genre', 'moods', 'music_for', 'instruments', 'functions', 'movement', 'character', 'tempo', 'arrangement'];
       
+      let tagModified = false;
+      
+      // Helper to extract values from multiple duplicate columns
+      const extractValues = (keyBase: string) => {
+        const matchingKeys = Object.keys(newTags).filter(k => k.toLowerCase().split('___')[0] === keyBase.toLowerCase());
+        if (matchingKeys.length === 0) return null; // column not present at all
+        const values = matchingKeys.map(k => newTags[k]).filter(v => v !== undefined && v !== null && v !== '');
+        return values;
+      };
+
       tagFields.forEach(field => {
-        if (newTags[field] !== undefined && newTags[field] !== null && newTags[field] !== '') {
-          const csvTags = splitCsvTags(newTags[field]);
-          
+        const vals = extractValues(field);
+        if (vals && vals.length > 0) {
+          tagModified = true;
+          const combinedCsvTags = vals.flatMap(v => splitCsvTags(v));
           if (importMode === 'REPLACE') {
-            updateData[field] = JSON.stringify(csvTags);
+            updateData[field] = JSON.stringify(combinedCsvTags);
           } else {
-            // APPEND
             const existing = parseExistingTags(track[field]);
-            const combined = Array.from(new Set([...existing, ...csvTags]));
+            const combined = Array.from(new Set([...existing, ...combinedCsvTags]));
             updateData[field] = JSON.stringify(combined);
           }
         }
       });
 
-      updateData.humanly_reviewed = true;
+      if (tagModified) {
+        updateData.humanly_reviewed = true;
+      }
       
       // Map 'content id' to frequency_audio_registered
-      if (newTags['content id']) {
-        const val = newTags['content id'].toLowerCase().trim();
+      const contentIdKeys = Object.keys(newTags).filter(k => k.toLowerCase().split('___')[0] === 'content id' || k.toLowerCase().split('___')[0] === 'freq');
+      if (contentIdKeys.length > 0) {
+        const val = (newTags[contentIdKeys[0]] || '').toLowerCase().trim();
         if (val === 'registered') updateData.frequency_audio_registered = true;
-        else if (val === 'unregistered') updateData.frequency_audio_registered = false;
+        else updateData.frequency_audio_registered = false;
       }
       
       // Map 'pro' to pro_registered
-      if (newTags['pro']) {
-        const val = newTags['pro'].toLowerCase().trim();
+      const proKeys = Object.keys(newTags).filter(k => k.toLowerCase().split('___')[0] === 'pro');
+      if (proKeys.length > 0) {
+        const val = (newTags[proKeys[0]] || '').toLowerCase().trim();
         if (val === 'registered') updateData.pro_registered = true;
-        else if (val === 'needs registration') updateData.pro_registered = false;
+        else updateData.pro_registered = false;
       }
+
+      // New Admin Columns
+      const adminMappings: Record<string, string[]> = {
+        'id_number': ['id #', 'id_number'],
+        'pub_admin': ['pub admin', 'pub_admin'],
+        'writer': ['writer'],
+        'role': ['role'],
+        'pro_org': ['pro org', 'pro_org'],
+        'ipi_number': ['ipi #', 'ipi_number'],
+        'publisher': ['publisher/publisher 1', 'publisher', 'publisher 1'],
+        'share': ['share'],
+        'sub_pub': ['sub pub', 'sub_pub']
+      };
+
+      Object.entries(adminMappings).forEach(([dbField, possibleHeaders]) => {
+        const matchingKeys = Object.keys(newTags).filter(k => possibleHeaders.includes(k.toLowerCase().split('___')[0]));
+        if (matchingKeys.length > 0) {
+          const values = matchingKeys.map(k => newTags[k]).filter(v => v !== undefined && v !== null && v !== '');
+          if (values.length > 0) {
+            updateData[dbField] = values.join(', ');
+          } else {
+            updateData[dbField] = ''; // clear if completely empty cells
+          }
+        }
+      });
       
       if (Object.keys(updateData).length > 0) {
         await supabase.from('tracks').update(updateData).eq('id', track.id);
@@ -177,7 +229,7 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
   };
 
   const downloadTemplate = () => {
-    const csvContent = "file_name,genre,moods,music_for,instruments,functions,movement,character,tempo,arrangement,content id,pro\nexample_track.wav,\"Electronic, Pop\",\"Happy, Upbeat\",\"Driving, Party\",\"Synth, Drums\",\"Smooth\",\"Flowing\",\"Vocal, Instrumental\",\"High\",\"Ambient Piano\",\"Registered\",\"Needs Registration\"";
+    const csvContent = "Track Title,genre,moods,music_for,instruments,functions,movement,character,tempo,arrangement,content id,pro,ID #,Pub admin,writer,role,pro org,IPI #,publisher/publisher 1,share,SUB PUB\nexample_track.wav,\"Electronic, Pop\",\"Happy, Upbeat\",\"Driving, Party\",\"Synth, Drums\",\"Smooth\",\"Flowing\",\"Vocal, Instrumental\",\"High\",\"Ambient Piano\",\"Registered\",\"Needs Registration\",\"12345\",\"Admin1\",\"John Doe\",\"Composer\",\"ASCAP\",\"987654321\",\"Pub1\",\"50%\",\"SubPub1\"";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -244,12 +296,12 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
                 <h4 className="font-bold text-sm flex items-center gap-2 mb-2">
                   <FileText className="w-4 h-4" /> Formatting Guide
                 </h4>
-                <ul className="text-sm text-black/60 space-y-1 list-disc pl-4 mb-4">
-                  <li>The file must be in <strong>.csv</strong> format.</li>
-                  <li>Column <strong>file_name</strong> is strictly required (extensions are ignored automatically).</li>
-                  <li>Use comma separation for multiple tags in a column (e.g. <code>Happy, Energetic</code>).</li>
-                  <li>Supported columns: genre, moods, music_for, instruments, functions, movement, character, tempo, arrangement, content id, pro.</li>
-                </ul>
+                <ul className="list-disc pl-5 mt-3 space-y-2 text-sm text-black/60">
+                <li>The file must be in <strong>.csv</strong> format.</li>
+                <li>Column <strong>Track Title</strong> (or file_name) is strictly required (extensions are ignored automatically).</li>
+                <li>Use comma separation for multiple tags in a column (e.g. Happy, Energetic).</li>
+                <li>Supported columns: genre, moods, music_for, instruments, functions, movement, character, tempo, arrangement, content id, pro, ID #, Pub admin, writer, role, pro org, IPI #, publisher/publisher 1, share, SUB PUB.</li>
+              </ul>
                 <button 
                   onClick={downloadTemplate}
                   className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-black bg-white border border-black/10 px-4 py-2 rounded-lg hover:bg-black/5 transition-colors"
