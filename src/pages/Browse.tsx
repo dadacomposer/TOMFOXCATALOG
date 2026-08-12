@@ -168,7 +168,7 @@ export default function Browse() {
   const [filterSearch, setFilterSearch] = useState(''); // search within filter panel
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
   const [expandedTags, setExpandedTags] = useState<{trackId: string, tags: any[]} | null>(null);
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
@@ -845,21 +845,10 @@ export default function Browse() {
       <div className="w-full relative flex-1 flex overflow-hidden">
         
         {/* STATIC SIDEBAR (Does not scroll) */}
-        <div className={`hidden md:flex flex-col shrink-0 z-30 transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] pt-8 pl-4 md:pl-5 ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
+        <div className={`hidden md:flex flex-col shrink-0 z-30 transition-all duration-150 ease-out will-change-[width,transform] pt-8 pl-4 md:pl-5 ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
           <div className="flex w-full h-full relative">
             <div className="w-[130px] flex flex-col gap-1 shrink-0 relative z-20 bg-[#fafafa]">
-              <button 
-                onClick={() => {
-                  setIsFiltersExpanded(!isFiltersExpanded);
-                    if (isFiltersExpanded) setExpandedCategory(null);
-                  }}
-                  className="flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-black/40 hover:text-black transition-colors rounded-lg hover:bg-black/5 w-full text-left mb-2"
-                >
-                  <span>Filters</span>
-                  <svg className={`w-3 h-3 transition-transform ${isFiltersExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-                <div className={`grid transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isFiltersExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
-                  <div className="overflow-hidden flex flex-col gap-1">
+
                 {FILTER_CATEGORIES.map(category => {
                   const count = (activeFilters[category.key] as string[])?.length || 0;
                   const isExpanded = expandedCategory === category.key;
@@ -892,8 +881,6 @@ export default function Browse() {
                 >
                   Clear Filters
                 </button>
-                  </div>
-                </div>
 
                 {/* MY MUSIC */}
                 <div className="mt-2 mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-black/30">
@@ -991,7 +978,7 @@ export default function Browse() {
                 </div>
               </div>
 
-              <div className={`absolute left-[130px] top-0 bottom-0 w-[250px] pl-6 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
+              <div className={`absolute left-[130px] top-0 bottom-0 w-[250px] pl-6 flex flex-col transition-all duration-150 ease-out will-change-[width,transform] ${expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
                 {expandedCategory && (() => {
                   const cat = FILTER_CATEGORIES.find(c => c.key === expandedCategory);
                   if (!cat) return null;
@@ -1105,7 +1092,7 @@ export default function Browse() {
                 </div>
               </div>
               
-              <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] overflow-visible relative">
+              <div className="hidden md:flex items-center justify-between shrink-0 w-[24%] relative gap-1">
                 {(() => {
                   const human = parseTags((track as any).human_tags);
                   const subgenres = parseTags(track.arrangement);
@@ -1128,38 +1115,41 @@ export default function Browse() {
                     }
                   }
                   
-                  const tags = uniqueTags.slice(0, 2);
-                  const remainingTags = uniqueTags.slice(2);
+                  // Show up to 4 tags
+                  const tags = uniqueTags.slice(0, 4);
+                  const remainingTags = uniqueTags.slice(4);
                   
                   if (tags.length === 0) return <span className="text-[10px] text-black/30 font-medium uppercase tracking-widest">Tagging...</span>;
 
                   return (
-                    <div className="flex items-center gap-2">
-                      {tags.map((t, idx) => (
-                        <span 
-                          key={idx} 
-                          onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; handleTagClick(t.category, t.val, e); }} 
-                          className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
-                        >
-                          {t.val}
-                        </span>
-                      ))}
+                    <>
+                      <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap flex-1" style={{ maskImage: 'linear-gradient(to right, black 80%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, black 80%, transparent 100%)' }}>
+                        {tags.map((t, idx) => (
+                          <span 
+                            key={idx} 
+                            onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; handleTagClick(t.category, t.val, e); }} 
+                            className="px-2 py-1 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
+                          >
+                            {t.val}
+                          </span>
+                        ))}
+                      </div>
                       {remainingTags.length > 0 && (
-                        <div className="relative">
+                        <div className="relative shrink-0">
                           <span 
                             onClick={(e) => {
                               if (e.shiftKey || e.metaKey || e.ctrlKey) return;
                               e.stopPropagation();
                               setExpandedTags(expandedTags?.trackId === track.id ? null : { trackId: track.id, tags: remainingTags });
                             }}
-                            className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                            className="px-2 py-1 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
                           >
                             +{remainingTags.length}
                           </span>
                           {expandedTags?.trackId === track.id && (
                             <>
                               <div className="fixed inset-0 z-[20]" onClick={(e) => { e.stopPropagation(); setExpandedTags(null); }} />
-                              <div ref={expandedTagsRef} className="absolute top-full left-0 mt-2 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
+                              <div ref={expandedTagsRef} className="absolute top-full right-0 mt-2 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
                                 {expandedTags.tags.map((t, idx) => (
                                   <span 
                                     key={idx} 
@@ -1174,13 +1164,13 @@ export default function Browse() {
                           )}
                         </div>
                       )}
-                    </div>
+                    </>
                   );
                 })()}
               </div>
 
               {/* WAVEFORM Column */}
-              <div className="hidden md:flex flex-grow h-8 items-center pr-4 opacity-70 group-hover:opacity-100 transition-opacity">
+              <div className={`hidden md:flex flex-grow h-8 items-center opacity-70 group-hover:opacity-100 transition-opacity ${profile?.can_download !== false ? 'pr-4' : 'pr-1'}`}>
                 <WaveformView 
                   data={parseWaveform(track.waveform_data)} 
                   isPlaying={currentTrack?.id === track.id && isPlaying} 
@@ -1191,7 +1181,7 @@ export default function Browse() {
                 />
               </div>
 
-              <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
+              <div className={`hidden md:flex items-center justify-end pr-4 shrink-0 w-auto ${profile?.can_download !== false ? 'gap-2' : 'gap-1'}`}>
                 <TrackActionButtons trackId={track.id} />
                 <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-10 text-right mr-2">
                   {track.duration ? formatTime(track.duration) : '0:00'}
@@ -1260,7 +1250,7 @@ export default function Browse() {
                         previewEndPct={isPreviewMode ? getPreviewTimings(version)?.endPct : undefined}
                       />
                     </div>
-                    <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
+                    <div className={`hidden md:flex items-center justify-end pr-4 shrink-0 w-auto ${profile?.can_download !== false ? 'gap-2' : 'gap-1'}`}>
                       <TrackActionButtons trackId={version.id} />
                       <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-10 text-right mr-2">
                         {version.duration ? formatTime(version.duration) : '0:00'}
