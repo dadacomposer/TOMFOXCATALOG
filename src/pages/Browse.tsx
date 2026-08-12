@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { toast } from 'react-hot-toast';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { supabase, fetchTracks, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, searchTracksByTitle, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds, fetchFilterOptions, searchTracksByTags, fetchPlaylistTracks, fetchSuggestedTracks } from '../lib/supabase';
+import { supabase, fetchTracks, searchTracksIntelligent, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds, fetchFilterOptions, fetchPlaylistTracks, fetchSuggestedTracks } from '../lib/supabase';
 import { analytics } from '../lib/analytics';
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
@@ -159,6 +159,7 @@ export default function Browse() {
     if (searchQuery !== urlQuery) {
       setSearchQuery(urlQuery);
       setIsTypingSearch(true);
+      setSortBy('relevance');
     }
   }, [urlQuery]);
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({
@@ -214,6 +215,10 @@ export default function Browse() {
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [expandedPlaylistId, setExpandedPlaylistId] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const searchCounter = useRef<number>(0);
+  
+  // Ref for audio element
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
   const tracksPerPage = 25;
@@ -321,13 +326,9 @@ export default function Browse() {
     const resolve = async () => {
       const idSets: Set<string>[] = [];
       for (const tag of shadowTags) {
-        const [textRaw, tagIds] = await Promise.all([
-          searchTracksByTitle(tag),
-          searchTracksByTags(tag)
-        ]);
+        const textRaw = await searchTracksIntelligent(tag);
         const ids = new Set<string>();
         textRaw.forEach((r: any) => ids.add(r.id));
-        tagIds.forEach((id: string) => ids.add(id));
         idSets.push(ids);
       }
       
@@ -393,19 +394,22 @@ export default function Browse() {
     if (!q.trim()) return;
     setIsSearching(true);
     analytics.trackSearch(q);
+    
+    // Increment search counter for race condition prevention
+    searchCounter.current += 1;
+    const currentSearchId = searchCounter.current;
+    
     try {
-      // Run semantic, title, and tag searches in parallel
-      const [vector, textRaw, tagIds] = await Promise.all([
+      // Run intelligent text/tag search and semantic search in parallel
+      const [vector, textRaw] = await Promise.all([
         generateEmbedding(q).catch(() => null),
-        searchTracksByTitle(q),
-        searchTracksByTags(q)
+        searchTracksIntelligent(q)
       ]);
 
       const allIds = new Set<string>();
-      // Title results first (most precise)
+      // Intelligent text/tag results first (most precise)
       textRaw.forEach((r: any) => allIds.add(r.id));
-      // Tag hits second  
-      tagIds.forEach((id: string) => allIds.add(id));
+      
       // Semantic last (broader)
       if (vector) {
         const semanticRaw = await searchTracksByEmbedding(vector);
@@ -426,29 +430,23 @@ export default function Browse() {
         combined = await fetchTracks(1, tracksPerPage, activeFilters, sortBy, finalIds) as Track[];
       }
       
-      setDisplayedTracks(combined);
-      setHasMoreTracks(false);
+      // Only update state if this is still the most recent search
+      if (searchCounter.current === currentSearchId) {
+        setDisplayedTracks(combined);
+        setHasMoreTracks(false);
+      }
     } catch (err) {
       console.error('Error during search:', err);
-      try {
-        const textRaw = await searchTracksByTitle(searchQuery);
-        const textIds = textRaw.map((r: any) => r.id);
-        let textResults: Track[] = [];
-        if (textIds.length > 0) {
-          let fallbackIds = textIds;
-          if (shadowTagIds) fallbackIds = fallbackIds.filter((id: string) => shadowTagIds.includes(id));
-          textResults = await fetchTracks(1, tracksPerPage, activeFilters, sortBy, fallbackIds) as Track[];
-        }
-        setDisplayedTracks(textResults);
-        setHasMoreTracks(false);
-      } catch (fallbackErr) {
+      if (searchCounter.current === currentSearchId) {
         setDisplayedTracks([]);
         setHasMoreTracks(false);
       }
     } finally {
-      setIsSearching(false);
-      setIsTypingSearch(false);
-      setIsInitialTracksLoaded(true);
+      if (searchCounter.current === currentSearchId) {
+        setIsSearching(false);
+        setIsTypingSearch(false);
+        setIsInitialTracksLoaded(true);
+      }
     }
   };
 

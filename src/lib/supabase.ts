@@ -349,50 +349,19 @@ export async function fetchSuggestedPlaylists(userId: string) {
 }
 
 
-export async function searchTracksByTitle(query: string) {
-  // Use fuzzy search RPC which handles both exact matches, ilike, and trigram similarity
-  const { data, error } = await supabase
-    .rpc('search_tracks_fuzzy', { search_query: query })
-    .select('*, versions:tracks!parent_track_id(*)');
-    
-  if (error) {
-    console.error('Error fetching tracks by title:', error);
-    return [];
-  }
-  
-  return data ? filterDeletedVersions(data) : [];
-}
-
-// Search across ALL tag fields: moods, instruments, textures, scenarios, human_tags, genre, subgenre, description
-export async function searchTracksByTags(query: string) {
+export async function searchTracksIntelligent(query: string) {
   const q = query.trim();
   if (!q) return [];
   
-  // Build an OR across all text fields containing the query
-  const conditions = [
-    `file_name.ilike.%${q}%`,
-    `genre.ilike.%${q}%`,
-    `description.ilike.%${q}%`,
-    `energy_level.ilike.%${q}%`,
-  ].join(',');
-  
-  const { data: textData } = await supabase
-    .from('tracks')
-    .select('id')
-    .eq('is_hidden', false)
-    .is('deleted_at', null)
-    .eq('track_type', 'main')
-    .or(conditions)
-    .limit(100);
+  const { data, error } = await supabase
+    .rpc('search_tracks_intelligent', { search_query: q });
     
-  // Also check array fields via RPC for moods/instruments/textures/scenarios/human_tags
-  const { data: tagData } = await supabase.rpc('search_tracks_by_tag', { search_term: q }).limit(100);
+  if (error) {
+    console.error('Error fetching intelligent search:', error);
+    return [];
+  }
   
-  const ids = new Set<string>();
-  (textData || []).forEach((r: any) => ids.add(r.id));
-  (tagData || []).forEach((r: any) => ids.add(r.id));
-  
-  return Array.from(ids);
+  return data || [];
 }
 
 // Fetch all distinct filter options from the DB dynamically

@@ -157,13 +157,11 @@ serve(async (req) => {
 
     console.log(`Tags generated successfully. Saving to database...`)
 
-    const mergedArrangement = JSON.stringify(tags.arrangement || [])
-
     // Update the track in Supabase using the service role key (bypasses RLS)
     const { error: updateError } = await supabase
       .from('tracks')
       .update({
-        arrangement: mergedArrangement,
+        arrangement: tags.arrangement || [],
         moods: tags.moods || [],
         instruments: tags.instruments || [],
         functions: tags.functions || [],

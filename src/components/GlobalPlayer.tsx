@@ -45,7 +45,7 @@ export default function GlobalPlayer() {
   const location = useLocation();
   const isSharedPage = location.pathname.startsWith('/share');
   
-  const { currentTrack, currentPlaylist, isPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId, setSelectedTrackForDetails } = usePlayer();
+  const { currentTrack, currentPlaylist, isPlaying, setIsPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId, setSelectedTrackForDetails } = usePlayer();
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
@@ -255,6 +255,8 @@ export default function GlobalPlayer() {
           onPlaying={() => setIsBuffering(false)}
           onLoadStart={() => setIsBuffering(true)}
           onCanPlay={() => setIsBuffering(false)}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
         />
       )}
       <div className="flex items-center gap-4 w-auto md:w-[280px] shrink-0">

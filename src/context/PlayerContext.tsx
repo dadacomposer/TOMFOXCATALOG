@@ -34,6 +34,7 @@ type PlayerContextType = {
   currentTrack: Track | null;
   currentPlaylist: Track[];
   isPlaying: boolean;
+  setIsPlaying: (playing: boolean) => void;
   progress: number;
   pendingSeek: number | null;
   audioRef: React.MutableRefObject<HTMLAudioElement | null>;
@@ -162,10 +163,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     if (!currentTrack) return;
-    setIsPlaying(!isPlaying);
-  };
+    setIsPlaying(prev => !prev);
+  }, [currentTrack]);
 
   const stopPlayback = useCallback(() => {
     if (audioRef.current) {
@@ -214,15 +215,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       applyPreview(nextTrack);
       setCurrentTrack(nextTrack);
       setIsPlaying(true);
-    } else if ((currentIndex === -1 || currentIndex === currentPlaylist.length - 1) && returnTrackId) {
-      // The current track is not in the current playlist OR we reached the end of the temporary playlist.
+    } else if (currentIndex === -1 && currentPlaylist.length > 0) {
+      // The current track is no longer in the active playlist (e.g. search changed or playlist closed).
+      // Play the very first track of the new queue!
+      const nextTrack = currentPlaylist[0];
+      applyPreview(nextTrack);
+      setCurrentTrack(nextTrack);
+      setIsPlaying(true);
+    } else if (currentIndex === currentPlaylist.length - 1 && returnTrackId) {
+      // We reached the end of the temporary playlist.
       // We should resume from the track AFTER the returnTrackId.
-      // Note: if currentIndex === -1, we are already in the restored playlist, so we just use currentPlaylist.
-      // If we are at the end, we still need the original playlist. Wait, if we are at the end, currentPlaylist is still the temporary one!
-      // So this won't work perfectly if currentPlaylist hasn't been restored.
-      // We rely on GlobalPlayer's onEnded for automatic transition. 
-      // For manual Next, it's safer to let GlobalPlayer handle it, or we just stop.
-      // But if currentIndex === -1, it means we restored the original playlist.
       const returnIndex = currentPlaylist.findIndex(t => t.id === returnTrackId);
       if (returnIndex >= 0 && returnIndex < currentPlaylist.length - 1) {
         const nextTrack = currentPlaylist[returnIndex + 1];
@@ -287,6 +289,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       applyPreview(prevTrack);
       setCurrentTrack(prevTrack);
       setIsPlaying(true);
+    } else if (currentIndex === -1 && currentPlaylist.length > 0) {
+      setIsCurrentPreviewDormant(false);
+      const prevTrack = currentPlaylist[0];
+      applyPreview(prevTrack);
+      setCurrentTrack(prevTrack);
+      setIsPlaying(true);
     }
   };
 
@@ -301,6 +309,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       playTrack,
       playPlaylist,
       togglePlay,
+      setIsPlaying,
       playNextTrack,
       playPrevTrack,
       stopPlayback,
