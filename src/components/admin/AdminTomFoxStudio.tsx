@@ -52,6 +52,7 @@ export default function AdminTomFoxStudio() {
 
   const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [deleteSubscriptionId, setDeleteSubscriptionId] = useState<string | null>(null);
 
   const termsRef = useRef<HTMLDivElement>(null);
 
@@ -139,7 +140,6 @@ export default function AdminTomFoxStudio() {
   };
 
   const handleDeleteSubscription = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this subscription from the Studio panel? This will not cancel the actual subscription in Stripe.')) return;
     try {
       const { error } = await supabase
         .from('tf_studio_subscriptions')
@@ -148,6 +148,7 @@ export default function AdminTomFoxStudio() {
       if (error) throw error;
       setSubscriptions(prev => prev.filter(s => s.id !== id));
       toast.success('Subscription removed from Studio');
+      setDeleteSubscriptionId(null);
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || 'Failed to remove subscription');
@@ -527,9 +528,9 @@ export default function AdminTomFoxStudio() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     type="button"
-                    onClick={() => handleDeleteSubscription(sub.id)}
+                    onClick={() => setDeleteSubscriptionId(sub.id)}
                     className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
                     title="Remove from Studio (Does not cancel in Stripe)"
                   >
