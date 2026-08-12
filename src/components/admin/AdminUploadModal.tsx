@@ -120,7 +120,8 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
       const uploadPromises = filesToUpload.map(async (item) => {
         const ext = item.format === 'aiff' ? '.aiff' : `.${item.format}`;
         const fileName = `${track.title}${ext}`;
-        const filePath = `audio/hdaudio/${fileName}`;
+        const uuid = Math.random().toString(36).substring(2, 10);
+        const filePath = `audio/hdaudio/${uuid}_${fileName}`;
         const contentType = item.format === 'wav' ? 'audio/wav' : item.format === 'aiff' ? 'audio/aiff' : 'audio/mpeg';
 
         const res = await fetch('https://jicrumwdnwmjkotkbjtg.supabase.co/functions/v1/r2_presigned_url', {
@@ -340,7 +341,8 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
         const ext = item.file.name.split('.').pop()?.toLowerCase() || 'mp3';
         const subfolder = item.isWm ? 'watermarked' : 'audio/hdaudio';
         const fileName = `${track.title}.${ext}`;
-        const filePath = `${subfolder}/${fileName}`;
+        const uuid = Math.random().toString(36).substring(2, 10);
+        const filePath = `${subfolder}/${uuid}_${fileName}`;
         
         const { data: presignData, error: presignError } = await supabase.functions.invoke('r2_presigned_url', {
           body: { action: 'upload', filePath, contentType: item.file.type || 'audio/mpeg' }
