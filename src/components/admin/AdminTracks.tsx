@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import TrackEditModal from './TrackEditModal';
 import { createPortal } from 'react-dom';
-import { supabase } from '../../lib/supabase';
+import { supabase, searchTracksIntelligent } from '../../lib/supabase';
 import { Search, EyeOff, Eye, Trash2, Share2, RefreshCw, AlertTriangle, Music, Edit2, X, Save, Link, Upload, UploadCloud, Power, Copy, Play, Pause, FileText, ChevronUp, ChevronDown, Plus, GripVertical, ChevronsUpDown, Download, Layers, ListPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePlayer } from '../../context/PlayerContext';
@@ -75,6 +75,7 @@ export default function AdminTracks() {
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const searchCounter = useRef(0);
   const [activeTab, setActiveTab] = useState<'active' | 'trash'>('active');
   const [visibleCount, setVisibleCount] = useState(20);
   const [editingTrack, setEditingTrack] = useState<AdminTrack | null>(null);
@@ -429,6 +430,9 @@ export default function AdminTracks() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
+      if (searchQuery.trim()) {
+        setSortBy('relevance');
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -487,103 +491,84 @@ export default function AdminTracks() {
   }, []);
 
   useEffect(() => {
-    let filtered = allFetchedTracks;
-    
-    // Tags Management Filters
-    if (reviewedFilter === 'yes') filtered = filtered.filter(t => t.humanly_reviewed);
-    if (reviewedFilter === 'no') filtered = filtered.filter(t => !t.humanly_reviewed);
-    if (proFilter === 'yes') filtered = filtered.filter(t => t.pro_registered);
-    if (proFilter === 'no') filtered = filtered.filter(t => !t.pro_registered);
-    if (freqFilter === 'yes') filtered = filtered.filter(t => t.frequency_audio_registered);
-    if (freqFilter === 'no') filtered = filtered.filter(t => !t.frequency_audio_registered);
-
-    const scores = new Map<string, number>();
-
-    if (debouncedQuery) {
-      const q = debouncedQuery.toLowerCase();
+    const executeSearch = async () => {
+      let filtered = allFetchedTracks;
       
-      filtered = filtered.filter(t => {
-        let score = 0;
-        
-        const fileName = t.file_name?.toLowerCase() || '';
-        if (fileName.includes(q)) {
-          score += 10;
-          if (fileName === q) score += 20;
-          if (fileName.startsWith(q)) score += 5;
-        }
+      // Tags Management Filters
+      if (reviewedFilter === 'yes') filtered = filtered.filter(t => t.humanly_reviewed);
+      if (reviewedFilter === 'no') filtered = filtered.filter(t => !t.humanly_reviewed);
+      if (proFilter === 'yes') filtered = filtered.filter(t => t.pro_registered);
+      if (proFilter === 'no') filtered = filtered.filter(t => !t.pro_registered);
+      if (freqFilter === 'yes') filtered = filtered.filter(t => t.frequency_audio_registered);
+      if (freqFilter === 'no') filtered = filtered.filter(t => !t.frequency_audio_registered);
 
-        const parse = (val: any) => {
-          if (!val) return [];
-          if (Array.isArray(val)) return val;
-          try { return JSON.parse(val); } catch { return []; }
-        };
+      let searchMatchedIds: Set<string> | null = null;
+      let scores = new Map<string, number>();
 
-        const tags = [
-          ...parse(t.arrangement),
-          ...parse(t.moods),
-          ...parse(t.music_for),
-          ...parse(t.instruments),
-          ...parse(t.functions),
-          ...parse(t.character),
-          t.genre || '',
-          t.tempo || '',
-          t.id_number || '',
-          t.pub_admin || '',
-          t.writer || '',
-          t.role || '',
-          t.pro_org || '',
-          t.ipi_number || '',
-          t.publisher || '',
-          t.share || '',
-          t.sub_pub || ''
-        ].map(tag => typeof tag === 'string' ? tag.toLowerCase() : '');
-
-        if (tags.some(tag => tag === q)) score += 8;
-        else if (tags.some(tag => tag.includes(q))) score += 5;
-
-        if (t.description?.toLowerCase().includes(q)) {
-           score += 2;
-        }
-
-        if (score > 0) {
-          scores.set(t.id, score);
-          return true;
-        }
-        return false;
-      });
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === 'newest') return new Date(b.release_date || b.created_at || 0).getTime() - new Date(a.release_date || a.created_at || 0).getTime();
-      if (sortBy === 'oldest') return new Date(a.release_date || a.created_at || 0).getTime() - new Date(b.release_date || b.created_at || 0).getTime();
-      if (sortBy === 'most_played') return (b.play_count || 0) - (a.play_count || 0);
-      const clean = (s: string) => s.replace(/^[^a-zA-Z0-9]+/, '').toLowerCase();
-      if (sortBy === 'a-z') {
-        return clean(a.file_name || '').localeCompare(clean(b.file_name || ''));
-      }
-      if (sortBy === 'z-a') {
-        return clean(b.file_name || '').localeCompare(clean(a.file_name || ''));
-      }
-      if (sortBy === 'hidden_first') {
-        if (a.is_hidden && !b.is_hidden) return -1;
-        if (!a.is_hidden && b.is_hidden) return 1;
-        // fallback to newest if both hidden or both visible
-        return new Date(b.release_date || b.created_at || 0).getTime() - new Date(a.release_date || a.created_at || 0).getTime();
-      }
-      
-      // relevance
       if (debouncedQuery) {
-        const scoreA = scores.get(a.id) || 0;
-        const scoreB = scores.get(b.id) || 0;
-        if (scoreB !== scoreA) return scoreB - scoreA;
-      }
-      // fallback to newest if no query or scores are equal
-      return new Date(b.release_date || b.created_at || 0).getTime() - new Date(a.release_date || a.created_at || 0).getTime();
-    });
+        searchCounter.current += 1;
+        const currentSearch = searchCounter.current;
+        setIsLoading(true);
 
-    setTracks(sorted);
-    setVisibleCount(20);
-  }, [debouncedQuery, allFetchedTracks, sortBy, reviewedFilter, proFilter, freqFilter]);
+        try {
+          const results = await searchTracksIntelligent(debouncedQuery, true); // true for admin_mode
+          
+          if (currentSearch !== searchCounter.current) return; // Race condition check
+
+          searchMatchedIds = new Set(results.map((r: any) => r.id));
+          results.forEach((r: any) => scores.set(r.id, r.relevance_score));
+        } catch (e) {
+          console.error(e);
+          if (currentSearch === searchCounter.current) {
+            searchMatchedIds = new Set();
+          }
+        } finally {
+          if (currentSearch === searchCounter.current) {
+            setIsLoading(false);
+          }
+        }
+      }
+
+      if (searchMatchedIds) {
+        filtered = filtered.filter(t => searchMatchedIds!.has(t.id));
+      }
+
+      const sorted = [...filtered].sort((a, b) => {
+        if (sortBy === 'newest') return new Date(b.release_date || b.created_at || 0).getTime() - new Date(a.release_date || a.created_at || 0).getTime();
+        if (sortBy === 'oldest') return new Date(a.release_date || a.created_at || 0).getTime() - new Date(b.release_date || b.created_at || 0).getTime();
+        if (sortBy === 'most_played') return (b.play_count || 0) - (a.play_count || 0);
+        const clean = (s: string) => s.replace(/^[^a-zA-Z0-9]+/, '').toLowerCase();
+        if (sortBy === 'a-z') {
+          return clean(a.file_name || '').localeCompare(clean(b.file_name || ''));
+        }
+        if (sortBy === 'z-a') {
+          return clean(b.file_name || '').localeCompare(clean(a.file_name || ''));
+        }
+        if (sortBy === 'hidden_first') {
+          if (a.is_hidden && !b.is_hidden) return -1;
+          if (!a.is_hidden && b.is_hidden) return 1;
+          return new Date(b.release_date || b.created_at || 0).getTime() - new Date(a.release_date || a.created_at || 0).getTime();
+        }
+        
+        // relevance
+        if (debouncedQuery) {
+          const scoreA = scores.get(a.id) || 0;
+          const scoreB = scores.get(b.id) || 0;
+          if (scoreB !== scoreA) return scoreB - scoreA;
+        }
+        // fallback to newest if no query or scores are equal
+        return new Date(b.release_date || b.created_at || 0).getTime() - new Date(a.release_date || a.created_at || 0).getTime();
+      });
+
+      // Apply tab filter (active/trash) AFTER all other logic so it works on search results too
+      const finalFiltered = sorted.filter(t => activeTab === 'trash' ? t.deleted_at : !t.deleted_at);
+
+      setTracks(finalFiltered);
+      setVisibleCount(20);
+    };
+
+    executeSearch();
+  }, [debouncedQuery, allFetchedTracks, sortBy, reviewedFilter, proFilter, freqFilter, activeTab]);
 
   const parseTags = (val: any) => {
     if (!val) return [];

@@ -349,12 +349,12 @@ export async function fetchSuggestedPlaylists(userId: string) {
 }
 
 
-export async function searchTracksIntelligent(query: string) {
+export async function searchTracksIntelligent(query: string, admin_mode: boolean = false) {
   const q = query.trim();
   if (!q) return [];
   
   const { data, error } = await supabase
-    .rpc('search_tracks_intelligent', { search_query: q });
+    .rpc('search_tracks_intelligent', { search_query: q, p_admin_mode: admin_mode });
     
   if (error) {
     console.error('Error fetching intelligent search:', error);
