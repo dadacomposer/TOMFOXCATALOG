@@ -16,12 +16,28 @@ export default function AdminStatistics() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStats();
+    fetchStats(true);
+
+    const channel = supabase.channel('statistics_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'play_events' }, () => {
+        fetchStats(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'search_events' }, () => {
+        fetchStats(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'filter_events' }, () => {
+        fetchStats(false);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const { data, error } = await supabase.rpc('get_admin_statistics');
       if (error) throw error;
       setStats(data as StatsData);
@@ -29,7 +45,7 @@ export default function AdminStatistics() {
       console.error('Failed to fetch stats', err);
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
