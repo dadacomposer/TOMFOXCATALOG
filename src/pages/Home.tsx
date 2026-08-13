@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchRecentlyPlayedTracks, fetchSuggestedTracks } from '../lib/supabase';
 import { Play, Pause, TrendingUp, Loader2, Star } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
@@ -392,7 +392,10 @@ export default function Home() {
         ) : (
           <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
             <ScrollArrows scrollRef={trendingRef} isDark={!user} offsetY={8} />
-            <div ref={trendingRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory">
+            <div 
+              ref={trendingRef} 
+              className={`w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory ${!user ? '[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] pr-40 md:pr-[300px]' : ''}`}
+            >
             {trendingTracks.slice(0, 16).map((track, i) => {
               const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
               return (
@@ -429,6 +432,16 @@ export default function Home() {
               );
             })}
             </div>
+            
+            {/* CTA for non-logged in users */}
+            {!user && (
+              <div className="absolute top-0 right-8 bottom-4 flex flex-col items-center justify-center gap-4 z-20 pointer-events-auto pl-24">
+                <div className="text-white/80 uppercase font-medium tracking-widest text-[12px]">Explore the catalog</div>
+                <Link to="/browse" className="bg-white text-black px-6 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[11px] tracking-widest shadow-lg">
+                  Browse
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>
