@@ -161,9 +161,9 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       <div className={
         inline 
         ? "w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6"
-        : "fixed inset-x-6 top-24 bottom-[100px] bg-[#fafafa] z-50 rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10"
+        : "fixed max-md:inset-x-0 md:inset-x-6 max-md:top-16 md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10"
       }>
-        <div className="px-8 py-8 border-b-2 border-black/5 flex items-center justify-between shrink-0 bg-[#fafafa]">
+        <div className="px-4 md:px-8 py-6 md:py-8 border-b-2 border-black/5 flex max-md:flex-col max-md:items-start max-md:gap-4 md:items-center justify-between shrink-0 bg-[#fafafa] relative">
           <div className="min-h-[50px] flex flex-col justify-center">
             {loading ? (
               <>
@@ -177,7 +177,15 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
               </>
             )}
           </div>
-          <div className="flex items-center gap-6">
+          
+          {/* Close button for mobile - placed absolutely at the top right of the header */}
+          {!inline && (
+            <button onClick={onClose} className="md:hidden absolute top-6 right-4 p-2 rounded-full hover:bg-black/5 transition-colors text-black/40 hover:text-black">
+              <X className="w-6 h-6" />
+            </button>
+          )}
+
+          <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
             
             {/* Sort Dropdown */}
             <div className="relative flex items-center gap-2 px-4 shrink-0" ref={sortDropdownRef}>
@@ -213,7 +221,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
               )}
             </div>
 
-            <div className="flex items-center gap-3 shrink-0 border-l border-black/10 pl-6 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+            <div className="flex items-center gap-3 shrink-0 border-l border-black/10 pl-4 md:pl-6 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
               <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? 'text-black group-hover/preview:text-black/70' : 'text-black/30 group-hover/preview:text-black/60'}`}>Preview</span>
               <div 
                 className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${isPreviewMode ? 'bg-[#111111] group-hover/preview:bg-[#333]' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]'}`}
@@ -222,14 +230,14 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
               </div>
             </div>
             {!inline && (
-              <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5 transition-colors text-black/40 hover:text-black">
+              <button onClick={onClose} className="hidden md:block p-2 rounded-full hover:bg-black/5 transition-colors text-black/40 hover:text-black">
                 <X className="w-6 h-6" />
               </button>
             )}
           </div>
         </div>
 
-        <div className={inline ? "px-8 py-6 bg-[#fafafa]" : "flex-grow overflow-y-auto px-8 py-6 bg-[#fafafa]"}>
+        <div className={inline ? "px-4 md:px-8 py-6 bg-[#fafafa]" : "flex-grow overflow-y-auto px-4 md:px-8 py-6 bg-[#fafafa]"}>
           {loading && initialTrackCount !== 0 ? (
             <div className="flex flex-col gap-1 pb-16">
               {[...Array(8)].map((_, i) => (
@@ -292,14 +300,14 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                         </div>
                       )}
                     </div>
-                  <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
+                  <div className="flex flex-col justify-center flex-1 md:flex-none md:w-[20%] shrink-0 pr-2 md:pr-4 overflow-hidden">
                     <div 
-                      className="font-bold truncate text-[14px] group-hover:underline cursor-pointer"
+                      className="font-bold truncate text-[13px] md:text-[14px] group-hover:underline cursor-pointer"
                       onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(track); }}
                     >
                       {cleanTitle(track.file_name)}
                     </div>
-                    <div className="font-sans text-[12px] text-black/50 mt-0.5">{DEFAULT_ARTIST}</div>
+                    <div className="font-sans text-[11px] md:text-[12px] text-black/50 mt-0.5 truncate">{DEFAULT_ARTIST}</div>
                   </div>
                   
                   {/* TAGS Column */}
@@ -375,9 +383,9 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                     />
                   </div>
 
-                  <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
+                  <div className="flex items-center justify-end gap-1 md:gap-2 pr-2 md:pr-4 shrink-0 w-auto">
                     <TrackActionButtons trackId={track.id} />
-                    <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
+                    <div className="hidden md:block text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
                       {track.duration ? formatTime(track.duration) : '0:00'}
                     </div>
                     {isOwner ? (
@@ -397,12 +405,12 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                     ) : (
                       <>
                         {profile?.can_download !== false && (
-                          <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
+                          <button className="hidden md:flex p-1.5 hover:bg-black/5 rounded-full transition-colors items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
                             <Download className="w-4 h-4" />
                           </button>
                         )}
-                        <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>
-                          <ShoppingBag className="w-3.5 h-3.5" /> License
+                        <button className="flex items-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={e => { e.stopPropagation(); openLicenseModal(track); }}>
+                          <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden md:inline">License</span>
                         </button>
                       </>
                     )}

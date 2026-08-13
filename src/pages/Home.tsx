@@ -255,12 +255,12 @@ export default function Home() {
               <FeaturedSun isHovered={isFeaturedHovered} />
             </div>
           )}
-          <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} px-8`}>
+          <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} max-md:px-[calc(50vw-140px)] md:px-8`}>
             <ScrollArrows scrollRef={topPicksRef} isDark={!user} offsetY={8} />
           <div ref={topPicksRef} className="flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4">
             {loading ? (
               [...Array(4)].map((_, i) => (
-                <div key={i} className={`flex flex-col p-4 rounded-[32px] shrink-0 snap-start ${!user ? 'w-[280px]' : 'w-[340px]'}`}>
+                <div key={i} className={`flex flex-col p-4 rounded-[32px] shrink-0 snap-center md:snap-start ${!user ? 'w-[280px]' : 'w-[340px]'}`}>
                   <div className="relative w-full aspect-[1.15] mb-6">
                      <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
                      <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
@@ -307,7 +307,7 @@ export default function Home() {
                   return (
                     <div 
                       key={pl.id} 
-                      className={`relative shrink-0 snap-start aspect-[3/4] rounded-[32px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-white/10 ${style.baseColor} ${!user ? 'w-[280px]' : 'w-[340px]'}`}
+                      className={`relative shrink-0 snap-center md:snap-start aspect-[3/4] rounded-[32px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-white/10 ${style.baseColor} ${!user ? 'w-[280px]' : 'w-[340px]'}`}
                       onClick={() => setSearchParams({ playlist: pl.id })}
                       onMouseEnter={() => setIsFeaturedHovered(true)}
                       onMouseLeave={() => setIsFeaturedHovered(false)}
