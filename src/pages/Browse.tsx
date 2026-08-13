@@ -889,8 +889,10 @@ export default function Browse() {
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMyMusicOpen ? '' : '-rotate-90'}`} />
                 </button>
                 
-                {isMyMusicOpen && (
-                  <>
+                <div 
+                  className={`grid transition-all duration-300 ease-in-out w-full ${isMyMusicOpen ? 'grid-rows-[1fr] opacity-100 flex-1 min-h-0 mt-1' : 'grid-rows-[0fr] opacity-0 flex-none min-h-0 mt-0'}`}
+                >
+                  <div className="overflow-hidden flex flex-col h-full w-full">
                     {profile && favoritesPlaylist && (
                       <SidebarPlaylist 
                         playlist={favoritesPlaylist}
@@ -977,8 +979,8 @@ export default function Browse() {
                     </div>
                   )}
                 </div>
-              </>
-            )}
+                  </div>
+                </div>
               </div>
 
               <div className={`absolute left-[130px] top-0 bottom-0 w-[250px] pl-6 flex flex-col transition-all duration-150 ease-out will-change-[width,transform] ${expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
