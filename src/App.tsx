@@ -3,9 +3,7 @@ import { useEffect } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import DiscoverBrowseWrapper from './pages/DiscoverBrowseWrapper';
-import Pricing from './pages/Pricing';
 import Playlists from './pages/Playlists';
-import Enterprise from './pages/Enterprise';
 import Login from './pages/Login';
 import CheckoutResume from './pages/CheckoutResume';
 import CheckoutSuccess from './pages/CheckoutSuccess';
@@ -87,8 +85,6 @@ function AppLayout() {
             <Route path="/browse" element={<DiscoverBrowseWrapper />} />
             <Route path="/my-music" element={<MyMusic />} />
             <Route path="/playlists" element={<Playlists />} />
-            <Route path="/pricing" element={settings?.subscriptions_enabled ? <Pricing /> : <Navigate to="/" replace />} />
-            <Route path="/enterprise" element={settings?.subscriptions_enabled ? <Enterprise /> : <Navigate to="/" replace />} />
             <Route path="/checkout-resume" element={<CheckoutResume />} />
             <Route path="/checkout-success" element={<CheckoutSuccess />} />
             <Route path="/checkout-cancel" element={<CheckoutCancel />} />

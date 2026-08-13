@@ -1,35 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, fetchPlaylists } from '../../lib/supabase';
 import { Save, Settings2, Edit3, Loader2, RefreshCw, Palette } from 'lucide-react';
-import { useSettings, SiteSettings, PageContent } from '../../context/SettingsContext';
+import { useSettings, SiteSettings } from '../../context/SettingsContext';
 import toast from 'react-hot-toast';
 import CustomSelect from '../CustomSelect';
 import PlaylistArtwork from '../PlaylistArtwork';
 
 
-// Hardcoded character limits based on original strings to prevent layout breaks
-const MAX_LENGTHS: Record<string, Record<string, number>> = {
-  home: {
-    hero_title: 51,
-    hero_subtitle: 83,
-    hero_btn_1: 6,
-    hero_btn_2: 19
-  },
-  pricing: {
-    hero_title: 79
-  },
-  enterprise: {
-    hero_title: 10
-  }
-};
 
 export default function AdminFeatures() {
-  const { settings, content, refreshSettings } = useSettings();
+  const { settings, refreshSettings } = useSettings();
   
   const [localSettings, setLocalSettings] = useState<SiteSettings>(settings);
-  const [localContent, setLocalContent] = useState<Record<string, PageContent>>(content);
+
   const [isSaving, setIsSaving] = useState(false);
-  const [expandedPage, setExpandedPage] = useState<string | null>(null);
   const [publicPlaylists, setPublicPlaylists] = useState<any[]>([]);
   const [topPicks, setTopPicks] = useState<Record<string, string>>({});
 
@@ -48,23 +32,10 @@ export default function AdminFeatures() {
 
   useEffect(() => {
     setLocalSettings(settings);
-    setLocalContent(content);
-  }, [settings, content]);
+  }, [settings]);
 
   // Toggles removed as requested
 
-  const handleContentChange = (pageId: string, key: string, value: string) => {
-    const maxLen = MAX_LENGTHS[pageId]?.[key] || 1000;
-    if (value.length > maxLen) return; // Enforce strict length limit
-
-    setLocalContent(prev => ({
-      ...prev,
-      [pageId]: {
-        ...(prev[pageId] || {}),
-        [key]: value
-      }
-    }));
-  };
 
   const saveSettings = async () => {
     setIsSaving(true);
@@ -77,19 +48,7 @@ export default function AdminFeatures() {
       
       if (settingsError) throw settingsError;
 
-      // 2. Save Content
-      const updatePromises = Object.entries(localContent).map(async ([pageId, contentObj]) => {
-        const { error } = await supabase
-          .from('page_content')
-          .upsert({ page_id: pageId, content: contentObj }, { onConflict: 'page_id' });
-        
-        if (error) {
-          console.error(`Error saving ${pageId}:`, error);
-          throw new Error(`Failed to save ${pageId}: ${error.message}`);
-        }
-      });
 
-      await Promise.all(updatePromises);
       
       // 3. Save Top Picks to Playlists
       const updateTopPicksPromises = publicPlaylists.map(async (pl) => {
@@ -285,71 +244,7 @@ export default function AdminFeatures() {
         </div>
       </div>
 
-      {/* Content Editor Section */}
-      <div className="space-y-6">
-        <div className="flex items-center gap-3 border-b border-black/10 pb-4">
-          <Edit3 className="w-5 h-5" />
-          <h3 className="text-xl font-medium uppercase tracking-tight">Content Editor</h3>
-        </div>
-        <p className="text-xs font-medium uppercase tracking-widest text-black/40">
-          Strict character limits are enforced to prevent layout breaks on the public site.
-        </p>
 
-        <div className="grid grid-cols-1 gap-4">
-          {Object.entries(localContent).filter(([pageId]) => pageId !== 'top_picks').map(([pageId, fields]) => (
-            <div key={pageId} className="bg-white rounded-2xl border border-black/10 shadow-sm overflow-hidden transition-all">
-              <button 
-                onClick={() => setExpandedPage(expandedPage === pageId ? null : pageId)}
-                className="w-full px-6 py-5 flex items-center justify-between bg-black/5 hover:bg-black/10 transition-colors"
-              >
-                <span className="font-medium uppercase tracking-widest text-sm">{pageId} Page</span>
-                <span className="text-xs font-medium text-black/40">{expandedPage === pageId ? 'Close' : 'Edit'}</span>
-              </button>
-              
-              {expandedPage === pageId && (
-                <div className="p-6 grid grid-cols-1 gap-6">
-                  {Object.entries(fields)
-                    .filter(([fieldKey]) => !fieldKey.includes('btn') && !fieldKey.includes('top_picks_card_'))
-                    .map(([fieldKey, fieldValue]) => {
-                    const maxLen = MAX_LENGTHS[pageId]?.[fieldKey] || 1000;
-                    const isLongText = fieldKey.includes('subtitle') || fieldKey.includes('desc');
-                    
-                    return (
-                      <div key={fieldKey} className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-medium uppercase tracking-widest text-black/60">
-                            {fieldKey.replace(/_/g, ' ')}
-                          </label>
-                          <span className={`text-[10px] font-medium font-mono ${fieldValue.length >= maxLen ? 'text-red-500' : 'text-black/30'}`}>
-                            {fieldValue.length} / {maxLen}
-                          </span>
-                        </div>
-                        {isLongText ? (
-                          <textarea 
-                            value={fieldValue}
-                            onChange={(e) => handleContentChange(pageId, fieldKey, e.target.value)}
-                            maxLength={maxLen}
-                            rows={3}
-                            className="w-full bg-[#fafafa] border border-black/10 rounded-xl px-4 py-3 font-sans text-sm focus:bg-white focus:border-black/30 outline-none transition-all resize-none"
-                          />
-                        ) : (
-                          <input 
-                            type="text"
-                            value={fieldValue}
-                            onChange={(e) => handleContentChange(pageId, fieldKey, e.target.value)}
-                            maxLength={maxLen}
-                            className="w-full bg-[#fafafa] border border-black/10 rounded-xl px-4 py-3 font-sans text-sm focus:bg-white focus:border-black/30 outline-none transition-all"
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
 
       </div>
     </div>

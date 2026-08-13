@@ -51,8 +51,8 @@ export default function AcceptInviteModal({ invite, onProcessed }: AcceptInviteM
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-500">
-      <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col p-8 w-[400px] text-center">
+    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-500">
+      <div className="animate-scale-in relative bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col p-8 w-[400px] text-center">
         
         <div className="flex justify-center mb-6">
           <div className="w-20 h-20 rounded-full border border-black/10 overflow-hidden bg-black/5 flex items-center justify-center">

@@ -208,7 +208,7 @@ export default function Browse() {
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const { user, profile, setLoginModalOpen } = useAuth();
-  const { settings, content } = useSettings();
+  const { settings } = useSettings();
   
   const { playlists: userPlaylists, favoritesPlaylist, createPlaylist, addTrackToPlaylist } = useUserPlaylists();
   const [dragTarget, setDragTarget] = useState<string | null>(null);
@@ -253,31 +253,36 @@ export default function Browse() {
     initEmbeddingModel();
     
     async function loadData() {
-      const [pData, tData, ids, fOpts] = await Promise.all([
-        fetchPlaylists(),
-        fetchTrendingTracks(),
-        fetchDefaultTrackOrder(),
-        fetchFilterOptions()
-      ]);
-      
-      const newPlaylist = pData.find((p: any) => p.title.toLowerCase().includes('new music'));
-      if (newPlaylist) {
-        setNewMusicPlaylist(newPlaylist);
-        setPlaylists(pData);
-        const newTrackIds = await fetchPlaylistTrackIds(newPlaylist.id);
-        setNewMusicTrackIds(new Set(newTrackIds));
-      } else {
-        setPlaylists(pData);
+      try {
+        const [pData, tData, ids, fOpts] = await Promise.all([
+          fetchPlaylists(),
+          fetchTrendingTracks(),
+          fetchDefaultTrackOrder(),
+          fetchFilterOptions()
+        ]);
+        
+        const newPlaylist = pData?.find((p: any) => p.title.toLowerCase().includes('new music'));
+        if (newPlaylist) {
+          setNewMusicPlaylist(newPlaylist);
+          setPlaylists(pData);
+          const newTrackIds = await fetchPlaylistTrackIds(newPlaylist.id);
+          setNewMusicTrackIds(new Set(newTrackIds));
+        } else {
+          setPlaylists(pData || []);
+        }
+        
+        setTrendingTracks((tData || []) as Track[]);
+        setDefaultTrackIds(ids || []);
+        if (fOpts) {
+          setFilterOptions(fOpts);
+        } else {
+          setFilterOptions(null);
+        }
+      } catch (error) {
+        console.error("Error loading browse data:", error);
+      } finally {
+        setLoading(false);
       }
-      
-      setTrendingTracks(tData as Track[]);
-      setDefaultTrackIds(ids);
-      if (fOpts) {
-        setFilterOptions(fOpts);
-      } else {
-        setFilterOptions(null);
-      }
-      setLoading(false);
     }
     loadData();
   }, []);
@@ -316,11 +321,11 @@ export default function Browse() {
   // Handle auto-scroll when trending tracks finish playing
   useEffect(() => {
     const handleScrollEvent = () => {
-      document.getElementById('main-search-bar')?.scrollIntoView({ behavior: 'smooth' });
+      navigate('/browse');
     };
     window.addEventListener('scrollToBrowse', handleScrollEvent);
     return () => window.removeEventListener('scrollToBrowse', handleScrollEvent);
-  }, []);
+  }, [navigate]);
 
   const [shadowTagIds, setShadowTagIds] = useState<string[] | null>(null);
 
@@ -1073,7 +1078,7 @@ export default function Browse() {
 
         {/* SCROLL CONTAINER for tracks */}
         <div className="flex-1 overflow-y-auto overscroll-none" id="full-catalog-browser">
-          <div className="flex flex-col w-full pt-8 pb-8 pr-4 md:pr-8 pl-4 md:pl-8">
+          <div className="flex flex-col w-full pt-8 pb-8 px-2 md:px-8">
             <div className="flex-grow flex flex-col overflow-hidden">
               <div className="flex flex-col gap-1 mb-8">
             {React.useMemo(() => (
@@ -1125,10 +1130,10 @@ export default function Browse() {
                   </div>
                 )}
               </div>
-              <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
+              <div className="flex flex-col justify-center flex-1 md:w-[20%] md:flex-none pr-2 md:pr-4 overflow-hidden">
                 <div className="flex items-center gap-2 overflow-hidden">
                   <div 
-                    className="font-medium truncate text-[14px] hover:underline underline-offset-2 cursor-pointer"
+                    className="font-medium truncate text-[13px] md:text-[14px] hover:underline underline-offset-2 cursor-pointer"
                     onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
                   >
                     {cleanTitle(track.file_name)}
@@ -1147,7 +1152,7 @@ export default function Browse() {
                     </button>
                   )}
                 </div>
-                <div className="text-[11px] text-black/40 truncate font-sans max-w-[200px]">
+                <div className="text-[11px] md:text-[11px] text-black/40 truncate font-sans max-w-[200px]">
                   {getComposers(track.composers)}
                 </div>
               </div>
@@ -1241,20 +1246,20 @@ export default function Browse() {
                 />
               </div>
 
-              <div className={`hidden md:flex items-center justify-end pr-4 shrink-0 w-auto ${profile?.can_download !== false ? 'gap-2' : 'gap-1'}`}>
+              <div className={`flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2`}>
                 <TrackActionButtons trackId={track.id} />
-                <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
+                <div className="hidden md:block text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
                   {track.duration ? formatTime(track.duration) : '0:00'}
                 </div>
-                <div className="w-[50px] flex justify-center shrink-0">
+                <div className="hidden md:flex w-[50px] justify-center shrink-0">
                 </div>
                 {profile?.can_download !== false && (
-                  <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
+                  <button className="hidden md:flex p-1.5 hover:bg-black/5 rounded-full transition-colors items-center justify-center text-black/40 hover:text-black shrink-0 mr-2 md:mr-4" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
                     <Download className="w-4 h-4" />
                   </button>
                 )}
-                <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(track); }}>
-                  <ShoppingBag className="w-3.5 h-3.5" /> License
+                <button className="flex items-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(track); }}>
+                  <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden md:inline">License</span>
                 </button>
               </div>
             </div>
@@ -1280,14 +1285,14 @@ export default function Browse() {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col w-[20%] shrink-0 pr-4">
+                    <div className="flex flex-col justify-center flex-1 md:w-[20%] md:flex-none shrink-0 pr-2 md:pr-4 overflow-hidden">
                       <div 
-                        className="font-medium text-[13px] truncate hover:underline underline-offset-2 cursor-pointer"
+                        className="font-medium text-[13px] md:text-[13px] truncate hover:underline underline-offset-2 cursor-pointer"
                         onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(version); }}
                       >
                         {cleanTitle(version.file_name)}
                       </div>
-                      <div className="font-sans text-[10px] text-black/40 uppercase tracking-widest mt-0.5">Version</div>
+                      <div className="font-sans text-[9px] md:text-[10px] text-black/40 uppercase tracking-widest mt-0.5">Version</div>
                     </div>
                     <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%]" />
                     <div className="hidden md:flex flex-grow h-6 items-center opacity-70 group-hover/version:opacity-100 transition-opacity pr-4">
@@ -1300,16 +1305,21 @@ export default function Browse() {
                         previewEndPct={isPreviewMode ? getPreviewTimings(version)?.endPct : undefined}
                       />
                     </div>
-                    <div className={`hidden md:flex items-center justify-end pr-4 shrink-0 w-auto ${profile?.can_download !== false ? 'gap-2' : 'gap-1'}`}>
+                    <div className={`flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2`}>
                       <TrackActionButtons trackId={version.id} />
-                      <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
+                      <div className="hidden md:block text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
                         {version.duration ? formatTime(version.duration) : '0:00'}
                       </div>
-                      {currentTrack?.id !== version.id && profile?.can_download !== false && (
-                        <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(version, e); }} title="Download">
+                      <div className="hidden md:flex w-[50px] justify-center shrink-0">
+                      </div>
+                      {profile?.can_download !== false && (
+                        <button className="hidden md:flex p-1.5 hover:bg-black/5 rounded-full transition-colors items-center justify-center text-black/40 hover:text-black shrink-0 mr-2 md:mr-4" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(version, e); }} title="Download">
                           <Download className="w-4 h-4" />
                         </button>
                       )}
+                      <button className="flex items-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(version); }}>
+                        <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden md:inline">License</span>
+                      </button>
                     </div>
                   </div>
                 ))}

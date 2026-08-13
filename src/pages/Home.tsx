@@ -72,7 +72,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0 }: { scrollRef: React.Ref
   return (
     <>
       <button 
-        className={`absolute left-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        className={`absolute max-md:left-2 md:left-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
@@ -82,7 +82,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0 }: { scrollRef: React.Ref
         <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
       <button 
-        className={`absolute right-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        className={`absolute max-md:right-2 md:right-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
@@ -129,13 +129,18 @@ export default function Home() {
 
   useEffect(() => {
     async function loadData() {
-      const [pData, tData] = await Promise.all([
-        fetchPlaylists(),
-        fetchTrendingTracks()
-      ]);
-      setPlaylists(pData);
-      setTrendingTracks(tData);
-      setLoading(false);
+      try {
+        const [pData, tData] = await Promise.all([
+          fetchPlaylists(),
+          fetchTrendingTracks()
+        ]);
+        setPlaylists(pData || []);
+        setTrendingTracks(tData || []);
+      } catch (error) {
+        console.error("Error loading home data:", error);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, []);
@@ -260,7 +265,7 @@ export default function Home() {
           <div ref={topPicksRef} className="flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4">
             {loading ? (
               [...Array(4)].map((_, i) => (
-                <div key={i} className={`flex flex-col p-4 rounded-[32px] shrink-0 snap-center md:snap-start ${!user ? 'w-[280px]' : 'w-[340px]'}`}>
+                <div key={i} className={`flex flex-col p-4 rounded-[32px] shrink-0 snap-always snap-center md:snap-start ${!user ? 'w-[280px]' : 'w-[280px] md:w-[340px]'}`}>
                   <div className="relative w-full aspect-[1.15] mb-6">
                      <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
                      <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
@@ -307,7 +312,7 @@ export default function Home() {
                   return (
                     <div 
                       key={pl.id} 
-                      className={`relative shrink-0 snap-center md:snap-start aspect-[3/4] rounded-[32px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-white/10 ${style.baseColor} ${!user ? 'w-[280px]' : 'w-[340px]'}`}
+                      className={`relative shrink-0 snap-always snap-center md:snap-start aspect-[3/4] rounded-[32px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-500 border border-transparent hover:border-white/10 ${style.baseColor} ${!user ? 'w-[280px]' : 'w-[280px] md:w-[340px]'}`}
                       onClick={() => setSearchParams({ playlist: pl.id })}
                       onMouseEnter={() => setIsFeaturedHovered(true)}
                       onMouseLeave={() => setIsFeaturedHovered(false)}
@@ -365,12 +370,12 @@ export default function Home() {
       </div>
 
       {/* Trending Tracks */}
-      <div className={`w-full px-8 pt-12 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
-        <h2 className={`text-[22px] font-medium uppercase tracking-tighter mb-6 ${!user ? 'text-white' : 'text-black'}`}>Trending tracks</h2>
+      <div className={`w-full pt-12 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
+        <h2 className={`text-[22px] font-medium uppercase tracking-tighter mb-6 px-8 ${!user ? 'text-white' : 'text-black'}`}>Trending tracks</h2>
         
         {loading ? (
-          <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
-            <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-4 content-start min-w-min">
+          <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
+            <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-4 content-start">
               {[...Array(16)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-2 rounded select-none">
                   <div className={`w-12 h-12 rounded relative overflow-hidden shrink-0 animate-pulse ${!user ? 'bg-white/10' : 'bg-[#e5e5e5]'}`} />
@@ -383,18 +388,17 @@ export default function Home() {
             </div>
           </div>
         ) : trendingTracks.length === 0 ? (
-          <div className={`font-sans text-[11px] uppercase tracking-widest ${!user ? 'text-white/30' : 'text-black/30'}`}>Nessuna traccia trovata.</div>
+          <div className={`font-sans text-[11px] uppercase tracking-widest px-8 ${!user ? 'text-white/30' : 'text-black/30'}`}>No tracks found.</div>
         ) : (
-          <div className="w-full relative">
+          <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
             <ScrollArrows scrollRef={trendingRef} isDark={!user} offsetY={8} />
-            <div ref={trendingRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
-              <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
+            <div ref={trendingRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory">
             {trendingTracks.slice(0, 16).map((track, i) => {
               const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
               return (
                 <div 
                   key={i} 
-                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border ${selectedTrackIds.has(track.id) ? (!user ? 'bg-white/10 border-white/20' : 'bg-black/5 border-black/10') : (!user ? 'border-transparent hover:bg-white/5 hover:border-white/10' : 'border-transparent hover:bg-black/5 hover:border-black/5')}`}
+                  className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border snap-always snap-center ${selectedTrackIds.has(track.id) ? (!user ? 'bg-white/10 border-white/20' : 'bg-black/5 border-black/10') : (!user ? 'border-transparent hover:bg-white/5 hover:border-white/10' : 'border-transparent hover:bg-black/5 hover:border-black/5')}`}
                   onClick={(e) => handleTrackClick(e, track, 'top')}
                   draggable
                   onDragStart={(e) => handleTrackDragStart(e, track.id)}
@@ -424,7 +428,6 @@ export default function Home() {
                 </div>
               );
             })}
-              </div>
             </div>
           </div>
         )}
@@ -433,16 +436,16 @@ export default function Home() {
 
       {/* Suggested For You */}
       {suggestedPlaylists.length > 0 && (
-        <div className="w-full px-8 pt-4 pb-2 flex flex-col relative group/section no-radius !rounded-none">
-          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Suggested for you</h2>
+        <div className="w-full pt-4 pb-2 flex flex-col relative group/section no-radius !rounded-none">
+          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black px-8">Suggested for you</h2>
           
-          <div className="w-full relative">
+          <div className="w-full relative max-md:px-[calc(50vw-120px)] sm:max-md:px-[calc(50vw-130px)] md:px-8">
             <ScrollArrows scrollRef={suggestedRef} offsetY={8} />
-            <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar">
+            <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar snap-x snap-mandatory">
               {suggestedPlaylists.map((pl) => (
                 <div 
                   key={pl.id} 
-                  className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all duration-300 border border-transparent hover:border-black/5 relative shrink-0 w-[240px] sm:w-[260px] md:w-[280px]"
+                  className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all duration-300 border border-transparent hover:border-black/5 relative shrink-0 w-[240px] sm:w-[260px] md:w-[280px] snap-always snap-center"
                   onClick={() => setSearchParams({ playlist: pl.id })}
                 >
                   <div className={`relative w-full mb-6 ${settings.public_artwork_frames_enabled ? 'aspect-[1.15]' : 'aspect-square'}`}>
@@ -521,19 +524,18 @@ export default function Home() {
 
       {/* Recently Played */}
       {recentlyPlayedTracks.length > 0 && (
-        <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section no-radius !rounded-none">
-          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Recently Played</h2>
+        <div className="w-full pt-4 pb-12 flex flex-col relative group/section no-radius !rounded-none">
+          <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black px-8">Recently Played</h2>
           
-          <div className="w-full relative">
+          <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
             <ScrollArrows scrollRef={recentlyPlayedRef} offsetY={16} />
-            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-8 hide-scrollbar -mx-4 px-4">
-              <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
+            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-8 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory">
                 {recentlyPlayedTracks.map((track, i) => {
                   const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
                   return (
                     <div 
                       key={`${track.id}-${i}`} 
-                      className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
+                      className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent snap-always snap-center ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
                       onClick={(e) => handleTrackClick(e, track, 'top')}
                       draggable
                       onDragStart={(e) => handleTrackDragStart(e, track.id)}
@@ -558,7 +560,6 @@ export default function Home() {
                     </div>
                   );
                 })}
-              </div>
             </div>
           </div>
         </div>

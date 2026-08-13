@@ -277,7 +277,7 @@ export default function GlobalPlayer() {
         </div>
         <div className="flex flex-col overflow-hidden">
           <div 
-            className="font-bold truncate text-[14px] cursor-pointer hover:underline underline-offset-2"
+            className="font-bold truncate text-[14px] cursor-pointer hover:underline underline-offset-2 pr-4"
             onClick={() => currentTrack && setSelectedTrackForDetails(currentTrack)}
           >
             {currentTrack ? cleanTitle(currentTrack.file_name) : ''}
@@ -286,28 +286,6 @@ export default function GlobalPlayer() {
             {getComposers(currentTrack?.composers)}
           </div>
         </div>
-        {!isSharedPage && currentTrack && (
-          <div className="ml-auto flex items-center gap-2">
-            <TrackActionButtons trackId={currentTrack.id} />
-            <button 
-              onClick={() => {
-                if (!isSimilarExpanded) {
-                  expandSimilar();
-                } else {
-                  if (currentTrack?.id !== referenceTrack?.id) {
-                    expandSimilar();
-                  } else {
-                    closeSimilar();
-                  }
-                }
-              }} 
-              className={`flex items-center justify-center p-1.5 rounded-full transition-colors ${isSimilarExpanded && currentTrack?.id === referenceTrack?.id ? 'text-black bg-black/10' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
-              title="Find Similar"
-            >
-              <Zap className="w-4 h-4" />
-            </button>
-          </div>
-        )}
       </div>
       <div className="flex items-center gap-4 shrink-0">
         <button 
@@ -340,7 +318,38 @@ export default function GlobalPlayer() {
         </button>
       </div>
       <div className="flex-grow flex items-center">
-        <div className="flex-grow mx-8 h-8 flex items-center">
+        {/* 2. Find Similar Tracks */}
+        {!isSharedPage && currentTrack && (
+          <button 
+            onClick={() => {
+              if (!isSimilarExpanded) {
+                expandSimilar();
+              } else {
+                if (currentTrack?.id !== referenceTrack?.id) {
+                  expandSimilar();
+                } else {
+                  closeSimilar();
+                }
+              }
+            }} 
+            className={`flex items-center justify-center p-1.5 rounded-full transition-colors mr-6 ${isSimilarExpanded && currentTrack?.id === referenceTrack?.id ? 'text-black bg-black/10' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
+            title="Find Similar"
+          >
+            <Zap className="w-4 h-4" />
+          </button>
+        )}
+
+              {/* 3. Toggle Preview */}
+        <div className="flex items-center gap-3 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+          <span className={`hidden md:block text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? (isSharedPage ? 'text-white' : 'text-black group-hover/preview:text-black/70') : (isSharedPage ? 'text-white/50' : 'text-black/30 group-hover/preview:text-black/60')}`}>Preview</span>
+          <div 
+            className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${isPreviewMode ? (isSharedPage ? 'bg-white/30 group-hover/preview:bg-white/40' : 'bg-[#111111] group-hover/preview:bg-[#333]') : (isSharedPage ? 'bg-white/10 group-hover/preview:bg-white/20' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]')}`}
+          >
+            <div className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-4' : 'translate-x-0'}`} />
+          </div>
+        </div>
+
+              <div className="flex-grow mx-8 h-8 flex items-center">
           {currentTrack && (
             <WaveformView 
               data={parseWaveform(currentTrack.waveform_data)} 
@@ -353,21 +362,13 @@ export default function GlobalPlayer() {
             />
           )}
         </div>
-        <div className={`font-sans text-[11px] ${secondaryText} uppercase tracking-widest w-20 text-right shrink-0`}>
-          {audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'} / {audioRef.current?.duration ? formatTime(audioRef.current.duration) : (currentTrack?.duration ? formatTime(currentTrack.duration) : '0:00')}
-        </div>
-      </div>
-      <div className="shrink-0 flex items-center gap-4 ml-4">
-        <div className="flex items-center gap-3 cursor-pointer group/preview mr-2" onClick={() => setIsPreviewMode(!isPreviewMode)}>
-          <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? (isSharedPage ? 'text-white' : 'text-black group-hover/preview:text-black/70') : (isSharedPage ? 'text-white/50' : 'text-black/30 group-hover/preview:text-black/60')}`}>Preview</span>
-          <div 
-            className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${isPreviewMode ? (isSharedPage ? 'bg-white/30 group-hover/preview:bg-white/40' : 'bg-[#111111] group-hover/preview:bg-[#333]') : (isSharedPage ? 'bg-white/10 group-hover/preview:bg-white/20' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]')}`}
-          >
-            <div className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-4' : 'translate-x-0'}`} />
+        {!isSharedPage && currentTrack && (
+          <div className="flex items-center mr-4 shrink-0">
+            <TrackActionButtons trackId={currentTrack.id} />
           </div>
-        </div>
-
-        <div className="relative group/volume flex items-center ml-2 shrink-0">
+        )}
+        {/* 1. Volume Controls */}
+        <div className="relative group/volume flex items-center shrink-0 mr-4">
           <button 
             onClick={toggleMute} 
             className={`p-1.5 rounded-full transition-colors flex items-center justify-center shrink-0 ${isSharedPage ? 'text-white/40 hover:text-white hover:bg-white/10' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
@@ -387,8 +388,17 @@ export default function GlobalPlayer() {
             </div>
           </div>
         </div>
+
+        
+        <div className={`font-sans text-[11px] ${secondaryText} uppercase tracking-widest w-20 text-right shrink-0`}>
+          {audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'} / {audioRef.current?.duration ? formatTime(audioRef.current.duration) : (currentTrack?.duration ? formatTime(currentTrack.duration) : '0:00')}
+        </div>
+      </div>
+      <div className="shrink-0 flex items-center gap-4 ml-4">
+        
+        {/* 4. Download and License */}
         {!isSharedPage && (
-          <div className="flex gap-2 ml-4">
+          <div className="flex gap-4 ml-2">
             {profile?.can_download !== false && (
               <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
                 <Download className="w-4 h-4" />
@@ -497,15 +507,21 @@ export default function GlobalPlayer() {
                     />
                   </div>
 
-                  {/* Download and License buttons */}
-                  <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-[280px]">
+                  {/* Action Buttons, Duration, Download and License buttons */}
+                  <div className={`flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2`}>
+                    <TrackActionButtons trackId={track.id} />
+                    <div className="hidden md:block text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
+                      {track.duration ? formatTime(track.duration) : '0:00'}
+                    </div>
+                    <div className="hidden md:flex w-[50px] justify-center shrink-0">
+                    </div>
                     {profile?.can_download !== false && (
-                      <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { e.stopPropagation(); openDownloadModal(track, e); }}>
+                      <button className="hidden md:flex p-1.5 hover:bg-black/5 rounded-full transition-colors items-center justify-center text-black/40 hover:text-black shrink-0 mr-2 md:mr-4" onClick={(e) => { e.stopPropagation(); openDownloadModal(track, e); }}>
                         <Download className="w-4 h-4" />
                       </button>
                     )}
-                    <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] uppercase tracking-widest" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>
-                      <ShoppingBag className="w-3 h-3" /> License
+                    <button className="flex items-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>
+                      <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden md:inline">License</span>
                     </button>
                   </div>
                 </div>

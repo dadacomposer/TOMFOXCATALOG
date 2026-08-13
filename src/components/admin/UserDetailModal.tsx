@@ -86,7 +86,7 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 animate-fade-in z-50 flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex flex-col max-h-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
@@ -156,7 +156,7 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-widest text-black/40 mb-4">Identity Details</h3>
-                  <div className="bg-white rounded-2xl border border-black/10 p-6 space-y-4 shadow-sm">
+                  <div className="animate-scale-in bg-white rounded-2xl border border-black/10 p-6 space-y-4 shadow-sm">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-widest text-black/40 mb-1">Stripe Customer ID</p>
                       <p className="font-mono text-sm">{user.stripe_customer_id || 'None'}</p>
@@ -174,7 +174,7 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
                 
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-widest text-black/40 mb-4">Permissions</h3>
-                  <div className="bg-white rounded-2xl border border-black/10 p-6 space-y-4 shadow-sm">
+                  <div className="animate-scale-in bg-white rounded-2xl border border-black/10 p-6 space-y-4 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-bold text-sm">Download Tracks</p>
@@ -196,7 +196,7 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
 
           {activeTab === 'billing' && (
             <div className="space-y-8">
-              <div className="bg-white rounded-2xl border border-black/10 p-6 shadow-sm">
+              <div className="animate-scale-in bg-white rounded-2xl border border-black/10 p-6 shadow-sm">
                 <div className="flex items-start justify-between mb-8">
                   <div>
                     <h3 className="text-xl font-bold mb-1">Subscription Status</h3>
@@ -243,7 +243,7 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {workspaces.map(ws => (
-                      <div key={ws.id} className="bg-white rounded-2xl border border-black/10 p-6 shadow-sm">
+                      <div key={ws.id} className="animate-scale-in bg-white rounded-2xl border border-black/10 p-6 shadow-sm">
                         <h4 className="font-bold text-lg mb-1">{ws.name}</h4>
                         <p className="text-black/50 text-sm mb-4">{ws.company_name} • {ws.company_industry}</p>
                         <p className="text-xs text-black/40">ID: {ws.id}</p>

@@ -38,7 +38,7 @@ export default function TrackActionButtons({ trackId, hideHeart }: TrackActionBu
 
   return (
     <>
-      <div className="flex items-center gap-1.5 transition-opacity">
+      <div className="flex items-center gap-4 transition-opacity">
         {!hideHeart && (
           <button 
             onClick={handleHeartClick}

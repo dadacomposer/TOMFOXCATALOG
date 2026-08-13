@@ -53,7 +53,7 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
 
   const content = (
     <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
-      <div className="bg-white rounded-[24px] w-full max-w-md overflow-hidden shadow-2xl relative animate-slide-in-up" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-[24px] w-full max-w-md overflow-hidden shadow-2xl relative animate-scale-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-black/5">
           <h2 className="text-2xl font-bold uppercase tracking-tighter">Add to Playlist</h2>
           <button onClick={handleClose} className="p-2 hover:bg-black/5 rounded-full transition-colors">

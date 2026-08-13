@@ -634,7 +634,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
   return (
     <div className="fixed inset-0 z-[100] flex flex-col p-4 sm:p-8 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
       <div 
-        className="bg-white rounded-2xl w-full max-w-6xl mx-auto flex flex-col flex-grow shadow-2xl overflow-hidden animate-slide-in-up border border-black/10" 
+        className="bg-white rounded-2xl w-full max-w-6xl mx-auto flex flex-col flex-grow shadow-2xl overflow-hidden animate-scale-in border border-black/10" 
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6 border-b border-black/5 flex items-center justify-between shrink-0">

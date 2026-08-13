@@ -270,7 +270,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pt-[100px] bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
-      <div className="bg-[#fafafa] rounded-[24px] w-full max-w-3xl flex flex-col h-[85vh] overflow-hidden shadow-2xl border border-black/10 animate-slide-in-up" onClick={e => e.stopPropagation()}>
+      <div className="bg-[#fafafa] rounded-[24px] w-full max-w-3xl flex flex-col h-[85vh] overflow-hidden shadow-2xl border border-black/10 animate-scale-in" onClick={e => e.stopPropagation()}>
         <div className="p-6 pb-2 border-b border-black/5 flex items-center justify-between shrink-0">
           <h3 className="text-xl font-bold flex items-center gap-3">
             <span className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 relative overflow-hidden border border-black/10">
@@ -422,7 +422,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
 
           {activeTab === 'versions' && (
             <div className="space-y-8">
-              <div className="bg-white p-6 rounded-2xl border border-black/10 shadow-sm">
+              <div className="animate-scale-in bg-white p-6 rounded-2xl border border-black/10 shadow-sm">
                 <h4 className="font-bold mb-4">Add New Version / Stem</h4>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -480,7 +480,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
                 {isLoadingVersions ? (
                   <div className="text-black/50 text-sm">Loading...</div>
                 ) : versions.length === 0 ? (
-                  <div className="text-black/40 text-sm p-8 text-center bg-white border border-black/10 rounded-2xl border-dashed">No alternative versions or stems yet.</div>
+                  <div className="animate-scale-in text-black/40 text-sm p-8 text-center bg-white border border-black/10 rounded-2xl border-dashed">No alternative versions or stems yet.</div>
                 ) : (
                   <div className="space-y-3">
                     {versions.map(v => (
@@ -529,7 +529,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         
         {versionToDelete && (
           <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
-            <div className="bg-white p-6 rounded-2xl shadow-xl border border-black/10 max-w-sm w-full text-center">
+            <div className="animate-scale-in bg-white p-6 rounded-2xl shadow-xl border border-black/10 max-w-sm w-full text-center">
               <h4 className="text-lg font-bold mb-2">Delete Version</h4>
               <p className="text-black/60 text-sm mb-6">Are you sure you want to delete this version? This action cannot be undone.</p>
               <div className="flex gap-3 justify-center">

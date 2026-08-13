@@ -175,7 +175,7 @@ export default function TrackFormatsModal({ track, onClose, onUpdate }: TrackFor
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
+    <div className="fixed inset-0 animate-fade-in bg-black/60 backdrop-blur-sm z-50 flex justify-end">
       <div className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col animate-slide-in-right">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-black/10">

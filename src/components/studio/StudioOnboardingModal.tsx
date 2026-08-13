@@ -104,7 +104,7 @@ export default function StudioOnboardingModal({ projectId, onComplete, onSkip }:
     }
 
     if (file && uploadStatus !== 'success') {
-      toast.error("Attendi il completamento dell'upload prima di salvare");
+      toast.error("Please wait for the upload to complete before saving");
       return;
     }
 
@@ -258,7 +258,7 @@ export default function StudioOnboardingModal({ projectId, onComplete, onSkip }:
           </div>
 
           {/* Source Files Checkbox Toggle */}
-          <div className="flex flex-col gap-4 bg-white border border-black/10 rounded-3xl p-6 transition-colors">
+          <div className="animate-scale-in flex flex-col gap-4 bg-white border border-black/10 rounded-3xl p-6 transition-colors">
             <label className="flex items-start gap-4 cursor-pointer group">
               <input 
                 type="checkbox"
@@ -270,7 +270,7 @@ export default function StudioOnboardingModal({ projectId, onComplete, onSkip }:
               <div className="flex flex-col">
                 <span className="font-bold text-sm">Add Dialogues, SFX or Stems</span>
                 <span className="text-xs text-black/50 mt-1 font-sans">
-                  Per comporre una colonna sonora su misura, Tom ha bisogno di tracce pulite. Se il tuo video ha dialoghi o effetti sonori, caricali qui separatamente (senza temp music) per evitare interferenze.
+                  To compose a custom soundtrack, Tom needs clean tracks. If your video has dialogues or sound effects, upload them here separately (without temp music) to avoid interference.
                 </span>
               </div>
             </label>

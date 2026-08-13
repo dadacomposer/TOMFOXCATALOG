@@ -6,7 +6,6 @@ import { supabase, updateWorkspace, getWorkspaceMembers, createWorkspace, update
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
 import ProfileSettings from './ProfileSettings';
-import Pricing from '../pages/Pricing';
 import UpgradePlan from './UpgradePlan';
 
 export default function AccountPanel() {

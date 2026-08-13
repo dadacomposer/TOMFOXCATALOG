@@ -89,7 +89,7 @@ export default function InviteCollaboratorModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-[32px] w-full max-w-md p-8 relative flex flex-col gap-6 shadow-2xl">
+      <div className="animate-scale-in bg-white rounded-[32px] w-full max-w-md p-8 relative flex flex-col gap-6 shadow-2xl">
         <button 
           onClick={onClose}
           className="absolute top-6 right-6 text-black/40 hover:text-black transition-colors"

@@ -405,7 +405,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                     ) : (
                       <>
                         {profile?.can_download !== false && (
-                          <button className="hidden md:flex p-1.5 hover:bg-black/5 rounded-full transition-colors items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
+                          <button className="hidden md:flex p-1.5 hover:bg-black/5 rounded-full transition-colors items-center justify-center text-black/40 hover:text-black shrink-0 mr-2 md:mr-4" onClick={e => { e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
                             <Download className="w-4 h-4" />
                           </button>
                         )}

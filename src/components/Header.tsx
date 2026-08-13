@@ -238,22 +238,22 @@ export default function Header() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`absolute top-full left-0 w-full shadow-xl flex flex-col p-6 gap-6 md:hidden z-10 border-b ${isHeaderDark ? 'bg-[#111111] border-white/10' : 'bg-[#fafafa] border-black/10'}`}
+            className={`absolute top-full left-0 w-full shadow-xl flex flex-col p-6 gap-4 md:hidden z-10 border-b ${isHeaderDark ? 'bg-[#111111] border-white/10' : 'bg-[#fafafa] border-black/10'}`}
           >
-            <NavLink to="/" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Discover</NavLink>
-            <NavLink to="/browse" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Browse</NavLink>
-            <NavLink to="/playlists" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Playlists</NavLink>
+            <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Discover</NavLink>
+            <NavLink to="/browse" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Browse</NavLink>
+            <NavLink to="/playlists" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Playlists</NavLink>
             {user && (
-              <NavLink to="/my-music" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>My Music</NavLink>
+              <NavLink to="/my-music" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>My Music</NavLink>
             )}
             {(!user || profile?.subscription_status !== 'active') && settings.subscriptions_enabled && (
               <>
-                <NavLink to="/pricing" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Pricing</NavLink>
-                <NavLink to="/enterprise" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Enterprise</NavLink>
+                <NavLink to="/pricing" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Pricing</NavLink>
+                <NavLink to="/enterprise" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Enterprise</NavLink>
               </>
             )}
             {isAdmin && (
-              <Link to="/admin" className={`font-bold uppercase text-xl tracking-widest flex items-center gap-2 ${isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black'}`}>
+              <Link to="/admin" className={`hidden md:flex items-center gap-2 ${isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black'}`}>
                 <Wrench className="w-5 h-5" />
                 Admin Panel
               </Link>

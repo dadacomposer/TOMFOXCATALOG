@@ -46,10 +46,10 @@ export default function UpdatePasswordModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 pointer-events-auto">
+    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center px-4 pointer-events-auto">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setUpdatePasswordModalOpen(false)} />
       
-      <div className="relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden">
+      <div className="animate-scale-in relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden">
         {/* Close Button */}
         <button 
           onClick={() => setUpdatePasswordModalOpen(false)} 

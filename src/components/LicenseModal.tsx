@@ -122,7 +122,7 @@ export default function LicenseModal() {
         <div className="p-8 md:p-12">
           
           {step === 1 && (
-            <div className="animate-fade-in-up">
+            <div className="animate-scale-in">
               <h2 className="text-2xl font-bold tracking-tight text-black mb-6">
                 Licensing Form
               </h2>
@@ -186,7 +186,7 @@ export default function LicenseModal() {
           )}
 
           {step === 2 && (
-            <div className="animate-fade-in-up">
+            <div className="animate-scale-in">
               <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="space-y-6">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-black/60 mb-2">What best describes you or your business? *</label>
@@ -202,7 +202,7 @@ export default function LicenseModal() {
                     </div>
                     
                     {isDropdownOpen && (
-                      <div className="absolute z-10 w-full mt-2 bg-white border border-black/10 rounded-xl shadow-lg overflow-hidden py-2 animate-fade-in-up">
+                      <div className="absolute z-10 w-full mt-2 bg-white border border-black/10 rounded-xl shadow-lg overflow-hidden py-2 animate-scale-in">
                         {[
                           "Content Creator / Youtube Channel",
                           "Freelancer / Client Work",
@@ -258,7 +258,7 @@ export default function LicenseModal() {
           )}
 
           {step === 3 && (
-            <div className="animate-fade-in-up">
+            <div className="animate-scale-in">
               <form onSubmit={(e) => { e.preventDefault(); handleNext(); }} className="space-y-6">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-black/60 mb-1">Check all that apply</label>
@@ -306,7 +306,7 @@ export default function LicenseModal() {
           )}
 
           {step === 4 && (
-            <div className="animate-fade-in-up">
+            <div className="animate-scale-in">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-widest text-black/60 mb-4">When do you need the license to begin? *</label>
@@ -366,7 +366,7 @@ export default function LicenseModal() {
           )}
 
           {step === 5 && (
-            <div className="py-16 flex flex-col items-center justify-center animate-fade-in-up text-center">
+            <div className="py-16 flex flex-col items-center justify-center animate-scale-in text-center">
               <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mb-6">
                 <CheckCircle2 className="w-8 h-8 text-white" />
               </div>

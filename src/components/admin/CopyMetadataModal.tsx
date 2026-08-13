@@ -88,7 +88,7 @@ export default function CopyMetadataModal({ sourceTrack, targetTrackIds, allTrac
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden shadow-2xl border border-black/10 animate-slide-in-up" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden shadow-2xl border border-black/10 animate-scale-in" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-black/5 flex items-center justify-between shrink-0">
           <h3 className="text-xl font-bold flex items-center gap-3">
             <Copy className="w-5 h-5 text-black/50" />

@@ -1,3 +1,11 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /admin/
+Disallow: /my-music
+Disallow: /playlists
+Disallow: /checkout-resume
+Disallow: /checkout-success
+Disallow: /checkout-cancel
+
+Sitemap: https://tomfoxcatalog.com/sitemap.xml

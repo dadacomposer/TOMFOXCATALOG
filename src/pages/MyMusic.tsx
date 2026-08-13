@@ -133,12 +133,12 @@ export default function MyMusic() {
       {/* Removed My Music title section as requested */}
 
       {isLoading ? (
-        <div className="w-full pl-8 md:pl-12 lg:pl-24 pb-24">Loading...</div>
+        <div className="w-full pl-4 md:pl-12 lg:pl-24 pb-24">Loading...</div>
       ) : (
-        <div className="w-full pl-8 md:pl-12 lg:pl-24 pb-24 flex flex-col gap-16">
+        <div className="w-full pl-4 md:pl-12 lg:pl-24 pb-24 flex flex-col gap-16">
           
           {/* Favorites Section */}
-          <div className="w-full pr-8 md:pr-12 lg:pr-24">
+          <div className="w-full pr-4 md:pr-12 lg:pr-24">
             {favoritesPlaylist ? (
               <PlaylistIsland 
                 id={favoritesPlaylist.id}
@@ -153,21 +153,21 @@ export default function MyMusic() {
                 isScrollableContainer={true}
               />
             ) : (
-              <div className="w-full flex flex-col items-center justify-center p-12 rounded-3xl">
+              <div className="w-full flex flex-col items-center justify-center p-12 !rounded-none bg-[#f6f6f6]">
                 <Heart className="w-12 h-12 text-black/20 mb-4" />
-                <h3 className="font-bold text-xl uppercase tracking-tighter text-black/40 mb-2">No Favorites Yet</h3>
-                <p className="font-sans text-xs text-black/40">Click the heart icon on any track to add it here.</p>
+                <h3 className="font-bold text-xl uppercase tracking-tighter text-black/40 mb-2 text-center">No Favorites Yet</h3>
+                <p className="font-sans text-xs text-black/40 text-center">Click the heart icon on any track to add it here.</p>
               </div>
             )}
           </div>
 
           {/* My Playlists Section */}
           <div className="w-full">
-            <div className="flex items-center justify-between mb-6 pr-8 md:pr-12 lg:pr-24">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 pr-4 md:pr-12 lg:pr-24 gap-4">
               <h2 className="text-2xl md:text-3xl font-semibold uppercase tracking-tighter text-black">My Playlists</h2>
               <button 
                 onClick={() => setShowCreateModal(true)}
-                className="px-6 py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-full hover:bg-black/80 transition-colors flex items-center gap-2"
+                className="px-6 py-3 md:w-auto w-full justify-center bg-black text-white font-bold uppercase tracking-widest text-xs !rounded-none hover:bg-black/80 transition-colors flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 Create New Playlist
@@ -175,13 +175,13 @@ export default function MyMusic() {
             </div>
             
             {customPlaylists.length === 0 ? (
-              <div className="w-full flex flex-col items-center justify-center py-12 pr-8 md:pr-12 lg:pr-24">
+              <div className="w-full flex flex-col items-center justify-center py-12 pr-4 md:pr-12 lg:pr-24">
                 <div className="flex flex-col items-center justify-center gap-6 text-black/40 w-full max-w-2xl">
                   <img src="/search-for-documents.svg" alt="No playlists" className="w-80 h-80" />
                   <span className="font-bold uppercase tracking-widest text-sm text-center">You haven't created any custom playlists yet.<br/>Create one to organize your favorite tracks.</span>
                   <button 
                     onClick={() => setShowCreateModal(true)}
-                    className="px-6 py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-full hover:bg-black/80 transition-colors flex items-center gap-2 mt-2"
+                    className="px-6 py-3 bg-black text-white font-bold uppercase tracking-widest text-xs !rounded-none hover:bg-black/80 transition-colors flex items-center gap-2 mt-2"
                   >
                     <Plus className="w-4 h-4" />
                     Create New Playlist
@@ -189,36 +189,33 @@ export default function MyMusic() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8 pr-8 md:pr-12 lg:pr-24 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8 pr-4 md:pr-12 lg:pr-24 mt-6">
                 {customPlaylists.map(pl => (
                   <div 
                     key={pl.id}
-                    className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all border border-transparent hover:border-black/5 relative"
+                    className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 !rounded-none group cursor-pointer transition-all border border-transparent hover:border-black/5 relative"
                     onClick={() => setSelectedPlaylistId(pl.id)}
                   >
-                    <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                      <button onClick={(e) => handleShare(e, pl)} className="p-2 bg-white rounded-full shadow hover:bg-black hover:text-white transition-colors" title="Share">
+                    <div className="absolute top-6 right-6 flex flex-col md:flex-row items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
+                      <button onClick={(e) => handleShare(e, pl)} className="p-2 bg-white !rounded-none shadow hover:bg-black hover:text-white transition-colors" title="Share">
                         <Share2 className="w-4 h-4" />
                       </button>
-                      <button onClick={(e) => handleDelete(e, pl.id)} className="p-2 bg-white rounded-full shadow hover:bg-red-500 hover:text-white transition-colors text-red-500" title="Delete">
+                      <button onClick={(e) => handleDelete(e, pl.id)} className="p-2 bg-white !rounded-none shadow hover:bg-red-500 hover:text-white transition-colors text-red-500" title="Delete">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div className="relative w-full aspect-square mb-4 rounded-[20px] bg-black/5 overflow-hidden flex items-center justify-center">
+                    <div className="relative w-full aspect-square bg-[#e5e5e5] !rounded-none overflow-hidden mb-4 flex items-center justify-center">
                       {pl.cover_url ? (
                         <img src={pl.cover_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                       ) : (
-                        <ListMusic className="w-10 h-10 text-black/20 group-hover:scale-110 transition-transform" />
+                        <ListMusic className="w-12 h-12 text-black/20" />
                       )}
                     </div>
-                    <div className="flex flex-col px-2 pb-2">
-                      <h3 className="font-bold text-[18px] uppercase tracking-tighter text-black truncate mb-1">
-                        {pl.title}
-                      </h3>
-                      <div className="font-sans text-[11px] uppercase tracking-widest text-black/50 line-clamp-2 leading-relaxed">
-                        {pl.track_count || 0} tracks
-                      </div>
+                    
+                    <div className="flex flex-col flex-1 pb-2">
+                      <h3 className="font-bold text-sm uppercase tracking-widest text-black group-hover:text-black/70 transition-colors line-clamp-1">{pl.title}</h3>
+                      <span className="font-sans text-xs text-black/40 mt-1">{pl.track_count || 0} tracks</span>
                     </div>
                   </div>
                 ))}
