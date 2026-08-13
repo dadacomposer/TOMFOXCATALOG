@@ -162,18 +162,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (event === 'INITIAL_SESSION') {
-        // Validate session with the server to handle deleted users
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
-          await supabase.auth.signOut();
-          if (mounted) {
-            setSession(null);
-            setUser(null);
-            setProfile(null);
-            setLoading(false);
+        // Validate session with the server asynchronously to avoid deadlocking the auth state change listener
+        supabase.auth.getUser().then(({ data: { user }, error }) => {
+          if (error || !user) {
+            supabase.auth.signOut();
           }
-          return;
-        }
+        });
       }
 
       if (event === 'PASSWORD_RECOVERY') {
