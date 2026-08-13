@@ -119,7 +119,7 @@ export default function Home() {
   const suggestedTracksRef = useRef<HTMLDivElement>(null);
   const recentlyPlayedRef = useRef<HTMLDivElement>(null);
 
-  const { user, setLoginModalOpen } = useAuth();
+  const { user, setLoginModalOpen, setGeneralContactModalOpen } = useAuth();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
   const { 
@@ -269,12 +269,7 @@ export default function Home() {
             </div>
           )}
           <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} max-md:px-[calc(50vw-140px)] md:px-8`}>
-            <ScrollArrows 
-              scrollRef={topPicksRef} 
-              isDark={!user} 
-              offsetY={8} 
-              rightOffsetClass={!user ? 'max-md:right-48 md:right-[260px]' : 'max-md:right-2 md:right-12'}
-            />
+            <ScrollArrows scrollRef={topPicksRef} isDark={!user} offsetY={8} />
           <div ref={topPicksRef} className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? '[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] pr-48 md:pr-[280px]' : ''}`}>
             {loading ? (
               [...Array(4)].map((_, i) => (
@@ -378,10 +373,10 @@ export default function Home() {
                 })
             )}
           </div>
-            {/* CTA for non-logged in users */}
+            {/* CTA for non-logged in users - Moved Below */}
             {!user && (
-              <div className="absolute top-0 right-8 bottom-4 flex flex-col items-center justify-center z-20 pointer-events-auto pl-24">
-                <Link to="/browse" className="bg-white text-black px-6 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[11px] tracking-widest shadow-lg">
+              <div className="w-full flex justify-center mt-6 mb-2 pointer-events-auto relative z-50">
+                <Link to="/browse" className="bg-white text-black px-8 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[12px] tracking-widest shadow-xl">
                   Explore the catalog
                 </Link>
               </div>
@@ -611,10 +606,9 @@ export default function Home() {
       
       {/* About Section (Unauthenticated Only) */}
       {!user && (
-        <div className="w-full bg-[#111] text-white pt-32 pb-32 px-8 flex flex-col items-center justify-center group/section no-radius !rounded-none">
-          <h2 className="text-sm font-bold uppercase tracking-[0.2em] mb-16 text-center text-white/50">About</h2>
+        <div className="w-full bg-[#111] text-white pt-24 pb-32 px-8 flex flex-col items-center justify-center group/section no-radius !rounded-none">
           
-          <div className="w-full max-w-[1400px] flex flex-col md:flex-row items-center justify-between gap-12 md:gap-24 mb-16 px-4 md:px-12">
+          <div className="w-full max-w-[1400px] flex flex-col md:flex-row items-stretch justify-between gap-12 md:gap-32 mb-20 px-4 md:px-12">
             <div className="w-full md:w-[45%] flex justify-start">
               <img 
                 src="/assets/tom-fox-about.jpg" 
@@ -623,7 +617,7 @@ export default function Home() {
               />
             </div>
             
-            <div className="w-full md:w-[55%] flex flex-col justify-center gap-8 text-left py-4">
+            <div className="w-full md:w-[50%] flex flex-col justify-between py-4 text-left">
               <p className="font-sans text-base md:text-[17px] leading-[2.2] text-white/80 font-light tracking-wide">
                 Tom Fox is a US based composer and sound designer who has worked with brands like Adidas and Anthropic.
               </p>
@@ -641,8 +635,8 @@ export default function Home() {
               If you need to get in touch for licensing or just to learn more,
             </span>
             <button 
-              onClick={() => openLicenseModal()}
-              className="font-sans text-sm uppercase tracking-widest font-bold border-b border-white hover:text-white/60 hover:border-white/60 transition-colors"
+              onClick={() => setGeneralContactModalOpen(true)}
+              className="font-sans text-sm uppercase tracking-widest font-bold border-b border-white hover:text-white/60 hover:border-white/60 transition-colors no-radius !rounded-none"
             >
               click here
             </button>
