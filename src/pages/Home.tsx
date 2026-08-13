@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLicense } from '../context/LicenseContext';
 import { useSettings } from '../context/SettingsContext';
 import { FeaturedSun } from '../components/TopPicksEffects';
+import { smoothScroll } from '../utils/scrollUtils';
 
 const cardStyles = [
   { baseColor: 'bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#38BDF8]/40 bg-[length:300%_300%] bg-left-top group-hover:bg-right-bottom', bgIdle: 'bg-[#38BDF8]/20', bgHover: 'bg-[#38BDF8]/40' },
@@ -76,7 +77,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0, rightOffsetClass = 'max-
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
-          scrollRef.current?.scrollBy({ left: -600, behavior: 'smooth' });
+          smoothScroll(scrollRef.current, -600, 600);
         }}
       >
         <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -86,7 +87,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0, rightOffsetClass = 'max-
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
-          scrollRef.current?.scrollBy({ left: 600, behavior: 'smooth' });
+          smoothScroll(scrollRef.current, 600, 600);
         }}
       >
         <svg className="w-5 h-5 -mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>

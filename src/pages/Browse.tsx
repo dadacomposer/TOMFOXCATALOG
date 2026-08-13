@@ -22,6 +22,7 @@ import SidebarPlaylist from '../components/SidebarPlaylist';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 
 import WaveformView from '../components/WaveformView';
+import { smoothScroll } from '../utils/scrollUtils';
 import { usePlayer } from '../context/PlayerContext';
 import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS, DEFAULT_ARTIST } from '../config';
 import TrackArtwork from '../components/TrackArtwork';
@@ -96,7 +97,7 @@ const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement
         style={{ borderRadius: '50%' }}
         onClick={(e) => {
           e.stopPropagation();
-          scrollRef.current?.scrollBy({ left: -600, behavior: 'smooth' });
+          smoothScroll(scrollRef.current, -600, 600);
         }}
       >
         <ChevronLeft className="w-5 h-5 -ml-0.5" />
@@ -106,7 +107,7 @@ const ScrollArrows = ({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement
         style={{ borderRadius: '50%' }}
         onClick={(e) => {
           e.stopPropagation();
-          scrollRef.current?.scrollBy({ left: 600, behavior: 'smooth' });
+          smoothScroll(scrollRef.current, 600, 600);
         }}
       >
         <ChevronRight className="w-5 h-5 ml-0.5" />
