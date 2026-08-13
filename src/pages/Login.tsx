@@ -7,8 +7,11 @@ import { siGoogle } from 'simple-icons';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
+import { useModalAnimation } from '../hooks/useModalAnimation';
+
 export default function Login() {
   const { isLoginModalOpen, setLoginModalOpen, setPlayIntro } = useAuth();
+  const { isMounted, isAnimating } = useModalAnimation(isLoginModalOpen);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -146,11 +149,13 @@ export default function Login() {
     }
   };
 
+  if (!isMounted) return null;
+
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isLoginModalOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-      <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isLoginModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100 pointer-events-auto' : 'bg-black/0 backdrop-blur-none opacity-0 pointer-events-none'}`} onClick={() => setLoginModalOpen(false)} />
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setLoginModalOpen(false)} />
       
-      <div className={`relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isLoginModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
         {/* Close Button */}
         <button 
           onClick={() => {

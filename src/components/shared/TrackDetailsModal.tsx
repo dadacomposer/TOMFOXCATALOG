@@ -123,7 +123,7 @@ export default function TrackDetailsModal() {
   if (!displayTrack) return null;
 
   return (
-    <div className={`fixed inset-0 z-[40] flex items-center justify-center p-4 pt-[100px] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 pt-[100px] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <div 
         className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isOpen ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} 
         onClick={() => setSelectedTrackForDetails(null)} 

@@ -115,20 +115,16 @@ export default function MyMusic() {
 
   return (
     <div className="relative flex flex-col w-full min-h-screen pt-32 md:pt-40 bg-[#fafafa] text-black overflow-hidden">
-      <AnimatePresence>
-        {selectedPlaylistId && (
-          <PlaylistIsland 
-            id={selectedPlaylistId}
-            onClose={() => setSelectedPlaylistId(null)}
-            progress={0}
-            handleSeek={handleSeek}
-            formatTime={formatTime}
-            trendingTrackIds={new Set()}
-            isOwner={true}
-            initialTrackCount={customPlaylists.find(p => p.id === selectedPlaylistId)?.track_count || 0}
-          />
-        )}
-      </AnimatePresence>
+      <PlaylistIsland 
+        id={selectedPlaylistId || ''}
+        onClose={() => setSelectedPlaylistId(null)}
+        progress={0}
+        handleSeek={handleSeek}
+        formatTime={formatTime}
+        trendingTrackIds={new Set()}
+        isOwner={true}
+        initialTrackCount={customPlaylists.find(p => p.id === selectedPlaylistId)?.track_count || 0}
+      />
 
       {/* Removed My Music title section as requested */}
 

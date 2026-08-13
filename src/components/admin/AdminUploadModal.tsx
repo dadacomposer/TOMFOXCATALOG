@@ -8,6 +8,7 @@ import { AdminTrack } from './AdminTracks';
 import CustomSelect from '../CustomSelect';
 import { processAudioFormats } from '../../utils/audioProcessor';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 
 type StagedTrack = {
   id: string;
@@ -35,6 +36,17 @@ type AdminUploadModalProps = {
 };
 
 export default function AdminUploadModal({ onClose, onComplete, existingTracks }: AdminUploadModalProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(true);
+  const { isMounted, isAnimating } = useModalAnimation(internalIsOpen);
+
+  useEffect(() => {
+    if (!internalIsOpen && !isMounted) {
+      onClose();
+    }
+  }, [internalIsOpen, isMounted, onClose]);
+
+  const handleClose = () => setInternalIsOpen(false);
+
   const [stagedTracks, setStagedTracks] = useState<StagedTrack[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -631,10 +643,13 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
     }
   };
 
+  if (!isMounted) return null;
+
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col p-4 sm:p-8 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
+    <div className={`fixed inset-0 z-[100] flex flex-col p-4 sm:p-8 ${isAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => { if(!isPublishing) handleClose(); }} />
       <div 
-        className="bg-white rounded-2xl w-full max-w-6xl mx-auto flex flex-col flex-grow shadow-2xl overflow-hidden animate-scale-in border border-black/10" 
+        className={`relative z-10 bg-white rounded-2xl w-full max-w-6xl mx-auto flex flex-col flex-grow shadow-2xl overflow-hidden border border-black/10 transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`} 
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6 border-b border-black/5 flex items-center justify-between shrink-0">
@@ -645,7 +660,7 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
             </h3>
             <p className="text-sm text-black/40 mt-1">Manage metadata while we handle the rest magically.</p>
           </div>
-          <button onClick={handleClose} className="p-2 hover:bg-black/5 rounded-full text-black/50 hover:text-black transition-colors" disabled={isPublishing || isSaving}>
+          <button onClick={handleClose} className="p-2 hover:bg-black/5 rounded-full text-black/40 hover:text-black transition-colors" disabled={isPublishing || isSaving}>
             <X className="w-5 h-5" />
           </button>
         </div>

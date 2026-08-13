@@ -3,8 +3,11 @@ import { ArrowRight, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
+import { useModalAnimation } from '../hooks/useModalAnimation';
+
 export default function ContactModal() {
   const { isGeneralContactModalOpen, setGeneralContactModalOpen } = useAuth();
+  const { isMounted, isAnimating } = useModalAnimation(isGeneralContactModalOpen);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -47,12 +50,14 @@ export default function ContactModal() {
     }
   };
 
+  if (!isMounted) return null;
+
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isGeneralContactModalOpen ? '' : 'pointer-events-none'}`}>
-      <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isGeneralContactModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setGeneralContactModalOpen(false)} />
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isAnimating ? '' : 'pointer-events-none'}`}>
+      <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setGeneralContactModalOpen(false)} />
 
       {/* Modal Content */}
-      <div className={`relative z-10 w-full max-w-2xl bg-[#fafafa] shadow-2xl overflow-hidden rounded-[32px] border border-black/5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isGeneralContactModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-2xl bg-[#fafafa] shadow-2xl overflow-hidden rounded-[32px] border border-black/5 transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
         <button 
           onClick={() => setGeneralContactModalOpen(false)} 
           className="absolute top-6 right-6 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors z-20"

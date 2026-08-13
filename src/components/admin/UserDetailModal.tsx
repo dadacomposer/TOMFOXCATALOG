@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { X, Shield, Folder, Share2, Music } from 'lucide-react';
 import type { ProfileData } from './AdminUsers';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 
 type UserDetailModalProps = {
   user: ProfileData;
@@ -13,6 +14,17 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdatingDL, setIsUpdatingDL] = useState(false);
   const [canDownload, setCanDownload] = useState(user.can_download !== false);
+
+  const [internalIsOpen, setInternalIsOpen] = useState(true);
+  const { isMounted, isAnimating } = useModalAnimation(internalIsOpen);
+
+  useEffect(() => {
+    if (!internalIsOpen && !isMounted) {
+      onClose();
+    }
+  }, [internalIsOpen, isMounted, onClose]);
+
+  const handleClose = () => setInternalIsOpen(false);
 
   const [logs, setLogs] = useState<any[]>([]);
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -85,10 +97,12 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
   };
 
 
+  if (!isMounted) return null;
+
   return (
-    <div className="fixed inset-0 animate-fade-in z-50 flex items-center justify-center p-4 sm:p-6">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex flex-col max-h-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 ${isAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={handleClose} />
+      <div className={`relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
         
         {/* Header */}
         <div className="p-6 sm:p-8 border-b border-black/10 flex items-start justify-between shrink-0 bg-black text-white">
@@ -125,7 +139,7 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
             </div>
           </div>
           <button 
-            onClick={onClose}
+            onClick={handleClose}
             className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-all"
           >
             <X className="w-5 h-5" />

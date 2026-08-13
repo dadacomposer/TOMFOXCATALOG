@@ -11,7 +11,7 @@ export default function DiscoverBrowseWrapper() {
   const { currentTrack } = usePlayer();
   
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const navHeight = isMobile ? 74 : 82;
+  const navHeight = isMobile ? 73 : 81; // 73px for mobile (24+24+24+1), 81px for desktop (24+32+24+1)
   const playerHeight = currentTrack ? 90 : 0;
 
   const isDiscover = location.pathname === '/';
@@ -33,7 +33,7 @@ export default function DiscoverBrowseWrapper() {
       <div 
         className={`absolute inset-x-0 bottom-0 z-10 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] no-radius !rounded-none`}
         style={{ 
-          height: `calc(100vh - 83px)`,
+          height: `calc(100vh - ${navHeight}px)`,
           transform: isBrowse ? 'translateY(0)' : `translateY(calc(100% - ${searchBarHeight}px))`
         }}
       >

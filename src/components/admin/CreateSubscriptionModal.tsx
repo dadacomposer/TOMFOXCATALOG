@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { X, ChevronDown, User, FileText, DollarSign, Calendar, Search, UserPlus } from 'lucide-react';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 
 interface Props {
   isOpen: boolean;
@@ -11,6 +12,23 @@ interface Props {
 }
 
 export default function CreateSubscriptionModal({ isOpen, onClose, onSuccess, allUsers }: Props) {
+  const [internalIsOpen, setInternalIsOpen] = useState(isOpen);
+  const { isMounted, isAnimating } = useModalAnimation(internalIsOpen);
+
+  useEffect(() => {
+    setInternalIsOpen(isOpen);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!internalIsOpen && !isMounted) {
+      onClose();
+    }
+  }, [internalIsOpen, isMounted, onClose]);
+
+  const handleClose = () => {
+    setInternalIsOpen(false);
+  };
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   
@@ -156,7 +174,7 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onSuccess, al
       }
       onSuccess();
       resetForm();
-      onClose();
+      handleClose();
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "Failed to create subscription");
@@ -165,20 +183,20 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onSuccess, al
     }
   };
 
-  if (!isOpen) return null;
+  if (!isMounted) return null;
 
   return (
-    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="animate-scale-in bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 ${isAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={handleClose} />
+      <div className={`relative z-10 bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
         {/* Header */}
         <div className="relative bg-[#fafafa] p-8 pb-6 border-b border-black/5 shrink-0">
-          <button 
-            onClick={() => {
-              onClose();
-              resetForm();
-            }}
-            className="absolute top-6 right-6 text-black/40 hover:text-black transition-colors"
-          >
+            <button 
+              onClick={() => {
+                handleClose();
+              }}
+              className="absolute top-6 right-6 text-black/40 hover:text-black transition-colors"
+            >
             <X className="w-6 h-6" />
           </button>
           

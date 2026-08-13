@@ -116,21 +116,17 @@ export default function Playlists() {
         <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" className="absolute top-10 -right-20 w-[120%] md:w-[60%] opacity-[0.02] rotate-12 select-none mix-blend-multiply" alt="" />
       </div>
       
-      <AnimatePresence>
-        {playlistUrlId && (
-          <PlaylistIsland 
-            id={playlistUrlId}
-            onClose={() => {
-              searchParams.delete('playlist');
-              setSearchParams(searchParams);
-            }}
-            progress={progress}
-            handleSeek={handleSeek}
-            formatTime={formatTime}
-            trendingTrackIds={new Set()}
-          />
-        )}
-      </AnimatePresence>
+      <PlaylistIsland 
+        id={playlistUrlId || ''}
+        onClose={() => {
+          searchParams.delete('playlist');
+          setSearchParams(searchParams);
+        }}
+        progress={progress}
+        handleSeek={handleSeek}
+        formatTime={formatTime}
+        trendingTrackIds={new Set()}
+      />
 
       <div 
         className={`sticky top-[84px] md:top-[80px] z-30 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 md:px-12 lg:px-24 flex flex-col border-b border-black/10 py-4 mb-16 shadow-sm focus-within:border-black/30 group/searchbar`}

@@ -62,21 +62,18 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const [tracks, setTracks] = useState<Track[]>(preloadedTracks || []);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(!preloadedTracks);
-  const [isMounted, setIsMounted] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
+  
+  const [internalId, setInternalId] = useState(id);
+  const { isMounted, isAnimating } = useModalAnimation(!!id);
 
   useEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setIsMounted(true));
-    });
-    return () => cancelAnimationFrame(raf);
-  }, []);
+    if (id) {
+      setInternalId(id);
+    }
+  }, [id]);
 
   const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      if (onClose) onClose();
-    }, 500);
+    if (onClose) onClose();
   };
   const [playlistTitle, setPlaylistTitle] = useState(preloadedTitle || 'Playlist');
   const [sortBy, setSortBy] = useState('relevance');
@@ -123,9 +120,11 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
 
   useEffect(() => {
     async function load() {
+      if (!internalId) return;
+
       // If we already have preloaded tracks and relevance sort, don't fetch initial chunk
       if (preloadedTracks && preloadedTitle && sortBy === 'relevance') {
-        const tIds = await fetchPlaylistTrackIds(id);
+        const tIds = await fetchPlaylistTrackIds(internalId);
         if (tIds.length > 15) {
           const restChunk = await fetchTracksByIds(tIds.slice(15));
           setTracks(prev => {
@@ -138,8 +137,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
 
       setLoading(true);
       const [pDataRes, tIds] = await Promise.all([
-        supabase.from('playlists').select('title').eq('id', id).single(),
-        fetchPlaylistTrackIds(id)
+        supabase.from('playlists').select('*').eq('id', internalId).single(),
+        fetchPlaylistTrackIds(internalId)
       ]);
       
       if (pDataRes.data) {
@@ -187,7 +186,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       }
     }
     load();
-  }, [id, sortBy]);
+  }, [internalId, sortBy]);
 
   const handlePlayPauseIsland = (track: Track) => {
     if (currentTrack?.id === track.id) {
@@ -202,7 +201,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       {/* Backdrop */}
       {!inline && (
         <div 
-          className={`fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-all duration-500 ease-out ${isMounted && !isClosing ? 'opacity-100' : 'opacity-0'}`} 
+          className={`fixed inset-0 bg-black/40 z-40 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} 
           onClick={handleClose} 
         />
       )}
@@ -210,8 +209,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       {/* Island Panel */}
       <div className={
         inline 
-        ? `w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6 transition-all duration-500 ease-out ${isMounted && !isClosing ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-[0.99]'}`
-        : `fixed max-md:inset-x-0 md:inset-x-6 max-md:top-16 md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10 transition-all duration-500 ease-out ${isMounted && !isClosing ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 md:translate-y-12 scale-[0.98]'}`
+        ? `w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6 transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
+        : `fixed max-md:inset-x-0 md:inset-x-6 max-md:top-16 md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10 transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
       }>
         <div className="px-4 md:px-8 py-6 md:py-8 border-b-2 border-black/5 flex max-md:flex-col max-md:items-start max-md:gap-4 md:items-center justify-between shrink-0 bg-[#fafafa] relative">
           <div className="min-h-[50px] flex flex-col justify-center">
@@ -443,7 +442,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                         className="flex items-center justify-center p-2 hover:bg-red-500/10 text-red-500 rounded transition-colors"
                         onClick={async (e) => {
                           e.stopPropagation();
-                          const ok = await removeTrackFromPlaylist(id, track.id);
+                          const ok = await removeTrackFromPlaylist(internalId, track.id);
                           if (ok) {
                             setTracks(prev => prev.filter(t => t.id !== track.id));
                           }
@@ -473,6 +472,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       </div>
     </>
   );
+
+  if (!isMounted) return null;
 
   if (inline) return content;
   

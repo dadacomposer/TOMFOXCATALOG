@@ -14,6 +14,7 @@ import AdminUploadModal from './AdminUploadModal';
 import TrackFormatsModal from './TrackFormatsModal';
 import ImportTagsModal from './ImportTagsModal';
 import { Settings, CheckSquare, Square } from 'lucide-react';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 
 export type AdminTrack = {
   id: string;
@@ -162,7 +163,11 @@ export default function AdminTracks() {
     "Epic Trailers", "Dark Forces", "Future Tech", "Human Stories"
   ]);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
-  const [editingCategoriesStr, setEditingCategoriesStr] = useState<string>('');
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+
+  const { isMounted: isBulkModalMounted, isAnimating: isBulkModalAnimating } = useModalAnimation(bulkAction !== 'none');
+  const { isMounted: isLinkModalMounted, isAnimating: isLinkModalAnimating } = useModalAnimation(isLinkManagerOpen);
+  const { isMounted: isPlaylistModalMounted, isAnimating: isPlaylistModalAnimating } = useModalAnimation(isPlaylistManagerOpen);
 
   const fetchCategories = async () => {
     try {
@@ -1550,13 +1555,6 @@ toast.success('Track restored successfully');
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => handleShare(track.id)}
-                                  className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
-                                  title="Share specific track link"
-                                >
-                                  <Share2 className="w-4 h-4" />
-                                </button>
-                                <button
                                   onClick={() => setCopySourceTrack(track)}
                                   className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-lg transition-all"
                                   title="Copy metadata to other tracks"
@@ -1725,9 +1723,10 @@ toast.success('Track restored successfully');
       )}
 
       {/* Bulk Action Modal */}
-      {bulkAction !== 'none' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setBulkAction('none')}>
-          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl border border-black/10" onClick={e => e.stopPropagation()}>
+      {isBulkModalMounted && (
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isBulkModalAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+          <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isBulkModalAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setBulkAction('none')} />
+          <div className={`relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col transition-all duration-500 ease-out ${isBulkModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
             <div className="p-6 border-b border-black/5 flex items-center justify-between">
               <h3 className="text-xl font-bold">
                 {bulkAction === 'artwork' && 'Bulk Set Artwork'}
@@ -1821,10 +1820,11 @@ toast.success('Track restored successfully');
         </div>
       )}
 
-      {/* Link Manager Modal */}
-      {isLinkManagerOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setIsLinkManagerOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+      {/* Shared Links Manager Modal */}
+      {isLinkModalMounted && (
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isLinkModalAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+          <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isLinkModalAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setIsLinkManagerOpen(false)} />
+          <div className={`relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col transition-all duration-500 ease-out ${isLinkModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
             <div className="p-6 border-b border-black/5 flex items-center justify-between shrink-0">
               <h3 className="text-xl font-bold">Manage Shared Links</h3>
               <button onClick={() => setIsLinkManagerOpen(false)} className="p-2 hover:bg-black/5 rounded-full text-black/50 hover:text-black">
@@ -1903,9 +1903,10 @@ toast.success('Track restored successfully');
       )}
 
       {/* Playlist Manager Modal */}
-      {isPlaylistManagerOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClosePlaylistManager}>
-          <div className="bg-white rounded-2xl w-full max-w-6xl h-[85vh] overflow-hidden shadow-2xl border border-black/10 flex animate-slide-in-up" onClick={e => e.stopPropagation()}>
+      {isPlaylistModalMounted && (
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isPlaylistModalAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+          <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isPlaylistModalAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={handleClosePlaylistManager} />
+          <div className={`relative z-10 bg-[#fafafa] rounded-[32px] shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col border border-black/5 transition-all duration-500 ease-out ${isPlaylistModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
             
             {/* Sidebar: Playlist List */}
             <div className="w-1/3 border-r border-black/10 flex flex-col bg-black/[0.02]">

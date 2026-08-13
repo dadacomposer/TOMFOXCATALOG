@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import CreateSubscriptionModal from './CreateSubscriptionModal';
+import { useModalAnimation } from '../../hooks/useModalAnimation';
 
 export default function AdminTomFoxStudio() {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export default function AdminTomFoxStudio() {
   const [collaboratorEmails, setCollaboratorEmails] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [deliverableToDelete, setDeliverableToDelete] = useState<{projectId: string, deliverableId: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -50,9 +52,21 @@ export default function AdminTomFoxStudio() {
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
   const currencyRef = useRef<HTMLDivElement>(null);
 
-  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [usersMap, setUsersMap] = useState<Record<string, any>>({});
   const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [internalSelectedProject, setInternalSelectedProject] = useState<any>(null);
+
+  useEffect(() => {
+    if (selectedProject) {
+      setInternalSelectedProject(selectedProject);
+    }
+  }, [selectedProject]);
+
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [deleteSubscriptionId, setDeleteSubscriptionId] = useState<string | null>(null);
+
+  const { isMounted: isCreateModalMounted, isAnimating: isCreateModalAnimating } = useModalAnimation(isCreateModalOpen);
+  const { isMounted: isDetailsModalMounted, isAnimating: isDetailsModalAnimating } = useModalAnimation(!!selectedProject);
 
   const termsRef = useRef<HTMLDivElement>(null);
 
@@ -560,22 +574,22 @@ export default function AdminTomFoxStudio() {
       />
 
       {/* Create Project Modal */}
-      {isCreateModalOpen && createPortal(
+      {isCreateModalMounted && createPortal(
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto"
-          onClick={() => {
-            setCreateModalOpen(false);
-            resetForm();
-          }}
+          className={`fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto ${isCreateModalAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}
         >
+          <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isCreateModalAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => {
+            setCreateModalOpen(false);
+            setTimeout(() => resetForm(), 500);
+          }} />
           <div 
-            className="bg-white rounded-[32px] w-full max-w-2xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto"
+            className={`bg-white rounded-[32px] w-full max-w-2xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto z-10 transition-all duration-500 ease-out ${isCreateModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
             onClick={e => e.stopPropagation()}
           >
             <button 
               onClick={() => {
                 setCreateModalOpen(false);
-                resetForm();
+                setTimeout(() => resetForm(), 500);
               }}
               className="absolute top-6 right-6 text-black/40 hover:text-black transition-colors"
             >
@@ -942,9 +956,10 @@ export default function AdminTomFoxStudio() {
         document.body
       )}
       {/* Panoramic Project Details Modal */}
-      {selectedProject && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto" onClick={() => setSelectedProject(null)}>
-          <div className="bg-white rounded-[32px] w-full max-w-xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto" onClick={(e) => e.stopPropagation()}>
+      {isDetailsModalMounted && internalSelectedProject && createPortal(
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto ${isDetailsModalAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+          <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isDetailsModalAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setSelectedProject(null)} />
+          <div className={`bg-white rounded-[32px] w-full max-w-xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto z-10 transition-all duration-500 ease-out ${isDetailsModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`} onClick={(e) => e.stopPropagation()}>
             <button 
               onClick={() => setSelectedProject(null)}
               className="absolute top-6 right-6 text-black/40 hover:text-black transition-colors"
@@ -955,15 +970,15 @@ export default function AdminTomFoxStudio() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="px-3 py-1 bg-black/5 rounded-full text-[10px] font-bold uppercase tracking-widest text-black/60">
-                  {selectedProject.status}
+                  {internalSelectedProject.status}
                 </span>
                 <span className="px-3 py-1 bg-black/5 rounded-full text-[10px] font-bold uppercase tracking-widest text-black/60">
-                  {selectedProject.project_type}
+                  {internalSelectedProject.project_type}
                 </span>
               </div>
-              <h2 className="text-3xl font-bold uppercase tracking-tighter">{selectedProject.title}</h2>
-              {selectedProject.budget && selectedProject.budget !== '0' && selectedProject.budget !== 0 && (
-                <p className="text-black/50 font-medium text-sm mt-1">${selectedProject.budget}</p>
+              <h2 className="text-3xl font-bold uppercase tracking-tighter">{internalSelectedProject.title}</h2>
+              {internalSelectedProject.budget && internalSelectedProject.budget !== '0' && internalSelectedProject.budget !== 0 && (
+                <p className="text-black/50 font-medium text-sm mt-1">${internalSelectedProject.budget}</p>
               )}
             </div>
 
@@ -974,12 +989,12 @@ export default function AdminTomFoxStudio() {
                   <input 
                     type="text" 
                     readOnly 
-                    value={`${window.location.origin}/studio/${selectedProject.id}`}
+                    value={`${window.location.origin}/studio/${internalSelectedProject.id}`}
                     className="w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm text-black/70 font-mono outline-none"
                   />
                   <button 
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/studio/${selectedProject.id}`);
+                      navigator.clipboard.writeText(`${window.location.origin}/studio/${internalSelectedProject.id}`);
                       toast.success("Link copied!");
                     }}
                     className="bg-black text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-colors"
@@ -994,7 +1009,7 @@ export default function AdminTomFoxStudio() {
                 
                 <button 
                   onClick={() => {
-                    navigate('/admin/studio/' + selectedProject.id);
+                    navigate('/admin/studio/' + internalSelectedProject.id);
                   }}
                   className="w-full bg-black text-white p-4 rounded-2xl font-bold uppercase tracking-widest text-sm hover:bg-black/90 transition-colors flex items-center justify-center gap-2"
                 >
@@ -1002,7 +1017,7 @@ export default function AdminTomFoxStudio() {
                 </button>
 
                 <button 
-                  onClick={() => setProjectToDelete(selectedProject.id)}
+                  onClick={() => setProjectToDelete(internalSelectedProject.id)}
                   className="w-full bg-red-50 text-red-600 p-4 rounded-2xl font-bold uppercase tracking-widest text-sm hover:bg-red-100 transition-colors mt-4"
                 >
                   Delete Project
