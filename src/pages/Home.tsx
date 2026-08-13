@@ -242,7 +242,7 @@ export default function Home() {
 
         {/* Welcome Section (Only for Unauthenticated Users) */}
         {!user && (
-          <div className="w-full pt-16 md:pt-32 pb-16 md:pb-32 flex flex-col md:flex-row items-center md:items-start justify-between px-8 md:px-16 relative z-40 pointer-events-none gap-6 md:gap-0">
+          <div className="w-full pt-24 md:pt-48 pb-24 md:pb-48 flex flex-col md:flex-row items-center md:items-start justify-between px-8 md:px-8 relative z-40 pointer-events-none gap-6 md:gap-0">
             <h1 className="text-xl md:text-3xl lg:text-[40px] font-black uppercase tracking-tight text-center md:text-left max-w-4xl z-20 leading-[1.1] text-white">
               A curated collection of original music.<br/><span className="text-white/60">Press play and explore the sound.</span>
             </h1>
@@ -258,7 +258,7 @@ export default function Home() {
         )}
 
         {/* Top Picks For You */}
-        <div className={`w-full relative group/section no-radius !rounded-none ${!user ? 'pt-0 pb-16 md:pb-32' : 'pt-12 pb-8 overflow-hidden'}`}>
+        <div className={`w-full relative group/section no-radius !rounded-none ${!user ? 'pt-0 pb-24 md:pb-48' : 'pt-12 pb-8 overflow-hidden'}`}>
           {/* Constrained Sun Animation (Only when Light Mode / Authenticated) */}
           {user && settings?.top_picks_animation_enabled !== false && (
             <div
@@ -375,7 +375,7 @@ export default function Home() {
           </div>
             {/* CTA for non-logged in users - Moved Below */}
             {!user && (
-              <div className="w-full flex justify-center mt-16 md:mt-32 pointer-events-auto relative z-50">
+              <div className="w-full flex justify-center mt-24 md:mt-48 pointer-events-auto relative z-50">
                 <Link to="/browse" className="bg-white text-black px-8 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[12px] tracking-widest shadow-xl">
                   Explore the catalog
                 </Link>
