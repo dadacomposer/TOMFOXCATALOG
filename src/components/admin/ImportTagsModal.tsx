@@ -176,7 +176,7 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
             if (importMode === 'REPLACE') {
               updateData[field] = combinedCsvTags.join(', ');
             } else {
-              const existing = track[field] ? track[field].split(',').map(s => s.trim()).filter(Boolean) : [];
+              const existing = track[field] ? track[field].split(',').map((s: string) => s.trim()).filter(Boolean) : [];
               const combined = Array.from(new Set([...existing, ...combinedCsvTags]));
               updateData[field] = combined.join(', ');
             }
