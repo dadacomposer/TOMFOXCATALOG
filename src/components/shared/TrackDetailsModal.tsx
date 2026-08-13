@@ -11,8 +11,18 @@ import { parseWaveform } from '../../lib/audioUtils';
 
 const parseTags = (t: string[] | string | undefined): string[] => {
   if (!t) return [];
-  if (Array.isArray(t)) return t;
-  return t.split(',').map(s => s.trim()).filter(Boolean);
+  let arr: any[] = [];
+  if (Array.isArray(t)) {
+    arr = t;
+  } else {
+    try { 
+      arr = JSON.parse(t); 
+      if (!Array.isArray(arr)) arr = [arr];
+    } catch(e) { 
+      arr = typeof t === 'string' ? t.split(',') : []; 
+    }
+  }
+  return arr.filter(s => typeof s === 'string' && s.trim().length > 0).map(s => s.trim());
 };
 
 const cleanTitle = (filename: string) => {
@@ -97,13 +107,13 @@ export default function TrackDetailsModal() {
   if (!displayTrack) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-all duration-500 ease-out ${selectedTrackForDetails ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[40] flex items-center justify-center p-4 pt-[100px] transition-all duration-500 ease-out ${selectedTrackForDetails ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
         onClick={() => setSelectedTrackForDetails(null)} 
       />
       <div 
-        className={`relative w-full max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 ease-out ${selectedTrackForDetails ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
+        className={`relative w-full max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl transition-all duration-500 ease-out ${selectedTrackForDetails ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
         onClick={() => setExpandedSection(null)}
       >
         

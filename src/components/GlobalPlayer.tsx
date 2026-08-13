@@ -31,14 +31,18 @@ const cleanTitle = (filename: string) => {
 
 const parseTags = (t: string[] | string | undefined): string[] => {
   if (!t) return [];
-  if (Array.isArray(t)) return t;
-  try {
-    const parsed = JSON.parse(t);
-    if (Array.isArray(parsed)) return parsed;
-  } catch (e) {
-    return [t];
+  let arr: any[] = [];
+  if (Array.isArray(t)) {
+    arr = t;
+  } else {
+    try { 
+      arr = JSON.parse(t); 
+      if (!Array.isArray(arr)) arr = [arr];
+    } catch(e) { 
+      arr = typeof t === 'string' ? t.split(',') : []; 
+    }
   }
-  return [t];
+  return arr.filter(s => typeof s === 'string' && s.trim().length > 0).map(s => s.trim());
 };
 
 export default function GlobalPlayer() {

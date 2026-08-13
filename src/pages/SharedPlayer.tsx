@@ -15,8 +15,18 @@ import { DEFAULT_ARTIST, DEFAULT_ARTWORK } from '../config';
 
 const parseTags = (t: string[] | string | undefined): string[] => {
   if (!t) return [];
-  if (Array.isArray(t)) return t;
-  try { return JSON.parse(t); } catch(e) { return []; }
+  let arr: any[] = [];
+  if (Array.isArray(t)) {
+    arr = t;
+  } else {
+    try { 
+      arr = JSON.parse(t); 
+      if (!Array.isArray(arr)) arr = [arr];
+    } catch(e) { 
+      arr = typeof t === 'string' ? t.split(',') : []; 
+    }
+  }
+  return arr.filter(s => typeof s === 'string' && s.trim().length > 0).map(s => s.trim());
 };
 
 const cleanTitle = (filename: string) => {
