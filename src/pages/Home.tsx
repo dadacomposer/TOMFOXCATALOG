@@ -35,7 +35,7 @@ const cleanTitle = (filename: string) => {
   return base;
 };
 
-const ScrollArrows = ({ scrollRef, isDark, offsetY = 0 }: { scrollRef: React.RefObject<HTMLDivElement | null>, isDark?: boolean, offsetY?: number }) => {
+const ScrollArrows = ({ scrollRef, isDark, offsetY = 0, rightOffsetClass = 'max-md:right-2 md:right-12' }: { scrollRef: React.RefObject<HTMLDivElement | null>, isDark?: boolean, offsetY?: number, rightOffsetClass?: string }) => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -82,7 +82,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0 }: { scrollRef: React.Ref
         <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
       <button 
-        className={`absolute max-md:right-2 md:right-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        className={`absolute ${rightOffsetClass} top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
@@ -396,7 +396,12 @@ export default function Home() {
           <div className={`font-sans text-[11px] uppercase tracking-widest px-8 ${!user ? 'text-white/30' : 'text-black/30'}`}>No tracks found.</div>
         ) : (
           <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
-            <ScrollArrows scrollRef={trendingRef} isDark={!user} offsetY={8} />
+            <ScrollArrows 
+              scrollRef={trendingRef} 
+              isDark={!user} 
+              offsetY={8} 
+              rightOffsetClass={!user ? 'max-md:right-40 md:right-[280px]' : 'max-md:right-2 md:right-12'}
+            />
             <div 
               ref={trendingRef} 
               className={`w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory ${!user ? '[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] pr-40 md:pr-[300px]' : ''}`}
