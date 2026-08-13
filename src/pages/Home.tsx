@@ -370,7 +370,7 @@ export default function Home() {
         
         {/* Fading gradient to smooth transition to Trending Tracks */}
         {!user && (
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[#111] pointer-events-none z-[35]" />
+          <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-b from-transparent to-[#111] pointer-events-none z-[35]" />
         )}
       </div>
 
