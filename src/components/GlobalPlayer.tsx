@@ -467,7 +467,12 @@ export default function GlobalPlayer() {
                     </div>
                   </div>
                   <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
-                    <div className={`font-bold truncate text-[14px] ${currentTrack?.id === track.id ? 'text-black' : ''}`}>{cleanTitle(track.file_name)}</div>
+                    <div 
+                      className={`font-bold truncate text-[14px] hover:underline cursor-pointer ${currentTrack?.id === track.id ? 'text-black' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                    >
+                      {cleanTitle(track.file_name)}
+                    </div>
                     <div className="font-sans text-[11px] text-black/40 truncate">
                       {getComposers(track.composers)}
                     </div>
@@ -514,7 +519,7 @@ export default function GlobalPlayer() {
                               {expandedTags?.trackId === track.id && (
                                 <>
                                   <div className="fixed inset-0 z-[20]" onClick={(e) => { e.stopPropagation(); setExpandedTags(null); }} />
-                                  <div className="absolute bottom-full mb-2 left-0 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
+                                  <div className="absolute top-full mt-2 left-0 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
                                     {expandedTags?.tags.map((t, idx) => (
                                       <span 
                                         key={idx} 
