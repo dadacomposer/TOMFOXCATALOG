@@ -185,18 +185,17 @@ export default function Playlists() {
       <div className="w-full px-8 md:px-12 lg:px-24 pb-24 overflow-hidden relative z-10">
         {loading ? (
           <div className="mb-16">
-            <div className="flex overflow-x-hidden gap-6 md:gap-8">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex flex-col p-4 rounded-[32px] shrink-0 w-[280px] sm:w-[320px] md:w-[340px]">
-                  <div className="relative w-full aspect-[1.15] mb-6">
-                     <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 right-[18%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 left-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8">
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="flex flex-col p-4 rounded-[32px] shrink-0 border border-transparent relative">
+                  <div className={`relative w-full mb-6 ${settings.public_artwork_frames_enabled ? 'aspect-[1.15]' : 'aspect-square'}`}>
+                     <div className="absolute top-0 right-0 w-[78%] aspect-square rounded-[28px] bg-black/5 animate-pulse" />
+                     <div className="absolute top-[3%] right-[11%] w-[78%] aspect-square rounded-[28px] bg-black/5 animate-pulse" />
+                     <div className="absolute top-[6%] left-0 w-[78%] aspect-square rounded-[28px] bg-black/5 animate-pulse" />
                   </div>
                   <div className="flex flex-col px-2 pb-2 gap-2 mt-2">
-                    <div className="h-5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
+                    <div className="h-5 bg-black/5 rounded w-3/4 animate-pulse" />
+                    <div className="h-4 bg-black/5 rounded w-1/2 animate-pulse" />
                   </div>
                 </div>
               ))}

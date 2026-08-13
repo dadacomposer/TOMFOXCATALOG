@@ -216,8 +216,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
           <div className="min-h-[50px] flex flex-col justify-center">
             {loading ? (
               <>
-                <div className="h-8 bg-[#e5e5e5] rounded w-64 animate-pulse mb-2" />
-                <div className="h-3 bg-[#e5e5e5] rounded w-24 animate-pulse" />
+                <div className="h-8 bg-black/10 rounded w-64 animate-pulse mb-2" />
+                <div className="h-3 bg-black/10 rounded w-24 animate-pulse" />
               </>
             ) : (
               <>
@@ -290,23 +290,23 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
           {loading && initialTrackCount !== 0 ? (
             <div className="flex flex-col gap-1 pb-16">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-2 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg shrink-0 bg-[#e5e5e5] animate-pulse" />
-                  <div className="flex flex-col gap-2 w-[20%] shrink-0 pr-4">
-                    <div className="h-3.5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
-                    <div className="h-2.5 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
+                <div key={i} className="flex items-center gap-4 p-2 rounded-xl border border-transparent">
+                  <div className="w-10 h-10 rounded-lg shrink-0 bg-black/5 animate-pulse" />
+                  <div className="flex flex-col justify-center flex-1 md:w-[20%] md:flex-none pr-2 md:pr-4 gap-2">
+                    <div className="h-3.5 bg-black/5 rounded w-3/4 animate-pulse" />
+                    <div className="h-2.5 bg-black/5 rounded w-1/2 animate-pulse" />
                   </div>
                   <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%]">
-                    <div className="h-5 w-12 bg-[#e5e5e5] rounded animate-pulse" />
-                    <div className="h-5 w-16 bg-[#e5e5e5] rounded animate-pulse" />
+                    <div className="h-5 w-12 bg-black/5 rounded animate-pulse" />
+                    <div className="h-5 w-16 bg-black/5 rounded animate-pulse" />
                   </div>
                   <div className="hidden md:flex flex-grow h-8 items-center pr-4">
-                    <div className="h-3 w-full bg-[#e5e5e5] rounded animate-pulse opacity-50" />
+                    <div className="h-3 w-full bg-black/5 rounded animate-pulse opacity-50" />
                   </div>
-                  <div className="hidden md:flex items-center justify-end gap-5 pr-4 shrink-0 w-[140px]">
-                    <div className="w-8 h-2.5 bg-[#e5e5e5] rounded animate-pulse" />
-                    <div className="w-4 h-4 bg-[#e5e5e5] rounded-full animate-pulse" />
-                    <div className="w-4 h-4 bg-[#e5e5e5] rounded-full animate-pulse" />
+                  <div className="flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2">
+                    <div className="hidden md:block w-8 h-2.5 bg-black/5 rounded animate-pulse mr-2" />
+                    <div className="hidden md:block w-4 h-4 bg-black/5 rounded-full animate-pulse mr-2 md:mr-4" />
+                    <div className="w-16 h-8 md:w-20 md:h-9 bg-black/5 rounded animate-pulse" />
                   </div>
                 </div>
               ))}

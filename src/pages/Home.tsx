@@ -57,11 +57,16 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0, rightOffsetClass = 'max-
     const el = scrollRef.current;
     if (el) {
       el.addEventListener('scroll', checkScroll, { passive: true });
-      const observer = new ResizeObserver(checkScroll);
-      observer.observe(el);
+      const resizeObserver = new ResizeObserver(checkScroll);
+      resizeObserver.observe(el);
+      
+      const mutationObserver = new MutationObserver(checkScroll);
+      mutationObserver.observe(el, { childList: true, subtree: true, characterData: true });
+      
       return () => {
         el.removeEventListener('scroll', checkScroll);
-        observer.disconnect();
+        resizeObserver.disconnect();
+        mutationObserver.disconnect();
       };
     }
   }, [scrollRef]);
@@ -308,21 +313,11 @@ export default function Home() {
           <div 
             ref={topPicksRef} 
             onScroll={!user ? (e) => setIsTopPicksScrolledLeft(e.currentTarget.scrollLeft > 20) : undefined}
-            className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? 'pr-48 md:pr-[280px]' : ''}`}
+            className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 touch-pan-x ${!user ? 'pr-48 md:pr-[280px]' : ''}`}
           >
             {loading ? (
               [...Array(4)].map((_, i) => (
-                <div key={i} className={`flex flex-col p-4 rounded-[32px] shrink-0 snap-always snap-center md:snap-start ${!user ? 'w-[280px]' : 'w-[280px] md:w-[340px]'}`}>
-                  <div className="relative w-full aspect-[1.15] mb-6">
-                     <div className="absolute top-0 right-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 right-[9%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 right-[18%] w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                     <div className="absolute top-0 left-0 w-[72%] aspect-square rounded-[28px] bg-[#e5e5e5] animate-pulse" />
-                  </div>
-                  <div className="flex flex-col px-2 pb-2 gap-2 mt-2">
-                    <div className="h-5 bg-[#e5e5e5] rounded w-3/4 animate-pulse" />
-                    <div className="h-4 bg-[#e5e5e5] rounded w-1/2 animate-pulse" />
-                  </div>
+                <div key={i} className={`relative shrink-0 snap-always snap-center md:snap-start aspect-[3/4] rounded-[32px] overflow-hidden ${!user ? 'bg-white/10 w-[280px]' : 'bg-black/5 w-[280px] md:w-[340px]'} animate-pulse`}>
                 </div>
               ))
             ) : (
@@ -434,35 +429,31 @@ export default function Home() {
       <div className={`w-full pt-12 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
         <h2 className={`text-[22px] font-medium uppercase tracking-tighter mb-6 px-8 ${!user ? 'text-white' : 'text-black'}`}>Trending tracks</h2>
         
-        {loading ? (
-          <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
-            <div className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-4 content-start">
-              {[...Array(16)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-2 rounded select-none">
-                  <div className={`w-12 h-12 rounded relative overflow-hidden shrink-0 animate-pulse ${!user ? 'bg-white/10' : 'bg-[#e5e5e5]'}`} />
-                  <div className="flex flex-col gap-2 w-full max-w-[160px]">
-                    <div className={`h-3.5 rounded w-3/4 animate-pulse ${!user ? 'bg-white/10' : 'bg-[#e5e5e5]'}`} />
-                    <div className={`h-2.5 rounded w-1/2 animate-pulse ${!user ? 'bg-white/10' : 'bg-[#e5e5e5]'}`} />
+        <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
+          <ScrollArrows 
+            scrollRef={trendingRef} 
+            isDark={!user} 
+            offsetY={8} 
+            rightOffsetClass={!user ? 'max-md:right-40 md:right-[280px]' : 'max-md:right-2 md:right-12'}
+          />
+          <div 
+            ref={trendingRef} 
+            className={`w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory touch-pan-x ${!user ? '[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] pr-40 md:pr-[300px]' : ''}`}
+          >
+            {loading ? (
+              [...Array(16)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-2 rounded border border-transparent select-none snap-always snap-center">
+                  <div className={`w-12 h-12 rounded relative overflow-hidden shrink-0 animate-pulse ${!user ? 'bg-white/10' : 'bg-black/5'}`} />
+                  <div className="flex flex-col gap-2 w-full overflow-hidden">
+                    <div className={`h-3.5 rounded w-3/4 animate-pulse ${!user ? 'bg-white/10' : 'bg-black/5'}`} />
+                    <div className={`h-2.5 rounded w-1/2 animate-pulse ${!user ? 'bg-white/10' : 'bg-black/5'}`} />
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        ) : trendingTracks.length === 0 ? (
-          <div className={`font-sans text-[11px] uppercase tracking-widest px-8 ${!user ? 'text-white/30' : 'text-black/30'}`}>No tracks found.</div>
-        ) : (
-          <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
-            <ScrollArrows 
-              scrollRef={trendingRef} 
-              isDark={!user} 
-              offsetY={8} 
-              rightOffsetClass={!user ? 'max-md:right-40 md:right-[280px]' : 'max-md:right-2 md:right-12'}
-            />
-            <div 
-              ref={trendingRef} 
-              className={`w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory ${!user ? '[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] pr-40 md:pr-[300px]' : ''}`}
-            >
-            {trendingTracks.slice(0, 16).map((track, i) => {
+              ))
+            ) : trendingTracks.length === 0 ? (
+              <div className={`font-sans text-[11px] uppercase tracking-widest ${!user ? 'text-white/30' : 'text-black/30'} col-span-full`}>No tracks found.</div>
+            ) : (
+              trendingTracks.slice(0, 16).map((track, i) => {
               const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
               return (
                 <div 
@@ -520,7 +511,7 @@ export default function Home() {
           
           <div className="w-full relative max-md:px-[calc(50vw-120px)] sm:max-md:px-[calc(50vw-130px)] md:px-8">
             <ScrollArrows scrollRef={suggestedRef} offsetY={8} />
-            <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar snap-x snap-mandatory">
+            <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar snap-x snap-mandatory touch-pan-x">
               {suggestedPlaylists.map((pl) => (
                 <div 
                   key={pl.id} 
@@ -563,7 +554,7 @@ export default function Home() {
         <div className={`w-full px-8 pt-0 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
           <div className="w-full relative">
             <ScrollArrows scrollRef={suggestedTracksRef} isDark={!user} offsetY={8} />
-            <div ref={suggestedTracksRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+            <div ref={suggestedTracksRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4 touch-pan-x">
               <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
                 {suggestedTracks.slice(0, 16).map((track, i) => {
                   const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
@@ -608,7 +599,7 @@ export default function Home() {
           
           <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
             <ScrollArrows scrollRef={recentlyPlayedRef} offsetY={16} />
-            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-8 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory">
+            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-8 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory touch-pan-x">
                 {recentlyPlayedTracks.map((track, i) => {
                   const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
                   return (

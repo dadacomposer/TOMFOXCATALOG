@@ -438,13 +438,24 @@ export default function GlobalPlayer() {
           {isSimilarLoading && similarTracks.length === 0 ? (
             // Initial Skeleton Loader
             [...Array(10)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4 p-2 mb-2 animate-pulse">
-                <div className="w-10 h-10 rounded-lg bg-black/5 shrink-0" />
-                <div className="flex flex-col gap-2 w-48 shrink-0">
-                  <div className="h-3 bg-black/10 rounded w-full" />
-                  <div className="h-2 bg-black/5 rounded w-2/3" />
+              <div key={i} className="flex items-center gap-4 p-2 mb-1 rounded-xl border border-transparent">
+                <div className="w-12 h-12 rounded shrink-0 bg-black/5 animate-pulse" />
+                <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4 gap-2">
+                  <div className="h-3.5 bg-black/5 rounded w-3/4 animate-pulse" />
+                  <div className="h-2.5 bg-black/5 rounded w-1/2 animate-pulse" />
                 </div>
-                <div className="flex-grow h-4 bg-black/5 rounded" />
+                <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%]">
+                  <div className="h-5 w-12 bg-black/5 rounded animate-pulse" />
+                  <div className="h-5 w-16 bg-black/5 rounded animate-pulse" />
+                </div>
+                <div className="hidden md:flex flex-grow h-8 items-center pr-4">
+                  <div className="h-3 w-full bg-black/5 rounded animate-pulse opacity-50" />
+                </div>
+                <div className="flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2">
+                  <div className="hidden md:block w-8 h-2.5 bg-black/5 rounded animate-pulse mr-2" />
+                  <div className="hidden md:block w-4 h-4 bg-black/5 rounded-full animate-pulse mr-2 md:mr-4" />
+                  <div className="w-16 h-8 md:w-20 md:h-9 bg-black/5 rounded animate-pulse" />
+                </div>
               </div>
             ))
           ) : (
@@ -574,13 +585,24 @@ export default function GlobalPlayer() {
               {/* Load More Skeleton */}
               {isSimilarLoading && similarTracks.length > 0 && (
                 [...Array(5)].map((_, i) => (
-                  <div key={`load-more-${i}`} className="flex items-center gap-4 p-2 mb-2 animate-pulse">
-                    <div className="w-10 h-10 rounded-lg bg-black/5 shrink-0" />
-                    <div className="flex flex-col gap-2 w-48 shrink-0">
-                      <div className="h-3 bg-black/10 rounded w-full" />
-                      <div className="h-2 bg-black/5 rounded w-2/3" />
+                  <div key={`load-more-${i}`} className="flex items-center gap-4 p-2 mb-1 rounded-xl border border-transparent">
+                    <div className="w-12 h-12 rounded shrink-0 bg-black/5 animate-pulse" />
+                    <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4 gap-2">
+                      <div className="h-3.5 bg-black/5 rounded w-3/4 animate-pulse" />
+                      <div className="h-2.5 bg-black/5 rounded w-1/2 animate-pulse" />
                     </div>
-                    <div className="flex-grow h-4 bg-black/5 rounded" />
+                    <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%]">
+                      <div className="h-5 w-12 bg-black/5 rounded animate-pulse" />
+                      <div className="h-5 w-16 bg-black/5 rounded animate-pulse" />
+                    </div>
+                    <div className="hidden md:flex flex-grow h-8 items-center pr-4">
+                      <div className="h-3 w-full bg-black/5 rounded animate-pulse opacity-50" />
+                    </div>
+                    <div className="flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2">
+                      <div className="hidden md:block w-8 h-2.5 bg-black/5 rounded animate-pulse mr-2" />
+                      <div className="hidden md:block w-4 h-4 bg-black/5 rounded-full animate-pulse mr-2 md:mr-4" />
+                      <div className="w-16 h-8 md:w-20 md:h-9 bg-black/5 rounded animate-pulse" />
+                    </div>
                   </div>
                 ))
               )}
