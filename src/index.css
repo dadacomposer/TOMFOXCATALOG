@@ -35,6 +35,7 @@
 @layer base {
   html, body {
     overscroll-behavior: none;
+    scroll-behavior: smooth;
   }
   
   body {
