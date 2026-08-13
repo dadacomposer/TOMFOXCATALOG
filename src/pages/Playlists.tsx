@@ -110,7 +110,7 @@ export default function Playlists() {
   }, [playlists, searchQuery, sortBy]);
 
   return (
-    <div className="relative flex flex-col w-full min-h-screen pt-[74px] md:pt-[82px] bg-[#fafafa] text-black">
+    <div className="relative flex flex-col w-full min-h-screen pt-[72px] md:pt-[80px] bg-[#fafafa] text-black">
       {/* HUGE DRIBBBLE LOGO WATERMARK */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" className="absolute top-10 -right-20 w-[120%] md:w-[60%] opacity-[0.02] rotate-12 select-none mix-blend-multiply" alt="" />
@@ -133,7 +133,7 @@ export default function Playlists() {
       </AnimatePresence>
 
       <div 
-        className={`sticky top-[74px] md:top-[82px] z-40 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 md:px-12 lg:px-24 flex flex-col border-b border-black/10 py-4 mb-16 shadow-sm focus-within:border-black/30 group/searchbar ${playlistUrlId ? 'hidden' : ''}`}
+        className={`sticky top-[72px] md:top-[80px] z-40 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 md:px-12 lg:px-24 flex flex-col border-b border-black/10 py-4 mb-16 shadow-sm focus-within:border-black/30 group/searchbar ${playlistUrlId ? 'hidden' : ''}`}
       >
         <div className="flex items-center w-full">
           <div className="group-hover/searchbar:text-black/80 group-focus-within/searchbar:text-black transition-colors z-10">
