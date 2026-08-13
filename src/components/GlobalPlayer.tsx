@@ -61,6 +61,7 @@ export default function GlobalPlayer() {
   const [similarOffset, setSimilarOffset] = React.useState(0);
   const [hasMoreSimilar, setHasMoreSimilar] = React.useState(true);
   const [isBuffering, setIsBuffering] = React.useState(false);
+  const [expandedTags, setExpandedTags] = React.useState<{trackId: string, tags: string[]} | null>(null);
   const originalPlaylistRef = React.useRef<Track[]>([]);
 
   const expandSimilar = () => {
@@ -473,7 +474,7 @@ export default function GlobalPlayer() {
                   </div>
                   
                   {/* Tags */}
-                  <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] overflow-hidden">
+                  <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] relative">
                     {(() => {
                       const human = parseTags((track as any).human_tags);
                       const subgenres = parseTags(track.subgenre);
@@ -483,15 +484,53 @@ export default function GlobalPlayer() {
                       
                       const all = [...human, ...subgenres, ...moods, ...scenarios, ...movement];
                       const unique = Array.from(new Set(all));
-                      const tags = unique.slice(0, 2);
+                      const tags = unique.slice(0, 4);
+                      const remainingTags = unique.slice(4);
                       
-                      if (tags.length === 0) return null;
+                      if (tags.length === 0) return <span className="text-[10px] text-black/30 font-bold uppercase tracking-widest">Tagging...</span>;
 
-                      return tags.map((t, idx) => (
-                        <span key={idx} onClick={e => e.stopPropagation()} className="px-2 py-1 bg-black/5 rounded text-[10px] font-bold text-black/60 uppercase tracking-widest whitespace-nowrap cursor-default">
-                          {t}
-                        </span>
-                      ));
+                      return (
+                        <div className="flex items-center gap-2">
+                          {tags.map((t, idx) => (
+                            <span 
+                              key={idx} 
+                              onClick={e => e.stopPropagation()} 
+                              className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                          {remainingTags.length > 0 && (
+                            <div className="relative">
+                              <span 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedTags(expandedTags?.trackId === track.id ? null : { trackId: track.id, tags: remainingTags });
+                                }}
+                                className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
+                              >
+                                +{remainingTags.length}
+                              </span>
+                              {expandedTags?.trackId === track.id && (
+                                <>
+                                  <div className="fixed inset-0 z-[20]" onClick={(e) => { e.stopPropagation(); setExpandedTags(null); }} />
+                                  <div className="absolute bottom-full mb-2 left-0 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
+                                    {expandedTags?.tags.map((t, idx) => (
+                                      <span 
+                                        key={idx} 
+                                        onClick={e => e.stopPropagation()}
+                                        className="px-1.5 py-0.5 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                                      >
+                                        {t}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
                     })()}
                   </div>
 
