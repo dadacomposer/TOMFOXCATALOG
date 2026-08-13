@@ -36,7 +36,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: "Tom Fox Catalog <onboarding@resend.dev>", // We use onboarding domain or a verified domain
-        to: ["dadacomposer@gmail.com", "licensing@tomfox.com"],
+        to: ["licensing@tomfoxcatalog.com"],
         reply_to: email,
         subject: `New Contact Request: ${source} from ${name}`,
         html: `

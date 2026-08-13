@@ -30,8 +30,8 @@ export default function Privacy() {
         </p>
 
         <h2 className="text-lg mt-12 mb-4">5. Contact Us</h2>
-        <p className="mb-6">
-          If you have any questions about this Privacy Policy, please contact us at support@tomfox.com.
+        <p className="text-black/70 leading-relaxed font-sans">
+          If you have any questions about this Privacy Policy, please contact us at licensing@tomfoxcatalog.com.
         </p>
       </div>
     </div>
