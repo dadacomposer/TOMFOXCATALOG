@@ -373,15 +373,16 @@ export default function Home() {
                 })
             )}
           </div>
-            {/* CTA for non-logged in users - Moved Below */}
-            {!user && (
-              <div className="w-full flex justify-center mt-16 md:mt-32 pointer-events-auto relative z-50">
-                <Link to="/browse" className="bg-white text-black px-8 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[12px] tracking-widest shadow-xl">
-                  Explore the catalog
-                </Link>
-              </div>
-            )}
           </div>
+          
+          {/* CTA for non-logged in users - Moved Below Cards Container */}
+          {!user && (
+            <div className="w-full flex justify-center mt-16 md:mt-32 pointer-events-auto relative z-50">
+              <Link to="/browse" className="bg-white text-black px-8 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[12px] tracking-widest shadow-xl">
+                Explore the catalog
+              </Link>
+            </div>
+          )}
         </div>
         
         {/* Fading gradient to smooth transition to Trending Tracks */}
