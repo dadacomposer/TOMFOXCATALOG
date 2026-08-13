@@ -56,7 +56,7 @@ interface PlaylistIslandProps {
 
 export default function PlaylistIsland(props: PlaylistIslandProps) {
   const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount, isScrollableContainer } = props;
-  const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, setSelectedTrackForDetails } = usePlayer();
+  const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, selectedTrackForDetails, setSelectedTrackForDetails } = usePlayer();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -76,7 +76,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   const { openDownloadModal } = useDownload();
-  const { removeTrackFromPlaylist, favoritesPlaylist } = useUserPlaylists();
+  const { removeTrackFromPlaylist, favoritesPlaylist, favoriteTrackIds } = useUserPlaylists();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
   const { profile } = useAuth();
@@ -267,7 +267,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
               ) : tracks.map((track) => (
                   <div 
                     key={track.id} 
-                    className={`flex items-center gap-4 p-2 md:p-3 rounded-2xl group transition-all cursor-pointer border border-transparent hover:border-black/5 hover:bg-[#f6f6f6] ${removingIds.has(track.id) ? 'opacity-0 -translate-x-4 pointer-events-none' : 'opacity-100 translate-x-0'} ${selectedTrackForDetails?.id === track.id ? 'bg-black/5 border-black/10' : ''}`}
+                    className={`flex items-center gap-4 p-2 rounded-xl group transition-colors cursor-pointer select-none border border-transparent hover:bg-[#f6f6f6] ${removingIds.has(track.id) ? 'opacity-0 -translate-x-4 pointer-events-none' : 'opacity-100 translate-x-0'} ${selectedTrackForDetails?.id === track.id ? 'bg-black/5 border-black/10' : ''}`}
                     onClick={(e) => {
                       if (e.shiftKey || e.metaKey || e.ctrlKey) return;
                       e.stopPropagation();
@@ -313,8 +313,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                       
                       const all = [...human, ...subgenres, ...moods, ...scenarios, ...movement];
                       const unique = Array.from(new Set(all));
-                      const tags = unique.slice(0, 2);
-                      const remainingTags = unique.slice(2);
+                      const tags = unique.slice(0, 4);
+                      const remainingTags = unique.slice(4);
                       
                       if (tags.length === 0) return <span className="text-[10px] text-black/30 font-bold uppercase tracking-widest">Tagging...</span>;
 
@@ -324,7 +324,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                             <span 
                               key={idx} 
                               onClick={e => e.stopPropagation()} 
-                              className="px-2 py-1 bg-black/5 rounded text-[10px] font-bold text-black/60 uppercase tracking-widest whitespace-nowrap cursor-default"
+                              className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
                             >
                               {t}
                             </span>
@@ -336,7 +336,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                                   e.stopPropagation();
                                   setExpandedTags(expandedTags?.trackId === track.id ? null : { trackId: track.id, tags: remainingTags });
                                 }}
-                                className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-bold text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                                className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
                               >
                                 +{remainingTags.length}
                               </span>
@@ -348,7 +348,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                                       <span 
                                         key={idx} 
                                         onClick={e => e.stopPropagation()}
-                                        className="px-2 py-1 bg-black/5 rounded text-[10px] font-bold text-black/60 uppercase tracking-widest whitespace-nowrap cursor-default"
+                                        className="px-1.5 py-0.5 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
                                       >
                                         {t}
                                       </span>
@@ -377,12 +377,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
 
                   <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
                     <TrackActionButtons trackId={track.id} />
-                    <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
-                      {currentTrack?.id === track.id && isPlaying ? (
-                        `${formatTime((progress / 100) * (track.duration || 0))} / ${formatTime(track.duration || 0)}`
-                      ) : (
-                        track.duration ? formatTime(track.duration) : '0:00'
-                      )}
+                    <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
+                      {track.duration ? formatTime(track.duration) : '0:00'}
                     </div>
                     {isOwner ? (
                       <button 

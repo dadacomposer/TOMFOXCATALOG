@@ -293,7 +293,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setIsPlaying(true);
       window.dispatchEvent(new CustomEvent('scrollToBrowse'));
     } else {
-      setIsPlaying(false);
+      if (currentPlaylist.length > 0) {
+        setIsShuffleEnabled(true);
+        let randomIndex = Math.floor(Math.random() * currentPlaylist.length);
+        // Avoid playing the exact same track again if possible
+        const currentIdx = currentPlaylist.findIndex(t => t.id === currentTrack.id);
+        if (randomIndex === currentIdx && currentPlaylist.length > 1) {
+          randomIndex = (randomIndex + 1) % currentPlaylist.length;
+        }
+        const nextTrack = currentPlaylist[randomIndex];
+        applyPreview(nextTrack);
+        setCurrentTrack(nextTrack);
+        setIsPlaying(true);
+      } else {
+        setIsPlaying(false);
+      }
     }
   }, [currentPlaylist, currentTrack, currentSource, fallbackPlaylist, returnTrackId, isShuffleEnabled, isRepeatEnabled]);
 

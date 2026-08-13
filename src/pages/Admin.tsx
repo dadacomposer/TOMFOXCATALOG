@@ -137,14 +137,7 @@ export default function Admin() {
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Statistics</span>
           </NavLink>
 
-          <NavLink
-            to="/admin/tickets"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
-            title="Tickets"
-          >
-            <div className="w-6 h-6 shrink-0 flex items-center justify-center"><Ticket className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Tickets</span>
-          </NavLink>
+
           <NavLink
             to="/admin/studio"
             className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}

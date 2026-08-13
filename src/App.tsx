@@ -16,7 +16,7 @@ import Admin from './pages/Admin';
 import AdminTracks from './components/admin/AdminTracks';
 import AdminUsers from './components/admin/AdminUsers';
 import AdminLicensing from './components/admin/AdminLicensing';
-import AdminTickets from './components/admin/AdminTickets';
+
 import AdminSettings from './components/admin/AdminSettings';
 import AdminFeatures from './components/admin/AdminFeatures';
 import AdminTomFoxStudio from './components/admin/AdminTomFoxStudio';
@@ -99,7 +99,7 @@ function AppLayout() {
               <Route path="tracks" element={<AdminTracks />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="licensing" element={<AdminLicensing />} />
-              <Route path="tickets" element={<AdminTickets />} />
+
               <Route path="settings" element={<AdminSettings />} />
               <Route path="features" element={<AdminFeatures />} />
               <Route path="studio" element={<AdminTomFoxStudio />} />

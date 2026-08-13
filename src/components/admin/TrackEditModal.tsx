@@ -269,9 +269,9 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
-      <div className="bg-white rounded-2xl w-full max-w-3xl flex flex-col h-[85vh] overflow-hidden shadow-2xl border border-black/10 animate-slide-in-up" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-black/5 flex items-center justify-between shrink-0">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pt-[100px] bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
+      <div className="bg-[#fafafa] rounded-[24px] w-full max-w-3xl flex flex-col h-[85vh] overflow-hidden shadow-2xl border border-black/10 animate-slide-in-up" onClick={e => e.stopPropagation()}>
+        <div className="p-6 pb-2 border-b border-black/5 flex items-center justify-between shrink-0">
           <h3 className="text-xl font-bold flex items-center gap-3">
             <span className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center shrink-0 relative overflow-hidden border border-black/10">
               <TrackArtwork track={{ ...track, artwork_url: form.artwork_url }} className="absolute inset-0 w-full h-full object-cover" />
@@ -285,26 +285,26 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         
         <div className="flex border-b border-black/5 px-6 shrink-0">
           <button 
-            className={`px-6 py-4 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'main' ? 'border-black text-black' : 'border-transparent text-black/40 hover:text-black'}`}
+            className={`px-6 py-4 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 !rounded-none ${activeTab === 'main' ? 'border-black text-black' : 'border-transparent text-black/40 hover:text-black'}`}
             onClick={() => setActiveTab('main')}
           >
             <Music className="w-4 h-4" /> Main Info
           </button>
           <button 
-            className={`px-6 py-4 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'metadata' ? 'border-black text-black' : 'border-transparent text-black/40 hover:text-black'}`}
+            className={`px-6 py-4 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 !rounded-none ${activeTab === 'metadata' ? 'border-black text-black' : 'border-transparent text-black/40 hover:text-black'}`}
             onClick={() => setActiveTab('metadata')}
           >
             <Tag className="w-4 h-4" /> Metadata
           </button>
           <button 
-            className={`px-6 py-4 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'versions' ? 'border-black text-black' : 'border-transparent text-black/40 hover:text-black'}`}
+            className={`px-6 py-4 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 !rounded-none ${activeTab === 'versions' ? 'border-black text-black' : 'border-transparent text-black/40 hover:text-black'}`}
             onClick={() => setActiveTab('versions')}
           >
             <FileAudio className="w-4 h-4" /> Versions & Stems
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-black/[0.02]">
+        <div className="flex-1 overflow-y-auto p-6 bg-transparent custom-scrollbar">
           {activeTab === 'main' && (
             <div className="space-y-6 w-full">
               <div>
@@ -510,7 +510,7 @@ export default function TrackEditModal({ track, onClose, onSave }: TrackEditModa
         </div>
 
         {(activeTab === 'main' || activeTab === 'metadata') && (
-          <div className="p-6 bg-white border-t border-black/5 flex justify-end gap-3 shrink-0">
+          <div className="p-6 bg-transparent border-t border-black/5 flex justify-end gap-3 shrink-0">
             <button
               onClick={handleClose}
               className="px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-black/60 hover:bg-black/5 hover:text-black transition-colors"

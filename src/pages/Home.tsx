@@ -214,7 +214,7 @@ export default function Home() {
             setSearchParams(searchParams);
           }}
           progress={progress}
-          handleSeek={handleSeek}
+          handleSeek={(_, percentage) => setPendingSeek(percentage)}
           formatTime={formatTime}
           trendingTrackIds={trendingTrackIds}
         />

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { X, Play, Pause } from 'lucide-react';
+import { X, Play, Pause, BarChart3, TrendingUp } from 'lucide-react';
 import { usePlayer, Track } from '../../context/PlayerContext';
+import { useAuth } from '../../context/AuthContext';
 import { DEFAULT_COMPOSERS } from '../../config';
 import TrackArtwork from '../TrackArtwork';
 import { generateEmbedding } from '../../lib/embedding';
@@ -40,6 +42,16 @@ export default function TrackDetailsModal() {
   const [expandedSection, setExpandedSection] = useState<{ label: string, tags: string[], rect: DOMRect } | null>(null);
   const [localTrack, setLocalTrack] = useState<Track | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (selectedTrackForDetails) {
+      setSelectedTrackForDetails(null);
+    }
+  }, [location.pathname]);
+
+  const isAdmin = user && (user.email === 'dadacomposer@gmail.com' || user.email === 'licensing@tomfoxcatalog.com' || user.email === 'licensing@tomfox.com');
 
   useEffect(() => {
     if (selectedTrackForDetails) {
@@ -194,6 +206,21 @@ export default function TrackDetailsModal() {
               <div className="bg-[#1a1a1a] p-6 rounded-2xl border border-black/5 shadow-sm">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-3">About this track</h3>
                 <p className="text-sm text-white/90 leading-relaxed font-sans">{displayTrack.description}</p>
+              </div>
+            )}
+
+            {isAdmin && (
+              <div className="bg-white p-5 rounded-2xl border border-black/10 shadow-sm flex flex-col gap-4">
+                <div className="flex items-center gap-2 text-black/40 mb-1">
+                  <BarChart3 className="w-4 h-4" />
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest">Admin Stats</h3>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-black/40 mb-1">Plays (Total)</div>
+                    <div className="font-sans text-xl font-bold text-black">{displayTrack.play_count || 0}</div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

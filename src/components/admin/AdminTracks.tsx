@@ -1160,7 +1160,6 @@ toast.success('Track restored successfully');
           )}
         </div>
 
-        {/* Import Tags Button */}
         <button 
           onClick={() => setIsImportModalOpen(true)}
           className="flex items-center justify-center gap-2 px-4 bg-black text-white rounded-xl shadow-sm shrink-0 h-12 hover:bg-black/80 transition-colors"
@@ -1168,16 +1167,16 @@ toast.success('Track restored successfully');
           <Upload className="w-4 h-4" />
           <span className="text-[11px] font-bold tracking-widest uppercase">Import CSV</span>
         </button>
-        <div className="flex items-center bg-black/5 p-1 rounded-xl h-12 shrink-0">
+        <div className="flex items-center bg-black/5 rounded-xl h-12 shrink-0 overflow-hidden border border-black/5 p-1 gap-1">
           <button
             onClick={() => setActiveTab('active')}
-            className={`px-4 text-[11px] font-bold tracking-widest uppercase rounded-lg transition-all h-full flex items-center justify-center ${activeTab === 'active' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/5'}`}
+            className={`px-4 text-[11px] font-bold tracking-widest uppercase transition-all h-full flex items-center justify-center rounded-lg ${activeTab === 'active' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/10'}`}
           >
             Active ({tracks.filter(t => !t.deleted_at).length})
           </button>
           <button
             onClick={() => setActiveTab('trash')}
-            className={`px-4 rounded-lg transition-all flex items-center justify-center h-full ${activeTab === 'trash' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/5'}`}
+            className={`px-4 transition-all flex items-center justify-center h-full rounded-lg ${activeTab === 'trash' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/10'}`}
             title={`Trash (${tracks.filter(t => t.deleted_at).length})`}
           >
             <Trash2 className="w-4 h-4" />
