@@ -59,6 +59,13 @@ type PlayerContextType = {
   setReturnTrackId: (id: string | null) => void;
   selectedTrackForDetails: Track | null;
   setSelectedTrackForDetails: (track: Track | null) => void;
+  volume: number;
+  setVolume: (volume: number) => void;
+  toggleMute: () => void;
+  isShuffleEnabled: boolean;
+  setIsShuffleEnabled: (enabled: boolean) => void;
+  isRepeatEnabled: boolean;
+  setIsRepeatEnabled: (enabled: boolean) => void;
 };
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -76,7 +83,26 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentSource, setCurrentSource] = useState<'top' | 'browse' | 'playlist' | 'suggested' | null>(null);
   const [returnTrackId, setReturnTrackId] = useState<string | null>(null);
   const [selectedTrackForDetails, setSelectedTrackForDetails] = useState<Track | null>(null);
+  const [volume, setVolume] = useState(1);
+  const [lastVolume, setLastVolume] = useState(1);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const toggleMute = useCallback(() => {
+    if (volume === 0) {
+      setVolume(lastVolume || 1);
+    } else {
+      setLastVolume(volume);
+      setVolume(0);
+    }
+  }, [volume, lastVolume]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume, currentTrack]);
 
   const handleSetPreviewMode = (mode: boolean) => {
     setIsPreviewMode(mode);
@@ -208,6 +234,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    if (isRepeatEnabled) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(console.error);
+        setProgress(0);
+      }
+      return;
+    }
+
+    if (isShuffleEnabled && currentPlaylist.length > 1) {
+      const currentIdx = currentPlaylist.findIndex(t => t.id === currentTrack.id);
+      let randomIndex = Math.floor(Math.random() * currentPlaylist.length);
+      // Try to avoid playing the exact same track again if possible
+      if (randomIndex === currentIdx) {
+        randomIndex = (randomIndex + 1) % currentPlaylist.length;
+      }
+      const nextTrack = currentPlaylist[randomIndex];
+      applyPreview(nextTrack);
+      setCurrentTrack(nextTrack);
+      setIsPlaying(true);
+      return;
+    }
+
     const currentIndex = currentPlaylist.findIndex(t => t.id === currentTrack.id);
     
     if (currentIndex >= 0 && currentIndex < currentPlaylist.length - 1) {
@@ -246,7 +295,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else {
       setIsPlaying(false);
     }
-  }, [currentPlaylist, currentTrack, currentSource, fallbackPlaylist, returnTrackId]);
+  }, [currentPlaylist, currentTrack, currentSource, fallbackPlaylist, returnTrackId, isShuffleEnabled, isRepeatEnabled]);
 
   const playPrevTrack = () => {
     if (!currentPlaylist.length || !currentTrack) return;
@@ -280,6 +329,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           }
         }
       }
+    }
+
+    if (isShuffleEnabled && currentPlaylist.length > 1) {
+      const currentIdx = currentPlaylist.findIndex(t => t.id === currentTrack.id);
+      let randomIndex = Math.floor(Math.random() * currentPlaylist.length);
+      if (randomIndex === currentIdx) {
+        randomIndex = (randomIndex + 1) % currentPlaylist.length;
+      }
+      const prevTrack = currentPlaylist[randomIndex];
+      applyPreview(prevTrack);
+      setCurrentTrack(prevTrack);
+      setIsPlaying(true);
+      return;
     }
 
     const currentIndex = currentPlaylist.findIndex(t => t.id === currentTrack.id);
@@ -327,7 +389,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       returnTrackId,
       setReturnTrackId,
       selectedTrackForDetails,
-      setSelectedTrackForDetails
+      setSelectedTrackForDetails,
+      volume,
+      setVolume,
+      toggleMute,
+      isShuffleEnabled,
+      setIsShuffleEnabled,
+      isRepeatEnabled,
+      setIsRepeatEnabled
     }}>
       {children}
     </PlayerContext.Provider>

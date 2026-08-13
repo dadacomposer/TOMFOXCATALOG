@@ -144,29 +144,50 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
       const { track, newTags } = match;
       
       const updateData: any = {};
-      const tagFields = ['genre', 'moods', 'music_for', 'instruments', 'functions', 'movement', 'character', 'tempo', 'arrangement'];
+      const tagAliases: Record<string, string[]> = {
+        'genre': ['genre'],
+        'moods': ['moods', 'mood'],
+        'music_for': ['music_for', 'music for'],
+        'instruments': ['instruments', 'instrument'],
+        'functions': ['functions', 'function'],
+        'movement': ['movement'],
+        'character': ['character'],
+        'tempo': ['tempo'],
+        'arrangement': ['arrangement']
+      };
       
       let tagModified = false;
       
       // Helper to extract values from multiple duplicate columns
-      const extractValues = (keyBase: string) => {
-        const matchingKeys = Object.keys(newTags).filter(k => k.toLowerCase().split('___')[0] === keyBase.toLowerCase());
+      const extractValues = (aliases: string[]) => {
+        const matchingKeys = Object.keys(newTags).filter(k => aliases.includes(k.toLowerCase().split('___')[0]));
         if (matchingKeys.length === 0) return null; // column not present at all
         const values = matchingKeys.map(k => newTags[k]).filter(v => v !== undefined && v !== null && v !== '');
         return values;
       };
 
-      tagFields.forEach(field => {
-        const vals = extractValues(field);
+      Object.entries(tagAliases).forEach(([field, aliases]) => {
+        const vals = extractValues(aliases);
         if (vals && vals.length > 0) {
           tagModified = true;
           const combinedCsvTags = vals.flatMap(v => splitCsvTags(v));
-          if (importMode === 'REPLACE') {
-            updateData[field] = JSON.stringify(combinedCsvTags);
+          
+          if (field === 'genre') {
+            if (importMode === 'REPLACE') {
+              updateData[field] = combinedCsvTags.join(', ');
+            } else {
+              const existing = track[field] ? track[field].split(',').map(s => s.trim()).filter(Boolean) : [];
+              const combined = Array.from(new Set([...existing, ...combinedCsvTags]));
+              updateData[field] = combined.join(', ');
+            }
           } else {
-            const existing = parseExistingTags(track[field]);
-            const combined = Array.from(new Set([...existing, ...combinedCsvTags]));
-            updateData[field] = JSON.stringify(combined);
+            if (importMode === 'REPLACE') {
+              updateData[field] = combinedCsvTags;
+            } else {
+              const existing = parseExistingTags(track[field]);
+              const combined = Array.from(new Set([...existing, ...combinedCsvTags]));
+              updateData[field] = combined;
+            }
           }
         }
       });
@@ -185,23 +206,37 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
       
       // Map 'pro' to pro_registered
       const proKeys = Object.keys(newTags).filter(k => k.toLowerCase().split('___')[0] === 'pro');
+      // Sort by column index to ensure we grab the first 'pro' column as the status
+      proKeys.sort((a, b) => {
+         const idxA = parseInt(a.split('___')[1] || '0');
+         const idxB = parseInt(b.split('___')[1] || '0');
+         return idxA - idxB;
+      });
+
       if (proKeys.length > 0) {
-        const val = (newTags[proKeys[0]] || '').toLowerCase().trim();
+        const proStatusKey = proKeys[0];
+        const val = (newTags[proStatusKey] || '').toLowerCase().trim();
         if (val === 'registered') updateData.pro_registered = true;
         else updateData.pro_registered = false;
+        
+        // Remove the status key so the remaining 'pro' columns can map to 'pro_org'
+        delete newTags[proStatusKey];
       }
 
       // New Admin Columns
       const adminMappings: Record<string, string[]> = {
         'id_number': ['id #', 'id_number'],
         'pub_admin': ['pub admin', 'pub_admin'],
-        'writer': ['writer'],
+        'writer': ['writer', 'writer 1', 'writer 2', 'writer 3'],
         'role': ['role'],
-        'pro_org': ['pro org', 'pro_org'],
-        'ipi_number': ['ipi #', 'ipi_number'],
-        'publisher': ['publisher/publisher 1', 'publisher', 'publisher 1'],
+        'pro_org': ['pro org', 'pro_org', 'pro'],
+        'ipi_number': ['ipi #', 'ipi_number', 'ipi'],
+        'publisher': ['publisher/publisher 1', 'publisher', 'publisher 1', 'publisher 2'],
         'share': ['share'],
-        'sub_pub': ['sub pub', 'sub_pub']
+        'sub_pub': ['sub pub', 'sub_pub'],
+        'upc': ['upc'],
+        'isrc': ['isrc'],
+        'description': ['track description', 'description']
       };
 
       Object.entries(adminMappings).forEach(([dbField, possibleHeaders]) => {
@@ -217,7 +252,11 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
       });
       
       if (Object.keys(updateData).length > 0) {
-        await supabase.from('tracks').update(updateData).eq('id', track.id);
+        const { error } = await supabase.from('tracks').update(updateData).eq('id', track.id);
+        if (error) {
+          console.error('Failed to update track', track.id, error);
+          toast.error(`Error updating track ${track.file_name}: ${error.message}`);
+        }
       }
       
       completed++;
@@ -229,7 +268,7 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
   };
 
   const downloadTemplate = () => {
-    const csvContent = "Track Title,genre,moods,music_for,instruments,functions,movement,character,tempo,arrangement,content id,pro,ID #,Pub admin,writer,role,pro org,IPI #,publisher/publisher 1,share,SUB PUB\nexample_track.wav,\"Electronic, Pop\",\"Happy, Upbeat\",\"Driving, Party\",\"Synth, Drums\",\"Smooth\",\"Flowing\",\"Vocal, Instrumental\",\"High\",\"Ambient Piano\",\"Registered\",\"Needs Registration\",\"12345\",\"Admin1\",\"John Doe\",\"Composer\",\"ASCAP\",\"987654321\",\"Pub1\",\"50%\",\"SubPub1\"";
+    const csvContent = "Track Title,genre,moods,music_for,instruments,functions,movement,character,tempo,arrangement,content id,pro,ID #,Pub admin,writer,role,pro org,IPI #,publisher/publisher 1,share,SUB PUB,UPC,ISRC\nexample_track.wav,\"Electronic, Pop\",\"Happy, Upbeat\",\"Driving, Party\",\"Synth, Drums\",\"Smooth\",\"Flowing\",\"Vocal, Instrumental\",\"High\",\"Ambient Piano\",\"Registered\",\"Needs Registration\",\"12345\",\"Admin1\",\"John Doe\",\"Composer\",\"ASCAP\",\"987654321\",\"Pub1\",\"50%\",\"SubPub1\",\"123456789012\",\"USABC1234567\"";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -300,7 +339,7 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
                 <li>The file must be in <strong>.csv</strong> format.</li>
                 <li>Column <strong>Track Title</strong> (or file_name) is strictly required (extensions are ignored automatically).</li>
                 <li>Use comma separation for multiple tags in a column (e.g. Happy, Energetic).</li>
-                <li>Supported columns: genre, moods, music_for, instruments, functions, movement, character, tempo, arrangement, content id, pro, ID #, Pub admin, writer, role, pro org, IPI #, publisher/publisher 1, share, SUB PUB.</li>
+                <li>Supported columns: genre, moods, music_for, instruments, functions, movement, character, tempo, arrangement, content id, pro, ID #, Pub admin, writer, role, pro org, IPI #, publisher/publisher 1, share, SUB PUB, UPC, ISRC.</li>
               </ul>
                 <button 
                   onClick={downloadTemplate}

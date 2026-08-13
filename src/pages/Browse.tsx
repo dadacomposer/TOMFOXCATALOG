@@ -214,7 +214,7 @@ export default function Browse() {
   const [defaultTrackIds, setDefaultTrackIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
-  const [expandedPlaylistId, setExpandedPlaylistId] = useState<string | null>(null);
+  const [isMyMusicOpen, setIsMyMusicOpen] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const searchCounter = useRef<number>(0);
   
@@ -881,33 +881,37 @@ export default function Browse() {
                 </button>
 
                 {/* MY MUSIC */}
-                <div className="mt-2 mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-black/30">
+                <button 
+                  onClick={() => setIsMyMusicOpen(!isMyMusicOpen)}
+                  className="mt-2 mb-2 px-3 text-xs font-bold uppercase tracking-widest text-black/40 hover:text-black/60 transition-colors w-full text-left flex items-center justify-between group"
+                >
                   My Music
-                </div>
-                {profile && favoritesPlaylist && (
-                  <SidebarPlaylist 
-                    playlist={favoritesPlaylist}
-                    isFavorites={true}
-                    isActive={playlistUrlId === favoritesPlaylist.id}
-                    onClick={() => {
-                      searchParams.set('playlist', favoritesPlaylist.id);
-                      setSearchParams(searchParams);
-                    }}
-                    dragTarget={dragTarget}
-                    setDragTarget={setDragTarget}
-                  />
-                )}
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMyMusicOpen ? '' : '-rotate-90'}`} />
+                </button>
                 
-
-                
-
-                <div className="flex flex-col overflow-y-auto hide-scrollbar gap-1 flex-1 pb-16">
-                  {userPlaylists.filter(p => !p.is_favorites).map(pl => (
-                    <SidebarPlaylist
-                      key={pl.id}
-                      playlist={pl}
-                      isActive={playlistUrlId === pl.id}
-                      onClick={() => {
+                {isMyMusicOpen && (
+                  <>
+                    {profile && favoritesPlaylist && (
+                      <SidebarPlaylist 
+                        playlist={favoritesPlaylist}
+                        isFavorites={true}
+                        isActive={playlistUrlId === favoritesPlaylist.id}
+                        onClick={() => {
+                          searchParams.set('playlist', favoritesPlaylist.id);
+                          setSearchParams(searchParams);
+                        }}
+                        dragTarget={dragTarget}
+                        setDragTarget={setDragTarget}
+                      />
+                    )}
+                    
+                    <div className="flex flex-col overflow-y-auto hide-scrollbar gap-1 flex-1 pb-[110px]">
+                      {userPlaylists.filter(p => !p.is_favorites).map(pl => (
+                        <SidebarPlaylist
+                          key={pl.id}
+                          playlist={pl}
+                          isActive={playlistUrlId === pl.id}
+                          onClick={() => {
                         searchParams.set('playlist', pl.id);
                         setSearchParams(searchParams);
                       }}
@@ -916,9 +920,11 @@ export default function Browse() {
                     />
                   ))}
                 </div>
-                
+              </>
+            )}
+            
                 <div 
-                  className={`mt-auto mb-4 flex items-center justify-between gap-2 mx-3 px-3 py-2.5 rounded-full transition-colors cursor-pointer text-[10px] font-bold uppercase tracking-widest shrink-0 ${isInlineCreating || pendingDropTracks.length > 0 ? 'bg-black/90 text-white shadow-inner' : 'bg-black text-white hover:bg-black/80 shadow-md hover:shadow-lg'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`mt-auto mb-4 flex items-center justify-between gap-2 mx-3 px-3 py-2.5 rounded-full transition-all duration-500 ease-out cursor-pointer text-[10px] font-bold uppercase tracking-widest shrink-0 ${isInlineCreating || pendingDropTracks.length > 0 ? 'bg-black/90 text-white shadow-inner' : 'bg-black text-white hover:bg-black/80 shadow-md hover:shadow-lg'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''} ${currentTrack ? '-translate-y-[90px]' : 'translate-y-0'}`}
                   onClick={() => {
                     if (!user) {
                       setLoginModalOpen(true);
@@ -1085,6 +1091,16 @@ export default function Browse() {
                   {(track.created_at || track.release_date) && (new Date().getTime() - new Date(track.created_at || track.release_date || 0).getTime() < 14 * 24 * 60 * 60 * 1000) && (
                     <span className="ml-2 text-[10px] bg-blue-500/10 text-blue-500 border border-blue-500/20 px-1.5 py-0.5 rounded font-medium tracking-wide uppercase hidden md:inline-block">New</span>
                   )}
+                  {track.versions && track.versions.length > 0 && (
+                    <button 
+                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setExpandedTrackId(expandedTrackId === track.id ? null : track.id); }}
+                      className={`flex items-center gap-1 px-1.5 py-1 rounded transition-colors ${expandedTrackId === track.id ? 'bg-black/10 text-black' : 'text-black/40 hover:bg-black/5 hover:text-black'}`}
+                      title={`${track.versions.length} alternative versions`}
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span className="font-medium text-[10px] font-sans">{track.versions.length}</span>
+                    </button>
+                  )}
                 </div>
                 <div className="text-[11px] text-black/40 truncate font-sans max-w-[200px]">
                   {getComposers(track.composers)}
@@ -1114,9 +1130,9 @@ export default function Browse() {
                     }
                   }
                   
-                  // Show up to 4 tags
-                  const tags = uniqueTags.slice(0, 4);
-                  const remainingTags = uniqueTags.slice(4);
+                  // Show up to 6 tags
+                  const tags = uniqueTags.slice(0, 6);
+                  const remainingTags = uniqueTags.slice(6);
                   
                   if (tags.length === 0) return <span className="text-[10px] text-black/30 font-medium uppercase tracking-widest">Tagging...</span>;
 
@@ -1127,7 +1143,7 @@ export default function Browse() {
                           <span 
                             key={idx} 
                             onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; handleTagClick(t.category, t.val, e); }} 
-                            className="px-2 py-1 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
+                            className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
                           >
                             {t.val}
                           </span>
@@ -1141,7 +1157,7 @@ export default function Browse() {
                               e.stopPropagation();
                               setExpandedTags(expandedTags?.trackId === track.id ? null : { trackId: track.id, tags: remainingTags });
                             }}
-                            className="px-2 py-1 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
+                            className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
                           >
                             +{remainingTags.length}
                           </span>
@@ -1150,11 +1166,11 @@ export default function Browse() {
                               <div className="fixed inset-0 z-[20]" onClick={(e) => { e.stopPropagation(); setExpandedTags(null); }} />
                               <div ref={expandedTagsRef} className="absolute top-full right-0 mt-2 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
                                 {expandedTags.tags.map((t, idx) => (
-                                  <span 
-                                    key={idx} 
-                                    onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; handleTagClick(t.category, t.val, e); }} 
-                                    className="px-2 py-1 bg-black/5 hover:bg-black/10 rounded text-[10px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
-                                  >
+                                    <span 
+                                      key={idx} 
+                                      onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; handleTagClick(t.category, t.val, e); }} 
+                                      className="px-1.5 py-0.5 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+                                    >
                                     {t.val}
                                   </span>
                                 ))}
@@ -1186,16 +1202,6 @@ export default function Browse() {
                   {track.duration ? formatTime(track.duration) : '0:00'}
                 </div>
                 <div className="w-[50px] flex justify-center shrink-0">
-                  {track.versions && track.versions.length > 0 && (
-                    <button 
-                      onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setExpandedTrackId(expandedTrackId === track.id ? null : track.id); }}
-                      className={`flex items-center gap-1.5 px-2 py-1.5 rounded transition-colors ${expandedTrackId === track.id ? 'bg-black/10 text-black' : 'text-black/40 hover:bg-black/5 hover:text-black'}`}
-                      title={`${track.versions.length} alternative versions`}
-                    >
-                      <Layers className="w-4 h-4" />
-                      <span className="font-medium text-[11px] font-sans">{track.versions.length}</span>
-                    </button>
-                  )}
                 </div>
                 {profile?.can_download !== false && (
                   <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(track, e); }} title="Download">
@@ -1280,7 +1286,7 @@ export default function Browse() {
               </div>
             )}
             
-            <div className="mt-auto pt-16">
+            <div className={`mt-auto pt-16 ${currentTrack ? 'pb-[90px]' : ''}`}>
               <Footer isMinimized={true} />
             </div>
 

@@ -33,7 +33,7 @@ export default function DiscoverBrowseWrapper() {
       <div 
         className={`absolute inset-x-0 bottom-0 z-10 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] no-radius !rounded-none`}
         style={{ 
-          height: `calc(100vh - ${navHeight - 1}px - ${playerHeight}px)`,
+          height: `calc(100vh - ${navHeight - 1}px)`,
           transform: isBrowse ? 'translateY(0)' : `translateY(calc(100% - ${searchBarHeight}px))`
         }}
       >

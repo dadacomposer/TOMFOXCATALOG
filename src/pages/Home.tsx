@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchRecentlyPlayedTracks } from '../lib/supabase';
+import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchRecentlyPlayedTracks, fetchSuggestedTracks } from '../lib/supabase';
 import { Play, Pause, TrendingUp, Loader2, Star } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import TrackArtwork from '../components/TrackArtwork';
@@ -104,15 +104,19 @@ export default function Home() {
   const [trendingTracks, setTrendingTracks] = useState<any[]>([]);
   const [suggestedPlaylists, setSuggestedPlaylists] = useState<any[]>([]);
   const [recentlyPlayedTracks, setRecentlyPlayedTracks] = useState<any[]>([]);
+  const [suggestedTracks, setSuggestedTracks] = useState<any[]>([]);
   
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
   const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
 
+  const newMusicRef = useRef<HTMLDivElement>(null);
+  const featuredRef = useRef<HTMLDivElement>(null);
   const topPicksRef = useRef<HTMLDivElement>(null);
   const trendingRef = useRef<HTMLDivElement>(null);
   const suggestedRef = useRef<HTMLDivElement>(null);
+  const suggestedTracksRef = useRef<HTMLDivElement>(null);
   const recentlyPlayedRef = useRef<HTMLDivElement>(null);
 
   const { user } = useAuth();
@@ -139,15 +143,18 @@ export default function Home() {
   useEffect(() => {
     async function loadSuggested() {
       if (user?.id) {
-        const [results, recentResults] = await Promise.all([
+        const [results, recentResults, suggestedTrks] = await Promise.all([
           fetchSuggestedPlaylists(user.id),
-          fetchRecentlyPlayedTracks(user.id)
+          fetchRecentlyPlayedTracks(user.id),
+          fetchSuggestedTracks(user.id)
         ]);
         setSuggestedPlaylists(results as any[]);
         setRecentlyPlayedTracks(recentResults as any[]);
+        setSuggestedTracks(suggestedTrks as any[]);
       } else {
         setSuggestedPlaylists([]);
         setRecentlyPlayedTracks([]);
+        setSuggestedTracks([]);
       }
     }
     loadSuggested();
@@ -464,6 +471,49 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Suggested Tracks (Same layout as Trending Tracks) */}
+      {suggestedTracks.length > 0 && (
+        <div className={`w-full px-8 pt-6 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
+          <div className="w-full relative">
+            <ScrollArrows scrollRef={suggestedTracksRef} isDark={!user} offsetY={8} />
+            <div ref={suggestedTracksRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
+              <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
+                {suggestedTracks.slice(0, 16).map((track, i) => {
+                  const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
+                  return (
+                    <div 
+                      key={i} 
+                      className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border ${selectedTrackIds.has(track.id) ? (!user ? 'bg-white/10 border-white/20' : 'bg-black/5 border-black/10') : (!user ? 'border-transparent hover:bg-white/5 hover:border-white/10' : 'border-transparent hover:bg-black/5 hover:border-black/5')}`}
+                      onClick={(e) => handleTrackClick(e, track, 'suggested')}
+                      draggable
+                      onDragStart={(e) => handleTrackDragStart(e, track.id)}
+                    >
+                      <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 ${!user ? 'bg-white/5' : 'bg-black/5'}`}>
+                        <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
+                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                          {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
+                        </div>
+                      </div>
+                      <div className="flex flex-col overflow-hidden w-full">
+                        <div 
+                          className={`font-medium text-[14px] truncate hover:underline underline-offset-2 cursor-pointer ${!user ? 'text-white/90' : 'text-black/90'}`}
+                          onClick={(e) => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); setSelectedTrackForDetails(track); }}
+                        >
+                          {cleanTitle(track.file_name)}
+                        </div>
+                        <div className={`font-sans text-[12px] flex items-center gap-1 mt-0.5 truncate ${!user ? 'text-white/50' : 'text-black/50'}`}>
+                           {getComposers(track.composers)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

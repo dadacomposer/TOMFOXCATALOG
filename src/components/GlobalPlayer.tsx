@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2, Minimize2, FileCheck2, Download, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2, Download, ShoppingBag, TrendingUp, Shuffle, Repeat, Zap } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import WaveformView from './WaveformView';
 import { usePlayer } from '../context/PlayerContext';
@@ -45,7 +45,7 @@ export default function GlobalPlayer() {
   const location = useLocation();
   const isSharedPage = location.pathname.startsWith('/share');
   
-  const { currentTrack, currentPlaylist, isPlaying, setIsPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId, setSelectedTrackForDetails } = usePlayer();
+  const { currentTrack, currentPlaylist, isPlaying, setIsPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId, setSelectedTrackForDetails, volume, setVolume, toggleMute, isShuffleEnabled, setIsShuffleEnabled, isRepeatEnabled, setIsRepeatEnabled } = usePlayer();
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
@@ -78,6 +78,11 @@ export default function GlobalPlayer() {
   };
 
   const handleNextTrack = () => {
+    if (isRepeatEnabled) {
+      playNextTrack();
+      return;
+    }
+    
     if (isSimilarExpanded && currentPlaylist === similarTracks) {
       const idx = similarTracks.findIndex(t => t.id === currentTrack?.id);
       if (idx === similarTracks.length - 1) {
@@ -278,23 +283,57 @@ export default function GlobalPlayer() {
           </div>
         </div>
         {!isSharedPage && currentTrack && (
-          <div className="ml-auto flex items-center">
+          <div className="ml-auto flex items-center gap-2">
             <TrackActionButtons trackId={currentTrack.id} />
+            <button 
+              onClick={() => {
+                if (!isSimilarExpanded) {
+                  expandSimilar();
+                } else {
+                  if (currentTrack?.id !== referenceTrack?.id) {
+                    expandSimilar();
+                  } else {
+                    closeSimilar();
+                  }
+                }
+              }} 
+              className={`flex items-center justify-center p-1.5 rounded-full transition-colors ${isSimilarExpanded && currentTrack?.id === referenceTrack?.id ? 'text-black bg-black/10' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
+              title="Find Similar"
+            >
+              <Zap className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
       <div className="flex items-center gap-4 shrink-0">
+        <button 
+          onClick={() => setIsShuffleEnabled(!isShuffleEnabled)} 
+          className={`transition-colors ${isShuffleEnabled ? (isSharedPage ? 'text-white' : 'text-black') : (isSharedPage ? 'text-white/30 hover:text-white/60' : 'text-black/30 hover:text-black/60')}`}
+          title="Shuffle"
+        >
+          <Shuffle className="w-4 h-4" />
+        </button>
         <button onClick={playPrevTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipBack className="w-5 h-5 fill-current" /></button>
         {isBuffering ? (
           <button disabled className={`w-10 h-10 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black' : 'bg-black text-white'} transition-colors`}>
             <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
           </button>
         ) : (
-          <button onClick={togglePlay} className={`w-10 h-10 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-black/90'} transition-colors`}>
+          <button 
+            className={`w-10 h-10 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-black/90'} transition-colors`}
+            onClick={togglePlay}
+          >
             {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" style={{ transform: 'translateX(4.166%)' }} />}
           </button>
         )}
         <button onClick={handleNextTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipForward className="w-5 h-5 fill-current" /></button>
+        <button 
+          onClick={() => setIsRepeatEnabled(!isRepeatEnabled)} 
+          className={`transition-colors ${isRepeatEnabled ? (isSharedPage ? 'text-white' : 'text-black') : (isSharedPage ? 'text-white/30 hover:text-white/60' : 'text-black/30 hover:text-black/60')}`}
+          title="Repeat"
+        >
+          <Repeat className="w-4 h-4" />
+        </button>
       </div>
       <div className="flex-grow flex items-center">
         <div className="flex-grow mx-8 h-8 flex items-center">
@@ -321,25 +360,27 @@ export default function GlobalPlayer() {
             <div className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isPreviewMode ? 'translate-x-4' : 'translate-x-0'}`} />
           </div>
         </div>
-        {!isSharedPage && (
+
+        <div className="relative group/volume flex items-center ml-2 shrink-0">
           <button 
-            onClick={() => {
-              if (!isSimilarExpanded) {
-                expandSimilar();
-              } else {
-                if (currentTrack?.id !== referenceTrack?.id) {
-                  expandSimilar();
-                } else {
-                  closeSimilar();
-                }
-              }
-            }} 
-            className={`hidden xl:flex items-center gap-2 font-sans text-[11px] uppercase tracking-widest transition-colors ${isSimilarExpanded && currentTrack?.id === referenceTrack?.id ? 'text-black' : 'text-black/60 hover:text-black'}`}
+            onClick={toggleMute} 
+            className={`p-1.5 rounded-full transition-colors flex items-center justify-center shrink-0 ${isSharedPage ? 'text-white/40 hover:text-white hover:bg-white/10' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
           >
-            <FileCheck2 className="w-4 h-4" /> Show Similar
+            {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
-        )}
-        <button className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} ml-2`}><Volume2 className="w-5 h-5" /></button>
+          
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-3 opacity-0 invisible group-hover/volume:opacity-100 group-hover/volume:visible transition-all duration-200 ease-out z-50">
+            <div className={`w-8 h-28 rounded-xl shadow-lg border flex items-center justify-center relative ${isSharedPage ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-black/10'}`}>
+              <input 
+                type="range" 
+                min="0" max="1" step="0.01" 
+                value={volume} 
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className={`w-20 h-1 rounded-lg appearance-none cursor-pointer transform -rotate-90 origin-center [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full ${isSharedPage ? 'accent-white bg-white/20 [&::-webkit-slider-thumb]:bg-white' : 'accent-black bg-black/10 [&::-webkit-slider-thumb]:bg-black'}`} 
+              />
+            </div>
+          </div>
+        </div>
         {!isSharedPage && (
           <div className="flex gap-2 ml-4">
             {profile?.can_download !== false && (

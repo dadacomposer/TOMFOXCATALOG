@@ -62,6 +62,8 @@ export type AdminTrack = {
   publisher?: string;
   share?: string;
   sub_pub?: string;
+  upc?: string;
+  isrc?: string;
 };
 
 
@@ -118,6 +120,8 @@ export default function AdminTracks() {
     publisher: false,
     share: false,
     sub_pub: false,
+    upc: false,
+    isrc: false,
     tags: true,
     rev: true,
     pro: true,
@@ -442,7 +446,7 @@ export default function AdminTracks() {
     try {
       let query = supabase
         .from('tracks')
-        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, arrangement, moods, music_for, instruments, functions, character, movement, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, tempo, description, humanly_reviewed, pro_registered, frequency_audio_registered')
+        .select('id, file_name, is_hidden, deleted_at, created_at, release_date, arrangement, moods, music_for, instruments, functions, character, movement, artwork_url, r2_url, wav_url, aiff_url, watermarked_url, play_count, waveform_data, has_wav, has_aiff, has_watermarked, has_mp3, composers, track_type, parent_track_id, key, scale, duration, genre, tempo, description, humanly_reviewed, pro_registered, frequency_audio_registered, id_number, pub_admin, writer, role, pro_org, ipi_number, publisher, share, sub_pub, upc, isrc')
         .order('release_date', { ascending: false });
 
       let allTracks: AdminTrack[] = [];
@@ -1235,16 +1239,58 @@ toast.success('Track restored successfully');
             <table className="w-full text-left text-sm relative">
               <thead className="bg-[#f8f8f8] border-b border-black/10 text-black/60 uppercase tracking-wider text-xs sticky top-0 z-20 shadow-sm">
                 <tr>
-                  <th className="px-6 py-4 w-12">
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer"
-                      checked={selectedTracks.size > 0 && selectedTracks.size === currentViewList.length}
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedTracks(new Set(currentViewList.map(t => t.id)));
-                        else setSelectedTracks(new Set());
-                      }}
-                    />
+                  <th className="px-6 py-4 w-20">
+                    <div className="flex items-center gap-3">
+                      <div className="relative" ref={columnDropdownRef}>
+                        <button onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)} className="p-1 -ml-1 hover:bg-black/10 rounded-full transition-colors text-black/40 hover:text-black">
+                          <Settings className="w-4 h-4" />
+                        </button>
+                        {isColumnDropdownOpen && (
+                          <div className="absolute top-full left-0 mt-2 w-52 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1 text-left normal-case tracking-normal text-[13px] font-normal">
+                            {Object.entries({
+                              trackInfo: 'Track Name',
+                              id_number: 'ID #',
+                              pub_admin: 'Pub Admin',
+                              writer: 'Writer',
+                              role: 'Role',
+                              pro_org: 'PRO Org',
+                              ipi_number: 'IPI #',
+                              publisher: 'Publisher',
+                              share: 'Share',
+                              sub_pub: 'Sub Pub',
+                              upc: 'UPC',
+                              isrc: 'ISRC',
+                              tags: 'Tags',
+                              rev: 'Humanly Reviewed (Rev)',
+                              pro: 'PRO Registered',
+                              freq: 'Freq Audio Reg',
+                              formats: 'Files Format',
+                              status: 'Status',
+                              actions: 'Actions'
+                            }).map(([key, label]) => (
+                              <label key={key} className="flex items-center px-4 py-2 hover:bg-black/5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={visibleColumns[key as keyof typeof visibleColumns]}
+                                  onChange={() => setVisibleColumns(prev => ({ ...prev, [key]: !prev[key as keyof typeof visibleColumns] }))}
+                                  className="w-4 h-4 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer mr-3"
+                                />
+                                <span className="text-black/80">{label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer"
+                        checked={selectedTracks.size > 0 && selectedTracks.size === currentViewList.length}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedTracks(new Set(currentViewList.map(t => t.id)));
+                          else setSelectedTracks(new Set());
+                        }}
+                      />
+                    </div>
                   </th>
                   {visibleColumns.trackInfo && <th className="px-6 py-4 font-bold">Track Name</th>}
                   {visibleColumns.id_number && <th className="px-6 py-4 font-bold">ID #</th>}
@@ -1256,6 +1302,8 @@ toast.success('Track restored successfully');
                   {visibleColumns.publisher && <th className="px-6 py-4 font-bold">Publisher</th>}
                   {visibleColumns.share && <th className="px-6 py-4 font-bold">Share</th>}
                   {visibleColumns.sub_pub && <th className="px-6 py-4 font-bold">Sub Pub</th>}
+                  {visibleColumns.upc && <th className="px-6 py-4 font-bold">UPC</th>}
+                  {visibleColumns.isrc && <th className="px-6 py-4 font-bold">ISRC</th>}
                   {visibleColumns.tags && <th className="px-6 py-4 font-bold w-1/4">Tags</th>}
                   {visibleColumns.rev && <th className="px-2 py-4 font-bold text-center" title="Humanly Reviewed">Rev</th>}
                   {visibleColumns.pro && <th className="px-2 py-4 font-bold text-center" title="PRO Registered">PRO</th>}
@@ -1263,48 +1311,7 @@ toast.success('Track restored successfully');
                   {visibleColumns.formats && <th className="px-6 py-4 font-bold">Files Format</th>}
                   {visibleColumns.status && <th className="px-6 py-4 font-bold">Status</th>}
                   {visibleColumns.actions && (
-                    <th className="px-6 py-4 font-bold text-right relative">
-                      <div className="flex items-center justify-end gap-2">
-                        <span>Actions</span>
-                        <div className="relative" ref={columnDropdownRef}>
-                          <button onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)} className="p-1 hover:bg-black/10 rounded-full transition-colors text-black/40 hover:text-black">
-                            <Settings className="w-4 h-4" />
-                          </button>
-                          {isColumnDropdownOpen && (
-                            <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1 text-left">
-                              {Object.entries({
-                                trackInfo: 'Track Name',
-                                id_number: 'ID #',
-                                pub_admin: 'Pub Admin',
-                                writer: 'Writer',
-                                role: 'Role',
-                                pro_org: 'PRO Org',
-                                ipi_number: 'IPI #',
-                                publisher: 'Publisher',
-                                share: 'Share',
-                                sub_pub: 'Sub Pub',
-                                tags: 'Tags',
-                                rev: 'Humanly Reviewed (Rev)',
-                                pro: 'PRO Registered',
-                                freq: 'Freq Registered',
-                                formats: 'Files Format',
-                                status: 'Status'
-                              }).map(([key, label]) => (
-                                <label key={key} className="flex items-center gap-3 px-4 py-2 hover:bg-black/5 cursor-pointer">
-                                  <input 
-                                    type="checkbox" 
-                                    className="w-3.5 h-3.5 rounded border-black/20 text-black focus:ring-black accent-black cursor-pointer"
-                                    checked={visibleColumns[key as keyof typeof visibleColumns]}
-                                    onChange={(e) => setVisibleColumns(prev => ({ ...prev, [key]: e.target.checked }))}
-                                  />
-                                  <span className="text-[11px] font-bold uppercase tracking-wider text-black/80">{label}</span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </th>
+                    <th className="px-6 py-4 font-bold text-right">Actions</th>
                   )}
                 </tr>
               </thead>
@@ -1413,6 +1420,16 @@ toast.success('Track restored successfully');
                       {visibleColumns.sub_pub && (
                         <td className="px-6 py-4">
                           <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.sub_pub || ''} onBlur={(e) => updateTrackValue(track.id, 'sub_pub', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.upc && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.upc || ''} onBlur={(e) => updateTrackValue(track.id, 'upc', e.target.value)} />
+                        </td>
+                      )}
+                      {visibleColumns.isrc && (
+                        <td className="px-6 py-4">
+                          <input type="text" className="w-24 bg-transparent focus:outline-none focus:border-b border-black/20" defaultValue={track.isrc || ''} onBlur={(e) => updateTrackValue(track.id, 'isrc', e.target.value)} />
                         </td>
                       )}
                       
@@ -1687,7 +1704,10 @@ toast.success('Track restored successfully');
       {isImportModalOpen && (
         <ImportTagsModal
           onClose={() => setIsImportModalOpen(false)}
-          onSuccess={fetchTracks}
+          onSuccess={() => {
+            fetchTracks();
+            setIsImportModalOpen(false);
+          }}
           existingTracks={allFetchedTracks}
         />
       )}
