@@ -133,6 +133,17 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
     return val.split(',').map(s => s.trim()).filter(s => s.length > 0);
   };
 
+  const mergeTagsCaseInsensitive = (existing: string[], newTags: string[]) => {
+    const map = new Map<string, string>();
+    existing.forEach(t => map.set(t.toLowerCase(), t));
+    newTags.forEach(t => {
+      if (!map.has(t.toLowerCase())) {
+        map.set(t.toLowerCase(), t);
+      }
+    });
+    return Array.from(map.values());
+  };
+
   const processImport = async () => {
     if (matchedTracks.length === 0) return;
     setStep('PROCESSING');
@@ -171,15 +182,15 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
         if (vals && vals.length > 0) {
           tagModified = true;
           const rawCsvTags = vals.flatMap(v => splitCsvTags(v));
-          // Deduplicate tags while preserving case of the first occurrence
-          const combinedCsvTags = Array.from(new Set(rawCsvTags));
+          // Deduplicate tags within the CSV itself while preserving case
+          const combinedCsvTags = mergeTagsCaseInsensitive([], rawCsvTags);
           
           if (field === 'genre') {
             if (importMode === 'REPLACE') {
               updateData[field] = combinedCsvTags.join(', ');
             } else {
               const existing = track[field] ? track[field].split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-              const combined = Array.from(new Set([...existing, ...combinedCsvTags]));
+              const combined = mergeTagsCaseInsensitive(existing, combinedCsvTags);
               updateData[field] = combined.join(', ');
             }
           } else {
@@ -187,7 +198,7 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
               updateData[field] = combinedCsvTags;
             } else {
               const existing = parseExistingTags(track[field]);
-              const combined = Array.from(new Set([...existing, ...combinedCsvTags]));
+              const combined = mergeTagsCaseInsensitive(existing, combinedCsvTags);
               updateData[field] = combined;
             }
           }

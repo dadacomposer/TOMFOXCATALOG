@@ -133,7 +133,7 @@ export default function Playlists() {
       </AnimatePresence>
 
       <div 
-        className={`sticky top-[84px] md:top-[80px] z-40 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 md:px-12 lg:px-24 flex flex-col border-b border-black/10 py-4 mb-16 shadow-sm focus-within:border-black/30 group/searchbar ${playlistUrlId ? 'hidden' : ''}`}
+        className={`sticky top-[84px] md:top-[80px] z-30 bg-[#fafafa]/85 backdrop-blur-xl w-full px-8 md:px-12 lg:px-24 flex flex-col border-b border-black/10 py-4 mb-16 shadow-sm focus-within:border-black/30 group/searchbar`}
       >
         <div className="flex items-center w-full">
           <div className="group-hover/searchbar:text-black/80 group-focus-within/searchbar:text-black transition-colors z-10">
