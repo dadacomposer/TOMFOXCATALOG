@@ -74,7 +74,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
     setIsClosing(true);
     setTimeout(() => {
       if (onClose) onClose();
-    }, 400);
+    }, 500);
   };
   const [playlistTitle, setPlaylistTitle] = useState('Playlist');
   const [sortBy, setSortBy] = useState('relevance');
@@ -173,7 +173,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       {/* Backdrop */}
       {!inline && (
         <div 
-          className={`fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMounted && !isClosing ? 'opacity-100' : 'opacity-0'}`} 
+          className={`fixed inset-0 bg-black/40 z-40 backdrop-blur-sm transition-all duration-500 ease-out ${isMounted && !isClosing ? 'opacity-100' : 'opacity-0'}`} 
           onClick={handleClose} 
         />
       )}
@@ -181,8 +181,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       {/* Island Panel */}
       <div className={
         inline 
-        ? `w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMounted && !isClosing ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-[0.99]'}`
-        : `fixed max-md:inset-x-0 md:inset-x-6 max-md:top-16 md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMounted && !isClosing ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 md:translate-y-12 scale-[0.98]'}`
+        ? `w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6 transition-all duration-500 ease-out ${isMounted && !isClosing ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-[0.99]'}`
+        : `fixed max-md:inset-x-0 md:inset-x-6 max-md:top-16 md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10 transition-all duration-500 ease-out ${isMounted && !isClosing ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 md:translate-y-12 scale-[0.98]'}`
       }>
         <div className="px-4 md:px-8 py-6 md:py-8 border-b-2 border-black/5 flex max-md:flex-col max-md:items-start max-md:gap-4 md:items-center justify-between shrink-0 bg-[#fafafa] relative">
           <div className="min-h-[50px] flex flex-col justify-center">
