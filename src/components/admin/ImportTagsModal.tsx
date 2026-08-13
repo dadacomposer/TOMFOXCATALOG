@@ -170,7 +170,9 @@ export default function ImportTagsModal({ onClose, onSuccess, existingTracks }: 
         const vals = extractValues(aliases);
         if (vals && vals.length > 0) {
           tagModified = true;
-          const combinedCsvTags = vals.flatMap(v => splitCsvTags(v));
+          const rawCsvTags = vals.flatMap(v => splitCsvTags(v));
+          // Deduplicate tags while preserving case of the first occurrence
+          const combinedCsvTags = Array.from(new Set(rawCsvTags));
           
           if (field === 'genre') {
             if (importMode === 'REPLACE') {
