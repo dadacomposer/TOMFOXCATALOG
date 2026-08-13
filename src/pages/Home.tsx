@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchRecentlyPlayedTracks, fetchSuggestedTracks } from '../lib/supabase';
+import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchRecentlyPlayedTracks, fetchSuggestedTracks, fetchPlaylistTrackIds, fetchTracksByIds } from '../lib/supabase';
 import { Play, Pause, TrendingUp, Loader2, Star } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import TrackArtwork from '../components/TrackArtwork';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import Footer from '../components/Footer';
 import { getComposers } from '../utils/trackUtils';
-import { usePlayer } from '../context/PlayerContext';
+import { usePlayer, Track } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
 import { useLicense } from '../context/LicenseContext';
 import { useSettings } from '../context/SettingsContext';
@@ -111,6 +111,7 @@ export default function Home() {
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const [isTopPicksScrolledLeft, setIsTopPicksScrolledLeft] = useState(false);
+  const [topPicksPreloadedTracks, setTopPicksPreloadedTracks] = useState<Record<string, Track[]>>({});
 
   const newMusicRef = useRef<HTMLDivElement>(null);
   const featuredRef = useRef<HTMLDivElement>(null);
@@ -164,7 +165,29 @@ export default function Home() {
       }
     }
     loadSuggested();
-  }, [user?.id]);
+  }, [user]);
+
+  useEffect(() => {
+    async function preloadTopPicks() {
+      if (!user && playlists.length > 0) {
+        const topPicks = playlists
+          .filter(pl => pl.top_pick_position !== null && pl.top_pick_position !== undefined)
+          .sort((a, b) => (a.top_pick_position || 99) - (b.top_pick_position || 99))
+          .slice(0, 10);
+        
+        const preloadData: Record<string, Track[]> = {};
+        for (const pl of topPicks) {
+           const tIds = await fetchPlaylistTrackIds(pl.id);
+           if (tIds.length > 0) {
+              const tracks = await fetchTracksByIds(tIds.slice(0, 15));
+              preloadData[pl.id] = tracks as Track[];
+           }
+        }
+        setTopPicksPreloadedTracks(preloadData);
+      }
+    }
+    preloadTopPicks();
+  }, [user, playlists]);
 
   useEffect(() => {
     if (currentTrack && user?.id) {
@@ -212,9 +235,11 @@ export default function Home() {
 
   return (
     <div className={`flex flex-col w-full min-h-screen pt-[88px] ${!user ? 'pb-[69px] bg-black text-white' : 'pb-[120px] bg-[#fafafa] text-black'} relative no-radius !rounded-none`}>
-{playlistUrlId && (
+      {playlistUrlId && (
         <PlaylistIsland 
           id={playlistUrlId}
+          preloadedTitle={playlists.find(p => p.id === playlistUrlId)?.title}
+          preloadedTracks={topPicksPreloadedTracks[playlistUrlId]}
           onClose={() => {
             searchParams.delete('playlist');
             setSearchParams(searchParams);

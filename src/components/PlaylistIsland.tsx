@@ -52,14 +52,16 @@ interface PlaylistIslandProps {
   inline?: boolean;
   initialTrackCount?: number;
   isScrollableContainer?: boolean;
+  preloadedTitle?: string;
+  preloadedTracks?: Track[];
 }
 
 export default function PlaylistIsland(props: PlaylistIslandProps) {
-  const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount, isScrollableContainer } = props;
+  const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount, isScrollableContainer, preloadedTitle, preloadedTracks } = props;
   const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, selectedTrackForDetails, setSelectedTrackForDetails } = usePlayer();
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [tracks, setTracks] = useState<Track[]>(preloadedTracks || []);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!preloadedTracks);
   const [isMounted, setIsMounted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -76,7 +78,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       if (onClose) onClose();
     }, 500);
   };
-  const [playlistTitle, setPlaylistTitle] = useState('Playlist');
+  const [playlistTitle, setPlaylistTitle] = useState(preloadedTitle || 'Playlist');
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [expandedTags, setExpandedTags] = useState<{trackId: string, tags: string[]} | null>(null);
@@ -121,6 +123,20 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
 
   useEffect(() => {
     async function load() {
+      // If we already have preloaded tracks and relevance sort, don't fetch initial chunk
+      if (preloadedTracks && preloadedTitle && sortBy === 'relevance') {
+        const tIds = await fetchPlaylistTrackIds(id);
+        if (tIds.length > 15) {
+          const restChunk = await fetchTracksByIds(tIds.slice(15));
+          setTracks(prev => {
+            const newTracks = (restChunk as Track[]).filter(rt => !prev.find(p => p.id === rt.id));
+            return [...prev, ...newTracks];
+          });
+        }
+        return;
+      }
+
+      setLoading(true);
       const [pDataRes, tIds] = await Promise.all([
         supabase.from('playlists').select('title').eq('id', id).single(),
         fetchPlaylistTrackIds(id)
@@ -148,9 +164,22 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
             });
           }
         } else {
-          // Use fetchTracks to apply sorting on the playlist's tracks
-          const sorted = await fetchTracks(1, 1000, {}, sortBy, tIds);
-          setTracks(sorted as Track[]);
+          // Fetch all for sorting
+          const allTracksData = await fetchTracksByIds(tIds);
+          let allTracks = allTracksData as Track[];
+          // Client-side sorting logic...
+          if (sortBy === 'a-z') {
+            allTracks.sort((a, b) => cleanTitle(a.title || a.filename).localeCompare(cleanTitle(b.title || b.filename)));
+          } else if (sortBy === 'z-a') {
+            allTracks.sort((a, b) => cleanTitle(b.title || b.filename).localeCompare(cleanTitle(a.title || a.filename)));
+          } else if (sortBy === 'newest') {
+            allTracks.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+          } else if (sortBy === 'oldest') {
+            allTracks.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+          } else if (sortBy === 'most_played') {
+            allTracks.sort((a, b) => (b.play_count || 0) - (a.play_count || 0));
+          }
+          setTracks(allTracks);
           setLoading(false);
         }
       } else {
