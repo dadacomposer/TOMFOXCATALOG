@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { Wrench } from 'lucide-react';
+import { Wrench, Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Header() {
   const [isHeaderDark, setIsHeaderDark] = useState(false);
@@ -11,8 +12,13 @@ export default function Header() {
   const [activeBoxStyle, setActiveBoxStyle] = useState({ left: 0, width: 0, opacity: 0 });
   const navRef = useRef<HTMLElement>(null);
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, profile, setAccountPanelOpen, setLoginModalOpen, studioProjects } = useAuth();
   const { settings } = useSettings();
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -190,6 +196,71 @@ export default function Header() {
           </button>
         )}
       </nav>
+
+      {/* Mobile Controls */}
+      <div className="flex md:hidden items-center gap-4 z-20">
+        {user ? (
+          <button 
+            onClick={() => setAccountPanelOpen(true)}
+            className="is-avatar w-8 h-8 aspect-square flex items-center justify-center shrink-0 bg-black/5 border border-black/10 hover:border-black/30 transition-all overflow-hidden"
+          >
+            {profile?.avatar_url || user.user_metadata?.avatar_url ? (
+              <img 
+                src={profile?.avatar_url || user.user_metadata?.avatar_url} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement?.classList.add('fallback-avatar');
+                }}
+              />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            )}
+          </button>
+        ) : (
+          <button onClick={() => setLoginModalOpen(true)} className={`flex items-center gap-2 transition-colors ${isHeaderDark ? 'text-white' : 'text-black'}`}>
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </button>
+        )}
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+          className={`p-2 transition-colors ${isHeaderDark && !isMobileMenuOpen ? 'text-white' : 'text-black'}`}
+        >
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-full left-0 w-full bg-[#fafafa] border-b border-black/10 shadow-xl flex flex-col p-6 gap-6 md:hidden z-10"
+          >
+            <NavLink to="/" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? 'text-black' : 'text-black/60 hover:text-black'}`}>Discover</NavLink>
+            <NavLink to="/browse" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? 'text-black' : 'text-black/60 hover:text-black'}`}>Browse</NavLink>
+            <NavLink to="/playlists" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? 'text-black' : 'text-black/60 hover:text-black'}`}>Playlists</NavLink>
+            {user && (
+              <NavLink to="/my-music" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? 'text-black' : 'text-black/60 hover:text-black'}`}>My Music</NavLink>
+            )}
+            {(!user || profile?.subscription_status !== 'active') && settings.subscriptions_enabled && (
+              <>
+                <NavLink to="/pricing" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? 'text-black' : 'text-black/60 hover:text-black'}`}>Pricing</NavLink>
+                <NavLink to="/enterprise" className={({isActive}) => `font-bold uppercase text-xl tracking-widest transition-colors ${isActive ? 'text-black' : 'text-black/60 hover:text-black'}`}>Enterprise</NavLink>
+              </>
+            )}
+            {isAdmin && (
+              <Link to="/admin" className="font-bold uppercase text-xl tracking-widest text-black/60 hover:text-black flex items-center gap-2">
+                <Wrench className="w-5 h-5" />
+                Admin Panel
+              </Link>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
