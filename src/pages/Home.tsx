@@ -270,11 +270,16 @@ export default function Home() {
             </div>
           )}
           <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} max-md:px-[calc(50vw-140px)] md:px-8`}>
+            {!user && (
+              <div 
+                className={`absolute top-0 left-0 bottom-0 w-24 md:w-48 bg-gradient-to-r from-black via-black/80 to-transparent z-20 pointer-events-none transition-opacity duration-700 ease-in-out ${isTopPicksScrolledLeft ? 'opacity-100' : 'opacity-0'}`} 
+              />
+            )}
             <ScrollArrows scrollRef={topPicksRef} isDark={!user} offsetY={8} />
           <div 
             ref={topPicksRef} 
             onScroll={!user ? (e) => setIsTopPicksScrolledLeft(e.currentTarget.scrollLeft > 20) : undefined}
-            className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? (isTopPicksScrolledLeft ? '[mask-image:linear-gradient(to_right,transparent_0%,black_15%,black_85%,transparent_100%)]' : '[mask-image:linear-gradient(to_right,black_0%,black_85%,transparent_100%)]') + ' pr-48 md:pr-[280px]' : ''}`}
+            className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? '[mask-image:linear-gradient(to_right,black_0%,black_85%,transparent_100%)] pr-48 md:pr-[280px]' : ''}`}
           >
             {loading ? (
               [...Array(4)].map((_, i) => (
