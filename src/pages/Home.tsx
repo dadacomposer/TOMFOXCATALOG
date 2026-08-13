@@ -270,7 +270,7 @@ export default function Home() {
           )}
           <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} max-md:px-[calc(50vw-140px)] md:px-8`}>
             <ScrollArrows scrollRef={topPicksRef} isDark={!user} offsetY={8} />
-          <div ref={topPicksRef} className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? '[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] pr-48 md:pr-[280px]' : ''}`}>
+          <div ref={topPicksRef} className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? '[mask-image:linear-gradient(to_right,transparent_0%,black_15%,black_85%,transparent_100%)] pr-48 md:pr-[280px] pl-8 md:pl-16 -ml-8 md:-ml-16' : ''}`}>
             {loading ? (
               [...Array(4)].map((_, i) => (
                 <div key={i} className={`flex flex-col p-4 rounded-[32px] shrink-0 snap-always snap-center md:snap-start ${!user ? 'w-[280px]' : 'w-[280px] md:w-[340px]'}`}>
