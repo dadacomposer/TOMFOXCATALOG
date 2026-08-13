@@ -62,7 +62,6 @@ export default function Footer({ isDark = false, isMinimized = false }: { isDark
 
             <div className="flex flex-col gap-4">
               <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Support</h4>
-              <Link to="/faq" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>FAQ</Link>
               <button onClick={() => setGeneralContactModalOpen(true)} className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold text-left`}>Contact Us</button>
             </div>
 
