@@ -40,7 +40,7 @@ export default function Footer({ isDark = false, isMinimized = false }: { isDark
                <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" className={`w-20 md:w-24 h-auto ${isDark ? 'invert' : ''}`} alt="Tom Fox Logo" />
             </Link>
             <p className={`font-sans ${mutedTextColor} text-xs md:text-sm uppercase tracking-widest leading-relaxed`}>
-              Premium music licensing for creators, brands, and filmmakers who refuse to compromise on sound.
+              Thank you for supporting my music - Tom Fox
             </p>
           </div>
 
