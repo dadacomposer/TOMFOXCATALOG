@@ -204,6 +204,7 @@ export default function Browse() {
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
+  const [isBulkDownloadDropdownOpen, setIsBulkDownloadDropdownOpen] = useState(false);
   const [isInlineCreating, setIsInlineCreating] = useState(false);
   const [inlineCreateTitle, setInlineCreateTitle] = useState('');
   const [pendingDropTracks, setPendingDropTracks] = useState<string[]>([]);
@@ -475,7 +476,7 @@ export default function Browse() {
     });
   };
 
-    const handleBulkDownload = async () => {
+    const handleBulkDownload = async (format: 'mp3' | 'wav' = 'mp3') => {
     const allVisibleTracks = [...displayedTracks, ...trendingTracks];
     const selected = allVisibleTracks.filter(t => selectedTrackIds.has(t.id));
     const uniqueSelected = Array.from(new Map(selected.map(t => [t.id, t])).values());
@@ -488,13 +489,13 @@ export default function Browse() {
     for (const t of uniqueSelected) {
       try {
         const { data, error } = await supabase.functions.invoke('get_download_url', {
-          body: { trackId: t.id, format: 'mp3' }
+          body: { trackId: t.id, format }
         });
         if (data?.url) {
           const response = await fetch(data.url);
           if (response.ok) {
             const blob = await response.blob();
-            const filename = cleanTitle(t.file_name) + '.mp3';
+            const filename = cleanTitle(t.file_name) + `.${format}`;
             zip.file(filename, blob);
             fetched++;
             toast.loading(`Fetching ${fetched}/${uniqueSelected.length} files...`, { id: toastId });
@@ -738,18 +739,49 @@ export default function Browse() {
       
       {document.getElementById('searchbar-right-portal') && !playlistUrlId && createPortal(
         <>
-          {selectedTrackIds.size > 0 && (
+          {selectedTrackIds.size > 0 && (() => {
+            const allVisibleTracks = [...displayedTracks, ...trendingTracks];
+            const selectedTracks = allVisibleTracks.filter(t => selectedTrackIds.has(t.id));
+            const uniqueSelected = Array.from(new Map(selectedTracks.map(t => [t.id, t])).values());
+            const canDownloadWav = uniqueSelected.length > 0 && uniqueSelected.every(t => t.has_wav);
+            const canDownloadMp3 = uniqueSelected.length > 0 && uniqueSelected.every(t => t.has_mp3 !== false);
+
+            return (
             <div className="flex items-center bg-black text-white px-4 py-2.5 rounded-[14px] shadow-lg animate-in fade-in zoom-in duration-200">
               <span className="text-[11px] font-medium uppercase tracking-widest mr-4">{selectedTrackIds.size} tracks selected</span>
-              <div className="flex items-center gap-3 border-l border-white/20 pl-4">
+              <div className="flex items-center gap-3 border-l border-white/20 pl-4 relative">
               {profile?.can_download !== false && (
+                <>
                 <button 
                   className="hover:text-white/70 transition-colors flex items-center justify-center" 
                   title="Download Selected"
-                  onClick={handleBulkDownload}
+                  onClick={() => setIsBulkDownloadDropdownOpen(!isBulkDownloadDropdownOpen)}
                 >
                   <Download className="w-4 h-4" />
                 </button>
+                {isBulkDownloadDropdownOpen && (
+                  <div className="absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-[#1a1a1a] shadow-[0_10px_30px_-5px_rgba(0,0,0,0.5)] border border-white/10 rounded-xl p-1 flex flex-col gap-1 w-32 z-[100] animate-in fade-in zoom-in-95 duration-200">
+                    {canDownloadMp3 && (
+                      <button 
+                        onClick={() => { setIsBulkDownloadDropdownOpen(false); handleBulkDownload('mp3'); }}
+                        className="w-full flex flex-col items-center justify-center p-2 rounded-lg transition-colors hover:bg-white/10 text-white"
+                      >
+                        <span className="text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">MP3</span>
+                        <span className="text-[9px] font-sans text-white/50 mt-0.5">320kbps</span>
+                      </button>
+                    )}
+                    {canDownloadWav && (
+                      <button 
+                        onClick={() => { setIsBulkDownloadDropdownOpen(false); handleBulkDownload('wav'); }}
+                        className="w-full flex flex-col items-center justify-center p-2 rounded-lg transition-colors hover:bg-white/10 text-white"
+                      >
+                        <span className="text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">WAV</span>
+                        <span className="text-[9px] font-sans text-white/50 mt-0.5">Lossless</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+                </>
               )}
               <button 
                   className="hover:text-white/70 transition-colors flex items-center justify-center"
@@ -760,7 +792,9 @@ export default function Browse() {
                 </button>
               </div>
             </div>
-          )}
+            );
+          })()}
+
           <div className="w-[1px] h-4 bg-black/10" />
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-medium tracking-widest uppercase text-black/40">Sort</span>
