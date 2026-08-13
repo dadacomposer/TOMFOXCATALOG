@@ -487,7 +487,8 @@ export default function Home() {
                   </div>
                 </div>
               );
-            })}
+            })
+            )}
             </div>
             
             {/* CTA for non-logged in users */}
@@ -500,7 +501,6 @@ export default function Home() {
               </div>
             )}
           </div>
-        )}
       </div>
 
 

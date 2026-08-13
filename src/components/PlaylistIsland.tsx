@@ -5,7 +5,7 @@ import { Play, Pause, Download, ShoppingBag, X, TrendingUp } from 'lucide-react'
 import WaveformView from './WaveformView';
 import { DEFAULT_ARTIST, DEFAULT_ARTWORK } from '../config';
 import TrackArtwork from './TrackArtwork';
-import { usePlayer } from '../context/PlayerContext';
+import { usePlayer, Track } from '../context/PlayerContext';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
 import TrackActionButtons from './TrackActionButtons';
 import { useDownload } from '../context/DownloadContext';
@@ -13,8 +13,7 @@ import { useLicense } from '../context/LicenseContext';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
-
-type Track = any;
+import { useModalAnimation } from '../hooks/useModalAnimation';
 
 const parseTags = (t: string[] | string | undefined): string[] => {
   if (!t) return [];

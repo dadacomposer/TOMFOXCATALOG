@@ -3,10 +3,9 @@ import { Search, Filter, Loader2, Eye, Trash2, Mail, X, ChevronDown } from 'luci
 import { supabase } from '../../lib/supabase';
 import { useModalAnimation } from '../../hooks/useModalAnimation';
 import { toast } from 'react-hot-toast';
-import CustomDropdown from '../CustomDropdown';
 import RequestDetailsModal from './RequestDetailsModal';
 
-interface LicensingRequest {
+export interface LicensingRequest {
   id: string;
   created_at: string;
   name: string;
@@ -31,7 +30,7 @@ interface DropdownOption {
   colorClass?: string;
 }
 
-function CustomDropdown({
+export function CustomDropdown({
   value,
   options,
   onChange,

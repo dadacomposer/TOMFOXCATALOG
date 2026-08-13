@@ -45,8 +45,6 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
     }
   }, [internalIsOpen, isMounted, onClose]);
 
-  const handleClose = () => setInternalIsOpen(false);
-
   const [stagedTracks, setStagedTracks] = useState<StagedTrack[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -636,10 +634,10 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
         try {
            await supabase.from('tracks').delete().in('id', dbIds);
         } catch(e) {}
-        onClose();
+        setInternalIsOpen(false);
       }
     } else {
-      onClose();
+      setInternalIsOpen(false);
     }
   };
 

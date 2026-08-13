@@ -164,6 +164,7 @@ export default function AdminTracks() {
   ]);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingCategoriesStr, setEditingCategoriesStr] = useState('');
 
   const { isMounted: isBulkModalMounted, isAnimating: isBulkModalAnimating } = useModalAnimation(bulkAction !== 'none');
   const { isMounted: isLinkModalMounted, isAnimating: isLinkModalAnimating } = useModalAnimation(isLinkManagerOpen);
@@ -183,7 +184,7 @@ export default function AdminTracks() {
   const handleSaveCategories = async () => {
     const loadingToast = toast.loading('Saving categories...');
     try {
-      const cleaned = editingCategoriesStr.split(',').map(c => c.trim()).filter(Boolean);
+      const cleaned = editingCategoriesStr.split(',').map((c: string) => c.trim()).filter(Boolean);
       
       const { data } = await supabase.from('page_content').select('*').eq('page_id', 'playlists').single();
       const currentContent = data?.content || {};

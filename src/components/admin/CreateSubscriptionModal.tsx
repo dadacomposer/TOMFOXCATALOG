@@ -25,10 +25,7 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onSuccess, al
     }
   }, [internalIsOpen, isMounted, onClose]);
 
-  const handleClose = () => {
-    setInternalIsOpen(false);
-  };
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   
@@ -119,7 +116,7 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onSuccess, al
 
   const handleClose = () => {
     resetForm();
-    onClose();
+    setInternalIsOpen(false);
   };
 
   const handleSubmit = async () => {

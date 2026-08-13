@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Mail, Trash2 } from 'lucide-react';
 import { useModalAnimation } from '../../hooks/useModalAnimation';
-import CustomDropdown from '../CustomDropdown';
-import type { LicensingRequest } from './AdminLicensing';
+import { LicensingRequest, CustomDropdown } from './AdminLicensing';
 
 type RequestDetailsModalProps = {
   request: LicensingRequest;
@@ -21,32 +20,31 @@ export default function RequestDetailsModal({ request, onClose, onUpdateStatus, 
     }
   }, [internalIsOpen, isMounted, onClose]);
 
-  const handleClose = () => setInternalIsOpen(false);
+  const handleClose = () => {
+    setInternalIsOpen(false);
+  };
 
   if (!isMounted) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-      <div 
-        className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} 
-        onClick={handleClose} 
-      />
-      <div className={`relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900">Request Details</h2>
-          <button 
-            onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 ${isAnimating ? 'animate-fade-in' : 'animate-fade-out opacity-0'}`} style={{ animationDuration: '200ms' }}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
+      
+      <div className={`relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isAnimating ? 'animate-slide-in-up' : 'animate-slide-out-down opacity-0'}`} style={{ animationDuration: '300ms' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
+          <h2 className="text-xl font-bold tracking-tight">Licensing Request</h2>
+          <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+            <X className="w-5 h-5" />
           </button>
         </div>
-        
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto hide-scrollbar custom-scrollbar">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Requester Info</h3>
-              <p className="text-base font-semibold text-gray-900">{request.name}</p>
+              <h3 className="text-sm font-medium text-gray-500 mb-1">Contact Details</h3>
+              <div className="font-medium text-lg">{request.name}</div>
               <a href={`mailto:${request.email}`} className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
                 <Mail className="w-3.5 h-3.5" /> {request.email}
               </a>
@@ -60,7 +58,7 @@ export default function RequestDetailsModal({ request, onClose, onUpdateStatus, 
               <h3 className="text-sm font-medium text-gray-500 mb-2">Status</h3>
               <CustomDropdown
                 value={request.status}
-                onChange={(val) => onUpdateStatus(request.id, val)}
+                onChange={(val: string) => onUpdateStatus(request.id, val)}
                 options={[
                   { value: 'pending', label: 'Pending', colorClass: 'bg-yellow-500' },
                   { value: 'replied', label: 'Replied', colorClass: 'bg-blue-500' },
