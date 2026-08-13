@@ -119,7 +119,7 @@ export default function Home() {
   const suggestedTracksRef = useRef<HTMLDivElement>(null);
   const recentlyPlayedRef = useRef<HTMLDivElement>(null);
 
-  const { user } = useAuth();
+  const { user, setLoginModalOpen } = useAuth();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
   const { 
@@ -242,10 +242,18 @@ export default function Home() {
 
         {/* Welcome Section (Only for Unauthenticated Users) */}
         {!user && (
-          <div className="w-full pt-4 md:pt-8 pb-4 md:pb-8 flex flex-col md:flex-row items-center md:items-center justify-between px-8 md:px-16 relative z-40 pointer-events-none">
+          <div className="w-full pt-4 md:pt-8 pb-4 md:pb-8 flex flex-col md:flex-row items-center md:items-start justify-between px-8 md:px-16 relative z-40 pointer-events-none gap-6 md:gap-0">
             <h1 className="text-xl md:text-3xl lg:text-[40px] font-black uppercase tracking-tight text-center md:text-left max-w-4xl z-20 leading-[1.1] text-white">
               A curated collection of original music.<br/><span className="text-white/60">Press play and explore the sound.</span>
             </h1>
+            <div className="pointer-events-auto">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setLoginModalOpen(true); }}
+                className="bg-white text-black px-8 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[12px] tracking-widest shadow-xl whitespace-nowrap"
+              >
+                Create an account
+              </button>
+            </div>
           </div>
         )}
 
@@ -261,8 +269,13 @@ export default function Home() {
             </div>
           )}
           <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} max-md:px-[calc(50vw-140px)] md:px-8`}>
-            <ScrollArrows scrollRef={topPicksRef} isDark={!user} offsetY={8} />
-          <div ref={topPicksRef} className="flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4">
+            <ScrollArrows 
+              scrollRef={topPicksRef} 
+              isDark={!user} 
+              offsetY={8} 
+              rightOffsetClass={!user ? 'max-md:right-48 md:right-[260px]' : 'max-md:right-2 md:right-12'}
+            />
+          <div ref={topPicksRef} className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? '[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] pr-48 md:pr-[280px]' : ''}`}>
             {loading ? (
               [...Array(4)].map((_, i) => (
                 <div key={i} className={`flex flex-col p-4 rounded-[32px] shrink-0 snap-always snap-center md:snap-start ${!user ? 'w-[280px]' : 'w-[280px] md:w-[340px]'}`}>
@@ -365,12 +378,20 @@ export default function Home() {
                 })
             )}
           </div>
+            {/* CTA for non-logged in users */}
+            {!user && (
+              <div className="absolute top-0 right-8 bottom-4 flex flex-col items-center justify-center z-20 pointer-events-auto pl-24">
+                <Link to="/browse" className="bg-white text-black px-6 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[11px] tracking-widest shadow-lg">
+                  Explore the catalog
+                </Link>
+              </div>
+            )}
           </div>
         </div>
         
         {/* Fading gradient to smooth transition to Trending Tracks */}
         {!user && (
-          <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-b from-transparent to-[#111] pointer-events-none z-[35]" />
+          <div className="absolute bottom-0 left-0 right-0 h-[400px] bg-gradient-to-b from-transparent to-[#111] pointer-events-none z-[35]" />
         )}
       </div>
 
