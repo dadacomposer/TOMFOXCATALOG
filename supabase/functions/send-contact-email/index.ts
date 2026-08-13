@@ -35,7 +35,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Tom Fox Catalog <onboarding@resend.dev>", // We use onboarding domain or a verified domain
+        from: "Tom Fox Catalog <licensing@tomfoxcatalog.com>",
         to: ["licensing@tomfoxcatalog.com"],
         reply_to: email,
         subject: `New Contact Request: ${source} from ${name}`,
