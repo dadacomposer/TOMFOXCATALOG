@@ -29,14 +29,14 @@ export default function Footer({ isDark = false, isMinimized = false }: { isDark
   }
 
   return (
-    <footer className={`w-full ${bgColor} ${textColor} pt-16 md:pt-24 pb-8 border-t ${borderColor} z-10 relative`}>
-      <div className="w-full max-w-[1600px] mx-auto px-6 md:px-12 lg:px-16">
+    <footer className={`w-full ${bgColor} ${textColor} pt-12 md:pt-24 pb-8 border-t ${borderColor} z-10 relative`}>
+      <div className="w-full max-w-[1600px] mx-auto px-8 md:px-12 lg:px-16">
         
-        <div className="w-full flex flex-col lg:flex-row justify-between gap-16 mb-16 md:mb-20">
+        <div className="w-full flex flex-col lg:flex-row justify-between gap-12 md:gap-16 mb-12 md:mb-20">
           
           {/* LOGO & TAGLINE */}
           <div className="flex flex-col items-start max-w-sm">
-            <Link to="/" className="mb-8 block cursor-pointer transition-transform hover:scale-105 active:scale-95 group">
+            <Link to="/" className="mb-6 md:mb-8 block cursor-pointer transition-transform hover:scale-105 active:scale-95 group">
                <img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" className={`w-20 md:w-24 h-auto ${isDark ? 'invert' : ''}`} alt="Tom Fox Logo" />
             </Link>
             <p className={`font-sans ${mutedTextColor} text-xs md:text-sm uppercase tracking-widest leading-relaxed`}>
@@ -45,10 +45,10 @@ export default function Footer({ isDark = false, isMinimized = false }: { isDark
           </div>
 
           {/* NAVIGATION LINKS */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 flex-1 lg:max-w-4xl pt-2 lg:pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 flex-1 lg:max-w-4xl pt-2 lg:pt-0">
             
             <div className="flex flex-col gap-4">
-              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Explore</h4>
+              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-2 md:mb-4">Explore</h4>
               <Link to="/browse" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Catalog</Link>
               <Link to="/playlists" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Playlists</Link>
               <Link to="/browse?playlist=new-music" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>New Releases</Link>
@@ -61,12 +61,12 @@ export default function Footer({ isDark = false, isMinimized = false }: { isDark
             </div>
 
             <div className="flex flex-col gap-4">
-              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Support</h4>
+              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-2 md:mb-4">Support</h4>
               <button onClick={() => setGeneralContactModalOpen(true)} className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold text-left`}>Contact Us</button>
             </div>
 
             <div className="flex flex-col gap-4">
-              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Legal</h4>
+              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-2 md:mb-4">Legal</h4>
               <Link to="/terms" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Terms of Service</Link>
               <Link to="/privacy" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Privacy Policy</Link>
               <Link to="/cookie-policy" className={`font-sans text-sm ${mutedTextColor} hover:${textColor} transition-colors uppercase tracking-wider font-bold`}>Cookie Policy</Link>
@@ -74,7 +74,7 @@ export default function Footer({ isDark = false, isMinimized = false }: { isDark
 
             {/* SOCIALS */}
             <div className="flex flex-col gap-4">
-              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-4">Connect</h4>
+              <h4 className="font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] mb-2 md:mb-4">Connect</h4>
               <div className="flex gap-4">
                 <a href="https://www.instagram.com/tom._fox/" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full border ${borderColor} flex items-center justify-center ${mutedTextColor} hover:${textColor} hover:border-${isDark ? 'white' : 'black'} transition-all hover:scale-105 active:scale-95`}>
                   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -97,7 +97,7 @@ export default function Footer({ isDark = false, isMinimized = false }: { isDark
         </div>
 
         {/* BOTTOM ROW */}
-        <div className={`w-full flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t ${borderColor}`}>
+        <div className={`w-full flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-8 border-t ${borderColor}`}>
           <div className={`font-sans text-[10px] uppercase tracking-widest ${mutedTextColor}`}>
             © {new Date().getFullYear()} Tom Fox Music. All rights reserved.
           </div>
