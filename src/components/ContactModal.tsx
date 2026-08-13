@@ -87,7 +87,7 @@ export default function ContactModal() {
                   required
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full bg-transparent border-b border-black/10 pb-2 text-xl md:text-2xl font-bold uppercase tracking-tighter text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/10"
+                  className="w-full bg-transparent border-b border-black/10 pb-2 text-xl md:text-2xl font-bold uppercase tracking-tighter text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/10 !rounded-none"
                   placeholder="JANE DOE"
                 />
               </div>
@@ -99,7 +99,7 @@ export default function ContactModal() {
                   required
                   value={formData.email}
                   onChange={e => setFormData({...formData, email: e.target.value})}
-                  className="w-full bg-transparent border-b border-black/10 pb-2 text-xl md:text-2xl font-bold uppercase tracking-tighter text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/10"
+                  className="w-full bg-transparent border-b border-black/10 pb-2 text-xl md:text-2xl font-bold uppercase tracking-tighter text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/10 !rounded-none"
                   placeholder="HELLO@DOMAIN.COM"
                 />
               </div>
@@ -110,7 +110,7 @@ export default function ContactModal() {
                   type="text" 
                   value={formData.company}
                   onChange={e => setFormData({...formData, company: e.target.value})}
-                  className="w-full bg-transparent border-b border-black/10 pb-2 text-xl md:text-2xl font-bold uppercase tracking-tighter text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/10"
+                  className="w-full bg-transparent border-b border-black/10 pb-2 text-xl md:text-2xl font-bold uppercase tracking-tighter text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/10 !rounded-none"
                   placeholder="YOUR COMPANY"
                 />
               </div>
@@ -122,7 +122,7 @@ export default function ContactModal() {
                   rows={2}
                   value={formData.message}
                   onChange={e => setFormData({...formData, message: e.target.value})}
-                  className="w-full bg-transparent border-b border-black/10 pb-2 text-lg md:text-xl font-bold uppercase tracking-tighter text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/10 resize-none"
+                  className="w-full bg-transparent border-b border-black/10 pb-2 text-lg md:text-xl font-bold uppercase tracking-tighter text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/10 resize-none !rounded-none"
                   placeholder="TELL US ABOUT YOUR NEEDS..."
                 />
               </div>
