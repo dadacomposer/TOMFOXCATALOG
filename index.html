@@ -65,6 +65,17 @@
         document.body.innerHTML = '<div style="color:red; font-size:20px; padding:20px; font-family:monospace;"><strong>Unhandled Promise Rejection:</strong><br/>' + e.reason + '</div>';
       });
     </script>
+    <!-- Lenis Smooth Scrolling -->
+    <script src="https://unpkg.com/lenis@1.1.9/dist/lenis.min.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        const lenis = new Lenis({
+          autoRaf: true,
+          duration: 1.2,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+        });
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
