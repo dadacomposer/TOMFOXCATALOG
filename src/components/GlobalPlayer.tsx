@@ -349,7 +349,9 @@ export default function GlobalPlayer() {
             />
           )}
         </div>
-        <div className={`font-sans text-[11px] ${secondaryText} uppercase tracking-widest w-12 text-right`}>{audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'}</div>
+        <div className={`font-sans text-[11px] ${secondaryText} uppercase tracking-widest w-20 text-right shrink-0`}>
+          {audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'} / {audioRef.current?.duration ? formatTime(audioRef.current.duration) : (currentTrack?.duration ? formatTime(currentTrack.duration) : '0:00')}
+        </div>
       </div>
       <div className="shrink-0 flex items-center gap-4 ml-4">
         <div className="flex items-center gap-3 cursor-pointer group/preview mr-2" onClick={() => setIsPreviewMode(!isPreviewMode)}>
