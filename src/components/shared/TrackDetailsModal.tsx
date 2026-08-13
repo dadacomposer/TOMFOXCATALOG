@@ -39,11 +39,15 @@ export default function TrackDetailsModal() {
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [expandedSection, setExpandedSection] = useState<{ label: string, tags: string[], rect: DOMRect } | null>(null);
   const [localTrack, setLocalTrack] = useState<Track | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (selectedTrackForDetails) {
       setLocalTrack(selectedTrackForDetails);
+      const t = setTimeout(() => setIsOpen(true), 10);
+      return () => clearTimeout(t);
     } else {
+      setIsOpen(false);
       setExpandedSection(null);
       const t = setTimeout(() => setLocalTrack(null), 500);
       return () => clearTimeout(t);
@@ -107,13 +111,13 @@ export default function TrackDetailsModal() {
   if (!displayTrack) return null;
 
   return (
-    <div className={`fixed inset-0 z-[40] flex items-center justify-center p-4 pt-[100px] transition-all duration-500 ease-out ${selectedTrackForDetails ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[40] flex items-center justify-center p-4 pt-[100px] transition-all duration-500 ease-out ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
         onClick={() => setSelectedTrackForDetails(null)} 
       />
       <div 
-        className={`relative w-full max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl transition-all duration-500 ease-out ${selectedTrackForDetails ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
+        className={`relative w-full max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl transition-all duration-500 ease-out ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
         onClick={() => setExpandedSection(null)}
       >
         

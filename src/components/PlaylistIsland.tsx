@@ -58,6 +58,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount, isScrollableContainer } = props;
   const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, setSelectedTrackForDetails } = usePlayer();
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [playlistTitle, setPlaylistTitle] = useState('Playlist');
   const [sortBy, setSortBy] = useState('relevance');
@@ -79,6 +80,28 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
   const { profile } = useAuth();
+
+  useEffect(() => {
+    if (favoritesPlaylist?.id === id) {
+      const removed = tracks.filter(t => !favoriteTrackIds.has(t.id));
+      if (removed.length > 0) {
+        setRemovingIds(prev => {
+          const next = new Set(prev);
+          removed.forEach(t => next.add(t.id));
+          return next;
+        });
+        
+        setTimeout(() => {
+          setTracks(prev => prev.filter(t => favoriteTrackIds.has(t.id)));
+          setRemovingIds(prev => {
+            const next = new Set(prev);
+            removed.forEach(t => next.delete(t.id));
+            return next;
+          });
+        }, 300);
+      }
+    }
+  }, [favoriteTrackIds, favoritesPlaylist?.id, id, tracks]);
 
   useEffect(() => {
     async function load() {
@@ -243,9 +266,13 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                 </div>
               ) : tracks.map((track) => (
                   <div 
-                    key={track.id}
-                    className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none"
-                    onClick={() => setSelectedTrackForDetails(track)}
+                    key={track.id} 
+                    className={`flex items-center gap-4 p-2 md:p-3 rounded-2xl group transition-all cursor-pointer border border-transparent hover:border-black/5 hover:bg-[#f6f6f6] ${removingIds.has(track.id) ? 'opacity-0 -translate-x-4 pointer-events-none' : 'opacity-100 translate-x-0'} ${selectedTrackForDetails?.id === track.id ? 'bg-black/5 border-black/10' : ''}`}
+                    onClick={(e) => {
+                      if (e.shiftKey || e.metaKey || e.ctrlKey) return;
+                      e.stopPropagation();
+                      setSelectedTrackForDetails(track);
+                    }}
                   >
                     <div 
                       className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
@@ -349,9 +376,13 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                   </div>
 
                   <div className="hidden md:flex items-center justify-end gap-2 pr-4 shrink-0 w-auto">
-                    <TrackActionButtons trackId={track.id} hideHeart={favoritesPlaylist?.id === id} />
-                    <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-10 text-right mr-2">
-                      {track.duration ? formatTime(track.duration) : '0:00'}
+                    <TrackActionButtons trackId={track.id} />
+                    <div className="text-[11px] font-sans font-bold text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
+                      {currentTrack?.id === track.id && isPlaying ? (
+                        `${formatTime((progress / 100) * (track.duration || 0))} / ${formatTime(track.duration || 0)}`
+                      ) : (
+                        track.duration ? formatTime(track.duration) : '0:00'
+                      )}
                     </div>
                     {isOwner ? (
                       <button 

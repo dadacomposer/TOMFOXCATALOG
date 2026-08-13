@@ -1243,8 +1243,12 @@ export default function Browse() {
 
               <div className={`hidden md:flex items-center justify-end pr-4 shrink-0 w-auto ${profile?.can_download !== false ? 'gap-2' : 'gap-1'}`}>
                 <TrackActionButtons trackId={track.id} />
-                <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-10 text-right mr-2">
-                  {track.duration ? formatTime(track.duration) : '0:00'}
+                <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
+                  {currentTrack?.id === track.id && isPlaying ? (
+                    `${formatTime((progress / 100) * (track.duration || 0))} / ${formatTime(track.duration || 0)}`
+                  ) : (
+                    track.duration ? formatTime(track.duration) : '0:00'
+                  )}
                 </div>
                 <div className="w-[50px] flex justify-center shrink-0">
                 </div>
@@ -1302,8 +1306,12 @@ export default function Browse() {
                     </div>
                     <div className={`hidden md:flex items-center justify-end pr-4 shrink-0 w-auto ${profile?.can_download !== false ? 'gap-2' : 'gap-1'}`}>
                       <TrackActionButtons trackId={version.id} />
-                      <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-10 text-right mr-2">
-                        {version.duration ? formatTime(version.duration) : '0:00'}
+                      <div className="text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
+                        {currentTrack?.id === version.id && isPlaying ? (
+                          `${formatTime((progress / 100) * (version.duration || 0))} / ${formatTime(version.duration || 0)}`
+                        ) : (
+                          version.duration ? formatTime(version.duration) : '0:00'
+                        )}
                       </div>
                       {currentTrack?.id !== version.id && profile?.can_download !== false && (
                         <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openDownloadModal(version, e); }} title="Download">

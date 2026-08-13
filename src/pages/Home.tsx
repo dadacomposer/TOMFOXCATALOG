@@ -433,7 +433,7 @@ export default function Home() {
 
       {/* Suggested For You */}
       {suggestedPlaylists.length > 0 && (
-        <div className="w-full px-8 pt-4 pb-12 flex flex-col relative group/section no-radius !rounded-none">
+        <div className="w-full px-8 pt-4 pb-2 flex flex-col relative group/section no-radius !rounded-none">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black">Suggested for you</h2>
           
           <div className="w-full relative">
@@ -478,7 +478,7 @@ export default function Home() {
 
       {/* Suggested Tracks (Same layout as Trending Tracks) */}
       {suggestedTracks.length > 0 && (
-        <div className={`w-full px-8 pt-6 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
+        <div className={`w-full px-8 pt-0 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
           <div className="w-full relative">
             <ScrollArrows scrollRef={suggestedTracksRef} isDark={!user} offsetY={8} />
             <div ref={suggestedTracksRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
