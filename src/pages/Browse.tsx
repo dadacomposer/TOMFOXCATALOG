@@ -198,6 +198,7 @@ export default function Browse() {
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [filterSearch, setFilterSearch] = useState(''); // search within filter panel
 
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
@@ -242,6 +243,7 @@ export default function Browse() {
 
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [defaultTrackIds, setDefaultTrackIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
@@ -256,7 +258,6 @@ export default function Browse() {
   
   // Ref for audio element
   const sortDropdownRef = useRef<HTMLDivElement>(null);
-  const observerTarget = useRef<HTMLDivElement>(null);
   const tracksPerPage = 25;
 
   // GlobalSearchBar owns these DOM targets. Browse can mount before that bar
@@ -431,6 +432,7 @@ export default function Browse() {
   useEffect(() => {
     const requestId = ++catalogRequestRef.current;
     loadMoreInFlightRef.current = false;
+    setIsLoadingMore(false);
 
     if (loading || searchQuery.trim()) return;
 
@@ -631,6 +633,7 @@ export default function Browse() {
 
     const catalogRequestId = catalogRequestRef.current;
     loadMoreInFlightRef.current = true;
+    setIsLoadingMore(true);
     const nextPage = currentPage + 1;
     const hasFilters = Object.values(activeFilters).some(v => v.length > 0);
 
@@ -666,6 +669,7 @@ export default function Browse() {
     } finally {
       if (catalogRequestRef.current === catalogRequestId) {
         loadMoreInFlightRef.current = false;
+        setIsLoadingMore(false);
       }
     }
   };
@@ -696,29 +700,6 @@ export default function Browse() {
       playTrack(track, queue, effectiveSource || undefined);
     }
   };
-
-  const handleLoadMoreRef = useRef(handleLoadMore);
-  useEffect(() => {
-    handleLoadMoreRef.current = handleLoadMore;
-  });
-
-  // Intersection Observer for infinite scrolling
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMoreTracks && isInitialTracksLoaded && !searchQuery.trim()) {
-          handleLoadMoreRef.current();
-        }
-      },
-      { threshold: 0.1, rootMargin: '0px 0px 400px 0px' }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [hasMoreTracks, isInitialTracksLoaded, searchQuery]);
 
   const [lastSelectedTrackId, setLastSelectedTrackId] = useState<string | null>(null);
 
@@ -836,7 +817,7 @@ export default function Browse() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full bg-[#fafafa] text-black relative no-radius !rounded-none">
+    <div className="flex min-h-0 flex-col w-full h-full bg-[#fafafa] text-black relative no-radius !rounded-none">
       <div id="main-search-bar" />
       
       {searchBarPortals.right && !playlistUrlId && createPortal(
@@ -976,95 +957,131 @@ export default function Browse() {
       )}
 
       {/* Layout Wrapper */}
-      <div className="w-full relative flex-1 flex overflow-hidden">
+      <div className="w-full relative flex-1 min-h-0 flex overflow-hidden">
         
         {/* STATIC SIDEBAR (Does not scroll) */}
-        <div className={`hidden md:flex flex-col shrink-0 z-30 transition-all duration-150 ease-out will-change-[width,transform] pt-8 pl-4 md:pl-5 ${expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
-          <div className="flex w-full h-full relative">
-            <div className="w-[130px] flex flex-col gap-1 shrink-0 relative z-20 bg-[#fafafa]">
+        <div className={`hidden md:flex flex-col shrink-0 z-30 transition-all duration-150 ease-out will-change-[width,transform] pt-8 pl-4 md:pl-5 ${isFiltersOpen && expandedCategory ? 'w-[380px]' : 'w-[130px]'}`}>
+          <div className="flex w-full h-full min-h-0 relative">
+            <div className={`w-[130px] h-full min-h-0 flex flex-col gap-1 shrink-0 relative z-20 bg-[#fafafa] ${currentTrack ? 'pb-[90px]' : ''}`}>
 
-                {FILTER_CATEGORIES.map(category => {
-                  const count = (activeFilters[category.key] as string[])?.length || 0;
-                  const isExpanded = expandedCategory === category.key;
-                  
-                  return (
-                    <button 
-                      key={category.key}
-                      onClick={() => { setExpandedCategory(isExpanded ? null : category.key); setFilterSearch(''); }}
-                      className={`w-full text-left px-3 h-[38px] shrink-0 rounded-lg text-[11px] font-medium uppercase tracking-widest flex items-center justify-between transition-colors ${isExpanded ? 'bg-black text-white' : 'hover:bg-black/5 text-black/60 hover:text-black'}`}
-                    >
-                      <span>{category.title}</span>
-                      {count > 0 ? (
-                        <span className={`w-[18px] h-[18px] shrink-0 flex items-center justify-center rounded-full text-[9px] transition-colors ${isExpanded ? 'bg-white text-black' : 'bg-black text-white'}`}>
-                          {count}
-                        </span>
-                      ) : (
-                        <span className="w-[18px] h-[18px] shrink-0 opacity-0 pointer-events-none" />
-                      )}
-                    </button>
-                  );
-                })}
-                
-                <button 
-                  onClick={clearAllFilters}
-                  className={`w-full text-left px-3 mt-2 h-[32px] shrink-0 text-[10px] transition-colors underline font-medium uppercase tracking-widest flex items-center ${
-                    totalActiveFilterCount > 0
-                      ? 'text-black/50 hover:text-black pointer-events-auto'
-                      : 'opacity-0 pointer-events-none'
-                  }`}
+                {/* Filter categories are collapsed by default to keep Browse focused
+                    on the catalog and leave vertical room for My Music. */}
+                <button
+                  onClick={() => {
+                    setIsFiltersOpen(open => !open);
+                    setExpandedCategory(null);
+                    setFilterSearch('');
+                  }}
+                  className={`w-full px-3 h-[38px] shrink-0 rounded-lg text-[11px] font-medium uppercase tracking-widest flex items-center justify-between transition-colors ${isFiltersOpen ? 'bg-black text-white' : 'hover:bg-black/5 text-black/60 hover:text-black'}`}
                 >
-                  Clear Filters
+                  <span>Filters</span>
+                  <span className="flex items-center gap-1.5">
+                    {totalActiveFilterCount > 0 && (
+                      <span className={`w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] ${isFiltersOpen ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                        {totalActiveFilterCount}
+                      </span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isFiltersOpen ? '' : '-rotate-90'}`} />
+                  </span>
                 </button>
+
+                <div className={`overflow-hidden transition-[max-height,opacity,margin] motion-disclosure w-full ${isFiltersOpen ? 'max-h-[calc(100vh-220px)] opacity-100 mt-1' : 'max-h-0 opacity-0 mt-0'}`}>
+                  <div className="flex flex-col">
+                    {FILTER_CATEGORIES.map(category => {
+                      const count = (activeFilters[category.key] as string[])?.length || 0;
+                      const isExpanded = expandedCategory === category.key;
+
+                      return (
+                        <button
+                          key={category.key}
+                          onClick={() => { setExpandedCategory(isExpanded ? null : category.key); setFilterSearch(''); }}
+                          className={`w-full text-left px-3 h-[38px] shrink-0 rounded-lg text-[11px] font-medium uppercase tracking-widest flex items-center justify-between transition-colors ${isExpanded ? 'bg-black text-white' : 'hover:bg-black/5 text-black/60 hover:text-black'}`}
+                        >
+                          <span>{category.title}</span>
+                          {count > 0 ? (
+                            <span className={`w-[18px] h-[18px] shrink-0 flex items-center justify-center rounded-full text-[9px] transition-colors ${isExpanded ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                              {count}
+                            </span>
+                          ) : (
+                            <span className="w-[18px] h-[18px] shrink-0 opacity-0 pointer-events-none" />
+                          )}
+                        </button>
+                      );
+                    })}
+
+                    {totalActiveFilterCount > 0 && (
+                      <button
+                        onClick={clearAllFilters}
+                        className="w-full text-left px-3 mt-2 h-[32px] shrink-0 text-[10px] text-black/50 hover:text-black transition-colors underline font-medium uppercase tracking-widest flex items-center"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+                </div>
 
                 {/* MY MUSIC */}
                 <button 
                   onClick={() => setIsMyMusicOpen(!isMyMusicOpen)}
-                  className="mt-2 mb-2 px-3 text-xs font-bold uppercase tracking-widest text-black/40 hover:text-black/60 transition-colors w-full text-left flex items-center justify-between group"
+                  className="mt-3 mb-1 px-3 text-xs font-bold uppercase tracking-widest text-black/40 hover:text-black/60 transition-colors w-full text-left flex items-center justify-between group shrink-0"
                 >
                   My Music
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMyMusicOpen ? '' : '-rotate-90'}`} />
                 </button>
                 
                 <div 
-                  className={`grid transition-all duration-300 ease-in-out w-full ${isMyMusicOpen ? 'grid-rows-[1fr] opacity-100 flex-1 min-h-0 mt-1' : 'grid-rows-[0fr] opacity-0 flex-none min-h-0 mt-0'}`}
+                  className={`grid transition-all motion-disclosure w-full ${isMyMusicOpen ? 'grid-rows-[1fr] opacity-100 flex-1 min-h-0 mt-1' : 'grid-rows-[0fr] opacity-0 flex-none min-h-0 mt-0'}`}
                 >
-                  <div className="overflow-hidden flex flex-col h-full w-full">
-                    {profile && favoritesPlaylist && (
-                      <SidebarPlaylist 
-                        playlist={favoritesPlaylist}
-                        isFavorites={true}
-                        isActive={playlistUrlId === favoritesPlaylist.id}
-                        onClick={() => {
-                          searchParams.set('playlist', favoritesPlaylist.id);
-                          setSearchParams(searchParams);
-                        }}
-                        dragTarget={dragTarget}
-                        setDragTarget={setDragTarget}
-                      />
-                    )}
-                    
-                    <div className="flex flex-col overflow-y-auto hide-scrollbar gap-1 flex-1 pb-[110px]">
+                  <div className="overflow-hidden flex flex-col h-full min-h-0 w-full">
+                    {/* This is the only scrollable My Music area: Favorites and all
+                        personal playlists stay between the header and fixed create box. */}
+                    <div className="relative flex-1 min-h-0">
+                      <div className="flex h-full flex-col gap-1 overflow-y-auto hide-scrollbar pb-5 pr-1">
+                      {profile && favoritesPlaylist && (
+                        <SidebarPlaylist
+                          playlist={favoritesPlaylist}
+                          isFavorites={true}
+                          isActive={playlistUrlId === favoritesPlaylist.id}
+                          onClick={() => {
+                            searchParams.set('playlist', favoritesPlaylist.id);
+                            setSearchParams(searchParams);
+                          }}
+                          dragTarget={dragTarget}
+                          setDragTarget={setDragTarget}
+                        />
+                      )}
                       {userPlaylists.filter(p => !p.is_favorites).map(pl => (
                         <SidebarPlaylist
                           key={pl.id}
                           playlist={pl}
                           isActive={playlistUrlId === pl.id}
                           onClick={() => {
-                        searchParams.set('playlist', pl.id);
-                        setSearchParams(searchParams);
-                      }}
-                      dragTarget={dragTarget}
-                      setDragTarget={setDragTarget}
-                    />
-                  ))}
+                            searchParams.set('playlist', pl.id);
+                            setSearchParams(searchParams);
+                          }}
+                          dragTarget={dragTarget}
+                          setDragTarget={setDragTarget}
+                        />
+                      ))}
+                      </div>
+
+                      {/* The playlist list fades out before the fixed create control,
+                          while remaining fully scrollable underneath. */}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent via-[#fafafa]/90 to-[#fafafa]" />
+                    </div>
+                  </div>
                 </div>
+
+                {/* Always present at the bottom of the sidebar, independent from
+                    whether My Music is folded. */}
                 <div 
-                  className={`mt-auto mb-4 flex items-center justify-between gap-2 mx-3 px-3 py-2.5 rounded-full transition-all duration-500 ease-out cursor-pointer text-[10px] font-bold uppercase tracking-widest shrink-0 ${isInlineCreating || pendingDropTracks.length > 0 ? 'bg-black/90 text-white shadow-inner' : 'bg-black text-white hover:bg-black/80 shadow-md hover:shadow-lg'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''} ${currentTrack ? '-translate-y-[90px]' : 'translate-y-0'}`}
+                  className={`mt-auto mb-4 flex items-center justify-between gap-2 mx-3 px-3 py-2.5 rounded-full motion-drawer cursor-pointer text-[10px] font-bold uppercase tracking-widest shrink-0 ${isInlineCreating || pendingDropTracks.length > 0 ? 'bg-black/90 text-white shadow-inner' : 'bg-black text-white hover:bg-black/80 shadow-md hover:shadow-lg'} ${isCreatingPlaylist ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => {
                     if (!user) {
                       setLoginModalOpen(true);
                       return;
                     }
+                    setIsMyMusicOpen(true);
                     if (!isInlineCreating) setIsInlineCreating(true);
                   }}
                   onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -1080,6 +1097,7 @@ export default function Browse() {
                       try {
                         const parsed = JSON.parse(data);
                         if (parsed.type === 'tracks' && Array.isArray(parsed.ids)) {
+                          setIsMyMusicOpen(true);
                           setPendingDropTracks(parsed.ids);
                           setIsInlineCreating(true);
                         }
@@ -1115,12 +1133,10 @@ export default function Browse() {
                     </div>
                   )}
                 </div>
-                  </div>
-                </div>
               </div>
 
-              <div className={`absolute left-[130px] top-0 bottom-0 w-[250px] pl-6 flex flex-col transition-all duration-150 ease-out will-change-[width,transform] ${expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
-                {expandedCategory && (() => {
+              <div className={`absolute left-[130px] top-0 bottom-0 w-[250px] pl-6 flex flex-col transition-all duration-150 ease-out will-change-[width,transform] ${isFiltersOpen && expandedCategory ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'}`}>
+                {isFiltersOpen && expandedCategory && (() => {
                   const cat = FILTER_CATEGORIES.find(c => c.key === expandedCategory);
                   if (!cat) return null;
                   const filteredOpts = filterSearch
@@ -1423,8 +1439,20 @@ export default function Browse() {
         </div>
           
             {hasMoreTracks && !searchQuery.trim() && isInitialTracksLoaded && (
-              <div ref={observerTarget} className="flex items-center justify-center py-12 w-full">
-                <Loader2 className="w-6 h-6 animate-spin text-black/40" />
+              <div className="flex w-full justify-center py-10">
+                <button
+                  type="button"
+                  onClick={() => void handleLoadMore()}
+                  disabled={isLoadingMore}
+                  className="group flex w-full max-w-md items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-5 py-4 text-[11px] font-medium uppercase tracking-[0.16em] text-black/70 shadow-sm transition-all hover:border-black/30 hover:text-black hover:shadow-md disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isLoadingMore ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" />
+                  )}
+                  <span>{isLoadingMore ? 'Loading tracks' : 'Load more tracks'}</span>
+                </button>
               </div>
             )}
             

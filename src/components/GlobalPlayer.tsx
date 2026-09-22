@@ -272,7 +272,7 @@ export default function GlobalPlayer() {
   const secondaryText = isSharedPage ? 'text-white/60' : 'text-black/60';
 
   return (
-    <div className={`global-player fixed bottom-0 left-0 w-full flex flex-col ${baseBg} ${baseText} border-t ${baseBorder} z-[90] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] no-radius !rounded-none ${currentTrack ? 'translate-y-0' : 'translate-y-[100%]'} ${isSimilarExpanded ? 'h-[75vh]' : 'h-[90px]'}`}>
+    <div className={`global-player fixed bottom-0 left-0 w-full flex flex-col ${baseBg} ${baseText} border-t ${baseBorder} z-[90] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] motion-drawer no-radius !rounded-none ${currentTrack ? 'translate-y-0' : 'translate-y-[100%]'} ${isSimilarExpanded ? 'h-[75vh]' : 'h-[90px]'}`}>
 
       {/* Main Player Bar FIRST so it's at the top of the expanded panel */}
       <div className={`w-full h-[90px] shrink-0 flex items-center px-4 md:px-6 gap-4 md:gap-8 transition-colors relative z-10 ${isSimilarExpanded ? `border-b ${baseBorder} ${isSharedPage ? 'bg-[#1a1a1a]' : 'bg-white/50'}` : ''}`}>
@@ -446,7 +446,7 @@ export default function GlobalPlayer() {
       </div>
 
       {/* Expanded Similar Tracks View */}
-      <div className={`w-full overflow-hidden flex flex-col transition-all duration-500 ${isSimilarExpanded ? 'opacity-100 flex-grow' : 'opacity-0 h-0'}`}>
+      <div className={`w-full overflow-hidden flex flex-col motion-drawer ${isSimilarExpanded ? 'opacity-100 flex-grow' : 'opacity-0 h-0'}`}>
         {referenceTrack && (
           <div className="flex items-center gap-6 px-6 py-6 border-b border-black/10 shrink-0 bg-black/5">
             <div className="w-24 h-24 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-black/10 shadow-sm relative bg-white">

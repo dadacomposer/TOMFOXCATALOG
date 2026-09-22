@@ -30,9 +30,9 @@ export default function GlobalLoader() {
 
   return (
     <div 
-      className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white transition-opacity duration-500 ease-in-out ${isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+      className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white transition-opacity duration-200 ease-out ${isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
     >
-      <div className="flex flex-col items-center animate-in zoom-in-95 duration-700">
+      <div className="flex flex-col items-center animate-in zoom-in-95 duration-200">
         <img 
           src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
           alt="Tom Fox" 

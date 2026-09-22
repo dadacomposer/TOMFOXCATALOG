@@ -106,10 +106,10 @@ export default function LicenseModal() {
 
   return (
     <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isLicenseModalOpen ? '' : 'pointer-events-none'}`}>
-      <div className={`absolute inset-0 transition-all duration-300 ${isLicenseModalOpen ? 'bg-black/20 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={handleClose} />
+      <div className={`absolute inset-0 motion-overlay ${isLicenseModalOpen ? 'bg-black/20 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={handleClose} />
 
       {/* Modal Content */}
-      <div className={`relative z-10 w-full max-w-2xl bg-[#F9FAFB] shadow-2xl overflow-hidden rounded-xl border border-black/5 transition-all duration-300 ${isLicenseModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-2xl bg-[#F9FAFB] shadow-2xl overflow-hidden rounded-xl border border-black/5 motion-surface ${isLicenseModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
         
         {/* Close button */}
         <button 
@@ -202,7 +202,7 @@ export default function LicenseModal() {
                     </div>
                     
                     {isDropdownOpen && (
-                      <div className="absolute z-10 w-full mt-2 bg-white border border-black/10 rounded-xl shadow-lg overflow-hidden py-2 animate-scale-in">
+                      <div className="absolute z-10 w-full mt-2 bg-white border border-black/10 rounded-xl shadow-lg overflow-hidden py-2 motion-popover">
                         {[
                           "Content Creator / Youtube Channel",
                           "Freelancer / Client Work",

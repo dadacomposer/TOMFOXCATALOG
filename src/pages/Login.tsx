@@ -153,9 +153,9 @@ export default function Login() {
 
   return (
     <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-      <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setLoginModalOpen(false)} />
+      <div className={`absolute inset-0 bg-black/60 motion-overlay ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setLoginModalOpen(false)} />
       
-      <div className={`relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
         {/* Close Button */}
         <button 
           onClick={() => {
@@ -174,7 +174,7 @@ export default function Login() {
         </button>
 
         {isVerifyEmailModalOpen ? (
-          <div className="flex flex-col items-center justify-center text-center animate-in fade-in duration-500 py-8">
+          <div className="flex flex-col items-center justify-center text-center animate-in fade-in duration-200 py-8">
             <div className="w-20 h-20 rounded-full bg-black/5 flex items-center justify-center mb-6">
               <Mail className="w-8 h-8 text-black" />
             </div>

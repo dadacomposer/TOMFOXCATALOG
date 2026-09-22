@@ -246,9 +246,9 @@ export default function OnboardingModal() {
   };
 
   return (
-    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-200 motion-overlay">
       <div 
-        className="relative bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] transition-all"
+        className="relative bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-200 motion-surface"
         style={{ 
           width: '480px',
           height: (step === 5 || step === 0) ? '400px' : step === 2 ? '740px' : '600px',
@@ -262,7 +262,7 @@ export default function OnboardingModal() {
             {[1, 2].map(s => (
               <div 
                 key={s} 
-                className={`h-1.5 rounded-full transition-all duration-500 flex-1 ${
+                className={`h-1.5 rounded-full motion-disclosure flex-1 ${
                   step >= s ? 'bg-black' : 'bg-black/10'
                 }`}
               />

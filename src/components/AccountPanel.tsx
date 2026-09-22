@@ -258,7 +258,7 @@ export default function AccountPanel() {
     <div className={`fixed inset-0 z-[100] flex justify-end ${isAccountPanelOpen ? '' : 'pointer-events-none'}`}>
       {/* Backdrop */}
       <div 
-        className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isAccountPanelOpen ? 'bg-black/20 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`}
+        className={`absolute inset-0 motion-overlay ${isAccountPanelOpen ? 'bg-black/20 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`}
         onClick={() => {
           setAccountPanelOpen(false);
           setTimeout(() => setActiveView('menu'), 300);
@@ -268,7 +268,7 @@ export default function AccountPanel() {
       {/* Expanding Side Panel */}
       <div 
         ref={panelRef}
-        className={`relative h-full bg-[#fafafa]/85 backdrop-blur-xl text-black shadow-2xl flex flex-col overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isAccountPanelOpen ? 'translate-x-0' : 'translate-x-full'} ${isExpanded ? 'w-[1152px]' : 'w-[384px]'}`}
+        className={`relative h-full bg-[#fafafa]/85 backdrop-blur-xl text-black shadow-2xl flex flex-col overflow-hidden motion-drawer ${isAccountPanelOpen ? 'translate-x-0' : 'translate-x-full'} ${isExpanded ? 'w-[1152px]' : 'w-[384px]'}`}
       >
         {/* Global Panel Header */}
         <div className="px-6 py-4 flex justify-between items-center bg-transparent z-20 shrink-0">
@@ -977,8 +977,8 @@ export default function AccountPanel() {
 
       {/* Cancel Subscription Modal */}
       <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isCancelSubModalOpen ? '' : 'pointer-events-none'}`}>
-        <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCancelSubModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsCancelSubModalOpen(false)} />
-        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCancelSubModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+        <div className={`absolute inset-0 motion-overlay ${isCancelSubModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsCancelSubModalOpen(false)} />
+        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface ${isCancelSubModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
           <div className="p-8 flex flex-col items-center text-center">
             <button onClick={() => setIsCancelSubModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors">
               <X className="w-4 h-4" />
@@ -1020,8 +1020,8 @@ export default function AccountPanel() {
 
       {/* Transfer Ownership Modal */}
       <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isTransferModalOpen ? '' : 'pointer-events-none'}`}>
-        <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isTransferModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsTransferModalOpen(false)} />
-        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isTransferModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+        <div className={`absolute inset-0 motion-overlay ${isTransferModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsTransferModalOpen(false)} />
+        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface ${isTransferModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
           <div className="p-8 flex flex-col items-center text-center">
             <button onClick={() => setIsTransferModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors">
               <X className="w-4 h-4" />
@@ -1085,8 +1085,8 @@ export default function AccountPanel() {
 
       {/* Create Workspace Modal */}
       <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isCreateModalOpen ? '' : 'pointer-events-none'}`}>
-        <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreateModalOpen ? 'bg-black/20 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsCreateModalOpen(false)} />
-        <div className={`bg-white/90 backdrop-blur-2xl border border-white/20 rounded-2xl p-6 w-full max-w-md relative z-10 shadow-2xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCreateModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+        <div className={`absolute inset-0 motion-overlay ${isCreateModalOpen ? 'bg-black/20 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsCreateModalOpen(false)} />
+        <div className={`bg-white/90 backdrop-blur-2xl border border-white/20 rounded-2xl p-6 w-full max-w-md relative z-10 shadow-2xl overflow-hidden motion-surface ${isCreateModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
           <h3 className="font-sans text-lg font-bold text-black mb-1">Create New Workspace</h3>
           <p className="font-sans text-sm text-black/60 mb-6">Create a new collaborative space for your team or project.</p>
           
@@ -1131,8 +1131,8 @@ export default function AccountPanel() {
 
       {/* Invite Member Modal */}
       <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isInviteModalOpen ? '' : 'pointer-events-none'}`}>
-        <div className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isInviteModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsInviteModalOpen(false)} />
-        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isInviteModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+        <div className={`absolute inset-0 motion-overlay ${isInviteModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsInviteModalOpen(false)} />
+        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface ${isInviteModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
           <div className="p-8 flex flex-col items-center text-center">
             <button onClick={() => setIsInviteModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors">
               <X className="w-4 h-4" />

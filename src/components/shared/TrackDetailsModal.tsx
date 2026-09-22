@@ -125,11 +125,11 @@ export default function TrackDetailsModal() {
   return (
     <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 pt-[100px] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <div 
-        className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isOpen ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} 
+        className={`absolute inset-0 bg-black/60 motion-overlay ${isOpen ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`}
         onClick={() => setSelectedTrackForDetails(null)} 
       />
       <div 
-        className={`relative w-full max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl transition-all duration-500 ease-out ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
+        className={`relative w-full max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl motion-surface ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
         onClick={() => setExpandedSection(null)}
       >
         
@@ -149,7 +149,7 @@ export default function TrackDetailsModal() {
               
               {/* Animated Play Button / Waveform Slider */}
               <div
-                className={`absolute bottom-4 left-4 h-14 rounded-full flex items-center shadow-xl z-10 transition-all duration-500 overflow-hidden ${
+                className={`absolute bottom-4 left-4 h-14 rounded-full flex items-center shadow-xl z-10 motion-drawer overflow-hidden ${
                   currentTrack?.id === displayTrack.id && isPlaying
                     ? 'w-[calc(100%-2rem)] bg-[#1a1a1a] text-white pr-5'
                     : 'w-14 bg-white text-black hover:scale-105 active:scale-95 cursor-pointer'

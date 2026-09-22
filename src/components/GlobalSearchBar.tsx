@@ -115,13 +115,13 @@ export default function GlobalSearchBar() {
 
         {/* Browse specific actions injects here */}
         {!isAtBottom && (
-          <div id="searchbar-right-portal" className="flex items-center max-md:w-full max-md:justify-between max-md:pt-4 max-md:border-t max-md:border-black/5 empty:hidden gap-4 shrink-0 z-10 relative animate-in fade-in duration-500 delay-200 fill-mode-both" />
+          <div id="searchbar-right-portal" className="flex items-center max-md:w-full max-md:justify-between max-md:pt-4 max-md:border-t max-md:border-black/5 empty:hidden gap-4 shrink-0 z-10 relative animate-in fade-in duration-200 fill-mode-both" />
         )}
       </div>
 
       {/* Browse specific filters injects here */}
       {!isAtBottom && (
-        <div id="searchbar-bottom-portal" className="w-full animate-in fade-in duration-500 delay-300 fill-mode-both" />
+        <div id="searchbar-bottom-portal" className="w-full animate-in fade-in duration-200 delay-75 fill-mode-both" />
       )}
     </div>
   );

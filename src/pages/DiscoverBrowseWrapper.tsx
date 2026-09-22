@@ -31,7 +31,7 @@ export default function DiscoverBrowseWrapper() {
       
       {/* Foreground Layer: Search Bar + Browse */}
       <div 
-        className={`absolute inset-x-0 bottom-0 z-10 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] no-radius !rounded-none`}
+        className={`absolute inset-x-0 bottom-0 z-10 flex flex-col motion-page no-radius !rounded-none`}
         style={{ 
           height: `calc(100vh - ${navHeight}px)`,
           transform: isBrowse ? 'translateY(0)' : `translateY(calc(100% - ${searchBarHeight}px))`

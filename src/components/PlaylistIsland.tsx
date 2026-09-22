@@ -264,7 +264,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       {/* Backdrop */}
       {!inline && (
         <div 
-          className={`fixed inset-0 bg-black/40 z-40 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} 
+          className={`fixed inset-0 bg-black/40 z-40 motion-overlay ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`}
           onClick={handleClose} 
         />
       )}
@@ -272,8 +272,8 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       {/* Island Panel */}
       <div className={
         inline 
-        ? `w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6 transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
-        : `fixed max-md:inset-x-0 md:inset-x-6 max-md:top-16 md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10 transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
+        ? `w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6 motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
+        : `fixed max-md:inset-x-0 md:inset-x-6 max-md:top-16 md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10 motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
       }>
         <div className="px-4 md:px-8 py-6 md:py-8 border-b-2 border-black/5 flex max-md:flex-col max-md:items-start max-md:gap-4 md:items-center justify-between shrink-0 bg-[#fafafa] relative">
           <div className="min-h-[50px] flex flex-col justify-center">
@@ -311,7 +311,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
               </button>
               
               {isSortDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg z-50 overflow-hidden py-1 motion-popover">
                   {[
                     { id: 'relevance', label: 'Relevance' },
                     { id: 'newest', label: 'Newest' },

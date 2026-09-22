@@ -54,10 +54,10 @@ export default function ContactModal() {
 
   return (
     <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isAnimating ? '' : 'pointer-events-none'}`}>
-      <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setGeneralContactModalOpen(false)} />
+      <div className={`absolute inset-0 bg-black/60 motion-overlay ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setGeneralContactModalOpen(false)} />
 
       {/* Modal Content */}
-      <div className={`relative z-10 w-full max-w-2xl bg-[#fafafa] shadow-2xl overflow-hidden rounded-[32px] border border-black/5 transition-all duration-500 ease-out ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-2xl bg-[#fafafa] shadow-2xl overflow-hidden rounded-[32px] border border-black/5 motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
         <button 
           onClick={() => setGeneralContactModalOpen(false)} 
           className="absolute top-6 right-6 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors z-20"

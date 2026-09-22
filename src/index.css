@@ -300,3 +300,93 @@
 .animate-scale-in {
   animation: scale-in 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* --------------------------------------------------------------------------
+   Product motion system
+
+   One timing language for every transient layer in the application:
+   - overlays acknowledge an action immediately;
+   - dialogs arrive with a small, deliberate lift;
+   - drawers and page-sized islands retain enough travel to communicate depth;
+   - popovers and disclosures are fastest, so they never feel like navigation.
+   -------------------------------------------------------------------------- */
+:root {
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-overlay-duration: 160ms;
+  --motion-popover-duration: 160ms;
+  --motion-disclosure-duration: 180ms;
+  --motion-surface-duration: 220ms;
+  --motion-drawer-duration: 240ms;
+  --motion-page-duration: 260ms;
+}
+
+/* Full-screen dimmer/backdrop. Keep this separate from the content so the
+   interface responds instantly while the surface retains a gentle lift. */
+.motion-overlay {
+  transition-property: opacity, backdrop-filter, background-color !important;
+  transition-duration: var(--motion-overlay-duration) !important;
+  transition-timing-function: var(--motion-ease-standard) !important;
+}
+
+/* Dialogs, floating islands and full-screen sheets. */
+.motion-surface {
+  transition-property: transform, opacity !important;
+  transition-duration: var(--motion-surface-duration) !important;
+  transition-timing-function: var(--motion-ease-out) !important;
+  will-change: transform, opacity;
+}
+
+/* Side panels and persistent player surfaces travel a little further. */
+.motion-drawer {
+  transition-property: transform, width, height, opacity !important;
+  transition-duration: var(--motion-drawer-duration) !important;
+  transition-timing-function: var(--motion-ease-out) !important;
+  will-change: transform, width, height, opacity;
+}
+
+/* Contextual menus only need a short acknowledgement. */
+.motion-popover {
+  animation: motion-popover-in var(--motion-popover-duration) var(--motion-ease-out) both;
+  transform-origin: top center;
+}
+
+.motion-disclosure {
+  transition-duration: var(--motion-disclosure-duration) !important;
+  transition-timing-function: var(--motion-ease-out) !important;
+}
+
+.motion-page {
+  transition-property: transform, opacity !important;
+  transition-duration: var(--motion-page-duration) !important;
+  transition-timing-function: var(--motion-ease-out) !important;
+}
+
+@keyframes motion-popover-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Compatibility layer for existing modal shells. It makes every remaining
+   legacy 500ms overlay/surface share the new motion until it is migrated to
+   one of the semantic classes above. */
+.fixed.inset-0 > .absolute.inset-0.transition-all.duration-500 {
+  transition-property: opacity, backdrop-filter, background-color !important;
+  transition-duration: var(--motion-overlay-duration) !important;
+  transition-timing-function: var(--motion-ease-standard) !important;
+}
+
+.fixed.inset-0 > .relative.transition-all.duration-500 {
+  transition-property: transform, opacity !important;
+  transition-duration: var(--motion-surface-duration) !important;
+  transition-timing-function: var(--motion-ease-out) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}

@@ -62,7 +62,7 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white border border-black/10 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-80 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white border border-black/10 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-80 motion-popover">
           {searchable && (
             <div className="p-2 border-b border-black/5 shrink-0">
               <div className="relative">

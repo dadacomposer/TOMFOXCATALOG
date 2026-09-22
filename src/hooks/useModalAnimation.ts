@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
-export function useModalAnimation(shouldBeOpen: boolean, closeDelay: number = 500) {
+// The delay must match the shared .motion-surface duration. Keeping it here
+// prevents a modal from feeling slow after its visual transition has finished.
+export function useModalAnimation(shouldBeOpen: boolean, closeDelay: number = 220) {
   const [isMounted, setIsMounted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 

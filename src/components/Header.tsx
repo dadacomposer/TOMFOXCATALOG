@@ -138,7 +138,7 @@ export default function Header() {
       
       <nav ref={navRef} className="hidden md:flex items-center gap-10 font-bold uppercase text-xs tracking-widest relative z-10">
         <div 
-          className={`absolute h-8 top-1/2 -translate-y-1/2 transition-all duration-500 ease-out pointer-events-none ${isHeaderDark ? 'bg-white/20' : 'bg-black/5'}`} 
+          className={`absolute h-8 top-1/2 -translate-y-1/2 transition-all motion-disclosure pointer-events-none ${isHeaderDark ? 'bg-white/20' : 'bg-black/5'}`}
           style={{ 
             left: `${activeBoxStyle.left - 12}px`, 
             width: `${activeBoxStyle.width + 24}px`, 

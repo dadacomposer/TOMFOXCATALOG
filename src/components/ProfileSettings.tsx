@@ -363,9 +363,9 @@ export default function ProfileSettings() {
 
       {/* Disconnect Google Modal */}
       {isDisconnectModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 animate-in fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 animate-in fade-in duration-200 motion-overlay">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsDisconnectModalOpen(false)} />
-          <div className="bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border border-black/5">
+          <div className="bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 motion-surface border border-black/5">
             <div className="p-8 flex flex-col items-center text-center">
               <button onClick={() => setIsDisconnectModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10">
                 <X className="w-4 h-4" />
@@ -409,9 +409,9 @@ export default function ProfileSettings() {
 
       {/* Delete Account Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 animate-in fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 animate-in fade-in duration-200 motion-overlay">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsDeleteModalOpen(false)} />
-          <div className="bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] border border-red-500/20">
+          <div className="bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 motion-surface border border-red-500/20">
             <div className="p-8 flex flex-col items-center text-center">
               <button onClick={() => setIsDeleteModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10">
                 <X className="w-4 h-4" />
