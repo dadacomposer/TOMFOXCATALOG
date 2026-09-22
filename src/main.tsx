@@ -10,6 +10,15 @@ import '@fontsource/jetbrains-mono/700.css'
 import './index.css'
 import App from './App.tsx'
 
+// Keep non-React diagnostics available to developers without replacing the
+// product UI with technical details.
+window.addEventListener('error', (event) => {
+  console.error('Uncaught window error', event.error || event.message)
+})
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection', event.reason)
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

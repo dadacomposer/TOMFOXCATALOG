@@ -10,6 +10,9 @@ import CheckoutSuccess from './pages/CheckoutSuccess';
 import CheckoutCancel from './pages/CheckoutCancel';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import CookiePolicy from './pages/CookiePolicy';
+import Pricing from './pages/Pricing';
+import Enterprise from './pages/Enterprise';
 import Admin from './pages/Admin';
 import AdminTracks from './components/admin/AdminTracks';
 import AdminUsers from './components/admin/AdminUsers';
@@ -48,6 +51,7 @@ import MyMusic from './pages/MyMusic';
 import TrackDetailsModal from './components/shared/TrackDetailsModal';
 import OnboardingModal from './components/OnboardingModal';
 import InviteManager from './components/InviteManager';
+import Seo from './components/Seo';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -76,6 +80,7 @@ function AppLayout() {
   return (
     <div className={`w-full min-h-screen bg-[#fafafa] text-black font-sans selection:bg-black selection:text-white flex flex-col no-radius !rounded-none ${currentTrack && !location.pathname.startsWith('/studio') && !location.pathname.startsWith('/admin') && location.pathname !== '/' && !location.pathname.startsWith('/browse') ? 'pb-[90px]' : ''}`}>
       <ScrollToTop />
+      <Seo />
       {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <Header />}
       
       <div className="flex-grow flex flex-col min-h-0">
@@ -85,11 +90,15 @@ function AppLayout() {
             <Route path="/browse" element={<DiscoverBrowseWrapper />} />
             <Route path="/my-music" element={<MyMusic />} />
             <Route path="/playlists" element={<Playlists />} />
+            <Route path="/playlists/:playlistId" element={<Playlists />} />
             <Route path="/checkout-resume" element={<CheckoutResume />} />
             <Route path="/checkout-success" element={<CheckoutSuccess />} />
             <Route path="/checkout-cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/enterprise" element={<Enterprise />} />
             <Route path="/admin" element={<Admin />}>
               <Route index element={<Navigate to="tracks" replace />} />
               <Route path="tracks" element={<AdminTracks />} />

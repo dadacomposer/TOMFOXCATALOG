@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchPlaylists } from '../lib/supabase';
 import { ChevronRight, Star, Search } from 'lucide-react';
 import PlaylistArtwork from '../components/PlaylistArtwork';
@@ -23,8 +23,9 @@ type Playlist = {
 
 export default function Playlists() {
   const navigate = useNavigate();
+  const { playlistId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const playlistUrlId = searchParams.get('playlist');
+  const playlistUrlId = playlistId || searchParams.get('playlist');
   const { settings } = useSettings();
   
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -120,8 +121,12 @@ export default function Playlists() {
       <PlaylistIsland 
         id={playlistUrlId || ''}
         onClose={() => {
-          searchParams.delete('playlist');
-          setSearchParams(searchParams);
+          if (playlistId) {
+            navigate('/playlists');
+          } else {
+            searchParams.delete('playlist');
+            setSearchParams(searchParams);
+          }
         }}
         progress={progress}
         handleSeek={handleSeek}
@@ -213,7 +218,7 @@ export default function Playlists() {
               <div 
                 key={pl.id} 
                 className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all duration-300 border border-transparent hover:border-black/5 relative"
-                onClick={() => setSearchParams({ playlist: pl.id })}
+                onClick={() => navigate(`/playlists/${pl.id}`)}
               >
                 
                 <div className={`relative w-full mb-6 ${settings.public_artwork_frames_enabled ? 'aspect-[1.15]' : 'aspect-square'}`}>
