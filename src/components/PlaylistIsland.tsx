@@ -58,23 +58,15 @@ interface PlaylistIslandProps {
 export default function PlaylistIsland(props: PlaylistIslandProps) {
   const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount, isScrollableContainer, preloadedTitle, preloadedTracks } = props;
   const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, selectedTrackForDetails, setSelectedTrackForDetails } = usePlayer();
-  const [tracks, setTracks] = useState<Track[]>(preloadedTracks || []);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(!preloadedTracks);
-  
-  const [internalId, setInternalId] = useState(id);
+  const [loading, setLoading] = useState(false);
   const { isMounted, isAnimating } = useModalAnimation(!!id);
-
-  useEffect(() => {
-    if (id) {
-      setInternalId(id);
-    }
-  }, [id]);
 
   const handleClose = () => {
     if (onClose) onClose();
   };
-  const [playlistTitle, setPlaylistTitle] = useState(preloadedTitle || 'Playlist');
+  const [playlistTitle, setPlaylistTitle] = useState('Playlist');
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [expandedTags, setExpandedTags] = useState<{trackId: string, tags: string[]} | null>(null);
@@ -118,14 +110,31 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   }, [favoriteTrackIds, favoritesPlaylist?.id, id, tracks]);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
-      if (!internalId) return;
+      // The island remains mounted while closing so its animation can finish.
+      // Clear all playlist-specific state instead of letting the last opened
+      // playlist leak into the next one.
+      if (!id) {
+        setTracks([]);
+        setPlaylistTitle('Playlist');
+        setLoading(false);
+        return;
+      }
+
+      setTracks(preloadedTracks || []);
+      setPlaylistTitle(preloadedTitle || 'Playlist');
+      setLoading(true);
 
       // If we already have preloaded tracks and relevance sort, don't fetch initial chunk
       if (preloadedTracks && preloadedTitle && sortBy === 'relevance') {
-        const tIds = await fetchPlaylistTrackIds(internalId);
+        setLoading(false);
+        const tIds = await fetchPlaylistTrackIds(id);
+        if (cancelled) return;
         if (tIds.length > 15) {
           const restChunk = await fetchTracksByIds(tIds.slice(15));
+          if (cancelled) return;
           setTracks(prev => {
             const newTracks = (restChunk as Track[]).filter(rt => !prev.find(p => p.id === rt.id));
             return [...prev, ...newTracks];
@@ -134,11 +143,11 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
         return;
       }
 
-      setLoading(true);
       const [pDataRes, tIds] = await Promise.all([
-        supabase.from('playlists').select('*').eq('id', internalId).single(),
-        fetchPlaylistTrackIds(internalId)
+        supabase.from('playlists').select('*').eq('id', id).single(),
+        fetchPlaylistTrackIds(id)
       ]);
+      if (cancelled) return;
       
       if (pDataRes.data) {
         setPlaylistTitle(pDataRes.data.title === 'Favourites' ? 'Favorites' : pDataRes.data.title);
@@ -148,14 +157,16 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
         if (sortBy === 'relevance') {
           // Fast initial load of first 15 tracks
           const firstChunk = await fetchTracksByIds(tIds.slice(0, 15));
+          if (cancelled) return;
           setTracks(firstChunk as Track[]);
           setLoading(false);
           
           // Background load of the rest
           if (tIds.length > 15) {
             fetchTracksByIds(tIds.slice(15)).then(restChunk => {
+              if (cancelled) return;
               setTracks(prev => {
-                // Prevent duplicate appending if component re-rendered
+                // Prevent duplicate appending if component re-rendered.
                 const newTracks = (restChunk as Track[]).filter(rt => !prev.find(p => p.id === rt.id));
                 return [...prev, ...newTracks];
               });
@@ -164,6 +175,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
         } else {
           // Fetch all for sorting
           const allTracksData = await fetchTracksByIds(tIds);
+          if (cancelled) return;
           let allTracks = allTracksData as Track[];
           // Client-side sorting logic...
           if (sortBy === 'a-z') {
@@ -184,8 +196,9 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
         setLoading(false);
       }
     }
-    load();
-  }, [internalId, sortBy]);
+    void load();
+    return () => { cancelled = true; };
+  }, [id, sortBy, preloadedTitle, preloadedTracks]);
 
   const handlePlayPauseIsland = (track: Track) => {
     if (currentTrack?.id === track.id) {
@@ -441,7 +454,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                         className="flex items-center justify-center p-2 hover:bg-red-500/10 text-red-500 rounded transition-colors"
                         onClick={async (e) => {
                           e.stopPropagation();
-                          const ok = await removeTrackFromPlaylist(internalId, track.id);
+                          const ok = await removeTrackFromPlaylist(id, track.id);
                           if (ok) {
                             setTracks(prev => prev.filter(t => t.id !== track.id));
                           }
