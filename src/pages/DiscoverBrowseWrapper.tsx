@@ -31,9 +31,14 @@ export default function DiscoverBrowseWrapper() {
       
       {/* Foreground Layer: Search Bar + Browse */}
       <div 
-        className={`absolute inset-x-0 bottom-0 z-10 flex flex-col motion-page no-radius !rounded-none`}
+        className={`discover-browse-panel absolute inset-x-0 z-10 flex flex-col motion-page no-radius !rounded-none`}
         style={{ 
-          height: `calc(100vh - ${navHeight}px)`,
+          // On Discover the search bar is the visible edge of this panel. Keep
+          // that edge directly above the persistent player instead of allowing
+          // the player to cover it. Browse keeps its existing full-height panel
+          // and transition behaviour.
+          bottom: isDiscover ? `${playerHeight}px` : 0,
+          height: `calc(100dvh - ${navHeight + (isDiscover ? playerHeight : 0)}px)`,
           transform: isBrowse ? 'translateY(0)' : `translateY(calc(100% - ${searchBarHeight}px))`
         }}
       >
