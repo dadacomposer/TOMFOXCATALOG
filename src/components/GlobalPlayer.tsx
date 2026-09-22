@@ -682,7 +682,7 @@ export default function GlobalPlayer() {
       {expandedTags && typeof document !== 'undefined' && createPortal(
         <div
           ref={expandedTagsRef}
-          className="fixed z-[70] w-64 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2"
+          className="fixed z-[100] w-64 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2"
           style={{ top: expandedTags.anchor.top, right: expandedTags.anchor.right }}
           onClick={event => event.stopPropagation()}
         >
