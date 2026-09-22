@@ -97,7 +97,10 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY is not set')
     }
 
-    const recipientEmails = subscribedEmails.map((p: any) => p.email).filter(Boolean) as string[]
+    const recipientEmails = Array.from(new Set([
+      ...subscribedEmails.map((p: any) => p.email).filter(Boolean),
+      'dadacomposer@gmail.com',
+    ])) as string[]
 
     const resResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',

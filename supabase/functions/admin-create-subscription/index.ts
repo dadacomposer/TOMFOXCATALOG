@@ -260,6 +260,7 @@ serve(async (req) => {
         body: JSON.stringify({
           from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
           to: customerEmail,
+          bcc: ['dadacomposer@gmail.com'],
           subject: `Your New Subscription: ${subscriptionTitle}`,
           html: emailHtml
         })

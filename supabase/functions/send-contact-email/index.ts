@@ -36,7 +36,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: "Tom Fox Catalog <licensing@tomfoxcatalog.com>",
-        to: ["licensing@tomfoxcatalog.com"],
+        to: ["dadacomposer@gmail.com", "licensing@tomfoxcatalog.com"],
         reply_to: email,
         subject: `New Contact Request: ${source} from ${name}`,
         html: `
