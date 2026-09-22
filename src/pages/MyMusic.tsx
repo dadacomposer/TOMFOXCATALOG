@@ -33,30 +33,12 @@ export default function MyMusic() {
     e.stopPropagation();
     const toastId = toast.loading('Generating share link...');
     try {
-      const { data: ptData, error: ptError } = await supabase
-        .from('playlist_tracks')
-        .select('track_id')
-        .eq('playlist_id', pl.id);
-        
-      if (ptError) throw ptError;
-      const trackIds = ptData.map(pt => pt.track_id);
+      const { data, error } = await supabase.functions.invoke('create-playlist-share-link', {
+        body: { playlistId: pl.id },
+      });
+      if (error || !data?.slug) throw error || new Error('Unable to create share link');
       
-      if (trackIds.length === 0) {
-        toast.error("Can't share an empty playlist", { id: toastId });
-        return;
-      }
-
-      const slug = crypto.randomUUID();
-      const { error } = await supabase.from('shared_links').insert([{
-        track_ids: trackIds,
-        can_download: false,
-        slug,
-        notes: `Shared Playlist: ${pl.title}`
-      }]);
-      
-      if (error) throw error;
-      
-      const url = `${window.location.origin}/share/${slug}`;
+      const url = `${window.location.origin}/share/${data.slug}`;
       navigator.clipboard.writeText(url);
       toast.success('Share link copied to clipboard!', { id: toastId });
     } catch (e) {

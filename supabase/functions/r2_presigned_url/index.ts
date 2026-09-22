@@ -30,6 +30,10 @@ serve(async (req) => {
 
     const { action = 'upload', fileName, contentType, filePath } = await req.json();
 
+    const adminDb = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '');
+    const { data: profile } = await adminDb.from('profiles').select('is_admin').eq('id', user.id).single();
+    const isAdmin = profile?.is_admin === true;
+
     const r2AccountId = Deno.env.get('R2_ACCOUNT_ID');
     const r2AccessKey = Deno.env.get('R2_ACCESS_KEY_ID');
     const r2SecretKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
@@ -58,6 +62,21 @@ serve(async (req) => {
 
     if (!key) {
       throw new Error('Missing filePath or fileName');
+    }
+
+    // Project keys are owned by their project owner, invited collaborators, or admins.
+    // All catalog paths require an admin; generic avatar/version uploads remain scoped
+    // to the authenticated caller and are generated server-side above.
+    const projectMatch = key.match(/^projects\/([0-9a-f-]{36})\//i);
+    if (projectMatch) {
+      const projectId = projectMatch[1];
+      const [{ data: project }, { data: collaborator }] = await Promise.all([
+        adminDb.from('tf_studio_projects').select('user_id').eq('id', projectId).single(),
+        adminDb.from('tf_studio_collaborators').select('id').eq('project_id', projectId).eq('email', user.email || '').maybeSingle(),
+      ]);
+      if (!project || (!isAdmin && project.user_id !== user.id && !collaborator)) throw new Error('Unauthorized');
+    } else if (filePath && !isAdmin) {
+      throw new Error('Unauthorized');
     }
 
     if (action === 'delete') {

@@ -1,0 +1,14 @@
+REVOKE EXECUTE ON FUNCTION public.get_subscribed_emails() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_subscribed_emails() TO service_role;
+REVOKE EXECUTE ON FUNCTION public.set_tomfox_password(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.verify_admin_password(text, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_track_format(text, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_track_tags_rpc(uuid, text, text[], text[], text[], text[], jsonb, text, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.create_new_workspace(text, text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_new_workspace(text, text, text, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.get_my_workspace_invites() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_my_workspace_invites() TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.accept_workspace_invite(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.accept_workspace_invite(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.decline_workspace_invite(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.decline_workspace_invite(uuid) TO authenticated;

@@ -61,36 +61,18 @@ export default function SharedPlayer() {
       try {
         setIsLoading(true);
         setError(null);
-        // Fetch shared link
-        const { data: linkResult, error: linkError } = await supabase
-          .from('shared_links')
-          .select('*')
-          .eq('slug', slug)
-          .single();
-
-        if (linkError) throw linkError;
-        if (!linkResult) throw new Error('Link not found');
-        if (!linkResult.is_active) throw new Error('Link deactivated');
+        const { data, error: linkError } = await supabase.functions.invoke('resolve-shared-link', { body: { slug } });
+        if (linkError || !data?.link) throw linkError || new Error('Link not found');
+        const linkResult = data.link;
 
         if (cancelled) return;
         setLinkData(linkResult);
         setCanDownload(linkResult.can_download);
 
-        // Fetch tracks
-        const { data: tracksData, error: tracksError } = await supabase
-          .from('tracks')
-          .select('*')
-          .in('id', linkResult.track_ids);
-
-        if (tracksError) throw tracksError;
+        const tracksData = data.tracks || [];
         
         // Reorder tracks to match original selection order
-        if (tracksData && Array.isArray(linkResult.track_ids)) {
-          const ordered = linkResult.track_ids.map((id: string) => tracksData.find(t => t.id === id)).filter(Boolean);
-          if (!cancelled) setTracks(ordered);
-        } else {
-          if (!cancelled) setTracks(tracksData || []);
-        }
+        if (!cancelled) setTracks(tracksData);
       } catch (err) {
         console.error('Error fetching shared link:', err);
         if (!cancelled) setError('This link is invalid or has expired.');
