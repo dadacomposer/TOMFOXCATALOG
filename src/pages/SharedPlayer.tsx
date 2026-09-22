@@ -55,9 +55,12 @@ export default function SharedPlayer() {
   const { openDownloadModal } = useDownload();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchSharedLink() {
       try {
         setIsLoading(true);
+        setError(null);
         // Fetch shared link
         const { data: linkResult, error: linkError } = await supabase
           .from('shared_links')
@@ -69,6 +72,7 @@ export default function SharedPlayer() {
         if (!linkResult) throw new Error('Link not found');
         if (!linkResult.is_active) throw new Error('Link deactivated');
 
+        if (cancelled) return;
         setLinkData(linkResult);
         setCanDownload(linkResult.can_download);
 
@@ -83,19 +87,26 @@ export default function SharedPlayer() {
         // Reorder tracks to match original selection order
         if (tracksData && Array.isArray(linkResult.track_ids)) {
           const ordered = linkResult.track_ids.map((id: string) => tracksData.find(t => t.id === id)).filter(Boolean);
-          setTracks(ordered);
+          if (!cancelled) setTracks(ordered);
         } else {
-          setTracks(tracksData || []);
+          if (!cancelled) setTracks(tracksData || []);
         }
       } catch (err) {
         console.error('Error fetching shared link:', err);
-        setError('This link is invalid or has expired.');
+        if (!cancelled) setError('This link is invalid or has expired.');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
-    if (slug) fetchSharedLink();
+    if (slug) {
+      void fetchSharedLink();
+    } else {
+      setError('This link is invalid or has expired.');
+      setIsLoading(false);
+    }
+
+    return () => { cancelled = true; };
   }, [slug]);
 
   const handlePlayPause = (track: any) => {

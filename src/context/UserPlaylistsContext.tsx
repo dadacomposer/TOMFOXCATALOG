@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-hot-toast';
@@ -32,8 +32,11 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
   const [favoritesPlaylist, setFavoritesPlaylist] = useState<UserPlaylist | null>(null);
   const [favoriteTrackIds, setFavoriteTrackIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const playlistRequestRef = useRef(0);
 
   const fetchUserPlaylists = async () => {
+    const requestId = ++playlistRequestRef.current;
+
     if (!user || !activeWorkspace) {
       setPlaylists([]);
       setFavoritesPlaylist(null);
@@ -42,6 +45,7 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
       return;
     }
 
+    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('playlists')
@@ -51,6 +55,7 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      if (playlistRequestRef.current !== requestId) return;
 
       const userPls = data as UserPlaylist[];
       setPlaylists(userPls);
@@ -64,7 +69,9 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
           .select('track_id')
           .eq('playlist_id', fav.id);
           
-        if (!trackError && trackData) {
+        if (trackError) throw trackError;
+        if (playlistRequestRef.current !== requestId) return;
+        if (trackData) {
           setFavoriteTrackIds(new Set(trackData.map(t => t.track_id)));
         }
       } else {
@@ -73,17 +80,17 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
     } catch (e) {
       console.error('Error fetching user playlists:', e);
     } finally {
-      setIsLoading(false);
+      if (playlistRequestRef.current === requestId) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchUserPlaylists();
-  }, [user, activeWorkspace]);
+  }, [user?.id, activeWorkspace?.id]);
 
   const ensureFavoritesPlaylist = async (): Promise<UserPlaylist | null> => {
     if (favoritesPlaylist) return favoritesPlaylist;
-    if (!user) return null;
+    if (!user || !activeWorkspace) return null;
 
     try {
       const { data, error } = await supabase

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, fetchProfile, getUserWorkspaces } from '../lib/supabase';
 
@@ -106,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [studioProjects, setStudioProjects] = useState<any[]>([]);
   const userId = user?.id;
+  const userDataRequestRef = useRef(0);
 
   const applyWorkspaces = (ws: any[]) => {
     setWorkspaces(ws);
@@ -171,12 +172,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    let authEventVersion = 0;
 
-    // Keep this callback synchronous. Calling Supabase APIs from inside
-    // onAuthStateChange can deadlock the client while a session is refreshing.
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    const applySessionState = (nextSession: Session | null, event?: string) => {
       if (!mounted) return;
 
       if (event === 'PASSWORD_RECOVERY') {
@@ -193,6 +191,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStudioProjects([]);
         setLoading(false);
       }
+    };
+
+    // Keep this callback synchronous. Calling Supabase APIs from inside
+    // onAuthStateChange can deadlock the client while a session is refreshing.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      authEventVersion += 1;
+      applySessionState(nextSession, event);
+    });
+
+    // Do not rely solely on the subscription's INITIAL_SESSION event. Reading
+    // the session here is outside the auth callback, so it cannot deadlock and
+    // it also makes a first render deterministic if the event is delayed.
+    const initialVersion = authEventVersion;
+    void supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      if (mounted && authEventVersion === initialVersion) {
+        applySessionState(initialSession);
+      }
+    }).catch(error => {
+      console.error('Error restoring auth session', error);
+      if (mounted && authEventVersion === initialVersion) setLoading(false);
     });
 
     return () => {
@@ -203,6 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let cancelled = false;
+    const requestId = ++userDataRequestRef.current;
 
     if (!userId) {
       setLoading(false);
@@ -213,11 +234,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       try {
         const data = await loadUserData(userId);
-        if (!cancelled) {
+        if (!cancelled && userDataRequestRef.current === requestId) {
           applyUserData(data);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && userDataRequestRef.current === requestId) {
           setLoading(false);
         }
       }
@@ -236,8 +257,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     if (user) {
+      const requestId = ++userDataRequestRef.current;
       const data = await loadUserData(user.id);
-      applyUserData(data);
+      if (userDataRequestRef.current === requestId) applyUserData(data);
     }
   };
 

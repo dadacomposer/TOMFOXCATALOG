@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { fetchPlaylistTrackIds, fetchTracksByIds, fetchTracks, supabase } from '../lib/supabase';
 import { Play, Pause, Download, ShoppingBag, X, TrendingUp } from 'lucide-react';
 import WaveformView from './WaveformView';
@@ -55,6 +56,13 @@ interface PlaylistIslandProps {
   preloadedTracks?: Track[];
 }
 
+type PlaylistTag = { category: string; val: string };
+type ExpandedTags = {
+  trackId: string;
+  tags: PlaylistTag[];
+  anchor: { top: number; right: number };
+};
+
 export default function PlaylistIsland(props: PlaylistIslandProps) {
   const { id, onClose, progress, handleSeek, formatTime, trendingTrackIds, isOwner, inline, initialTrackCount, isScrollableContainer, preloadedTitle, preloadedTracks } = props;
   const { playTrack, currentTrack, isPlaying, togglePlay, isPreviewMode, setIsPreviewMode, selectedTrackForDetails, setSelectedTrackForDetails } = usePlayer();
@@ -62,6 +70,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const { isMounted, isAnimating } = useModalAnimation(!!id);
+  const navigate = useNavigate();
 
   const handleClose = () => {
     if (onClose) onClose();
@@ -69,8 +78,9 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const [playlistTitle, setPlaylistTitle] = useState('Playlist');
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
-  const [expandedTags, setExpandedTags] = useState<{trackId: string, tags: string[]} | null>(null);
+  const [expandedTags, setExpandedTags] = useState<ExpandedTags | null>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const expandedTagsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -81,6 +91,32 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (expandedTagsRef.current && !expandedTagsRef.current.contains(event.target as Node)) {
+        setExpandedTags(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!expandedTags) return;
+
+    // The menu is fixed so it can sit over the track list. Close it when that
+    // list scrolls instead of placing a fullscreen click-catcher over it.
+    const closeOnScroll = () => setExpandedTags(null);
+    document.addEventListener('scroll', closeOnScroll, true);
+    return () => document.removeEventListener('scroll', closeOnScroll, true);
+  }, [expandedTags]);
+
+  const handleTagClick = (tag: PlaylistTag, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setExpandedTags(null);
+    navigate(`/browse?tag=${encodeURIComponent(tag.val)}`);
+  };
   const { openDownloadModal } = useDownload();
   const { removeTrackFromPlaylist, favoritesPlaylist, favoriteTrackIds } = useUserPlaylists();
   const { openLicenseModal } = useLicense();
@@ -88,31 +124,36 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const { profile } = useAuth();
 
   useEffect(() => {
-    if (favoritesPlaylist?.id === id) {
-      const removed = tracks.filter(t => !favoriteTrackIds.has(t.id));
-      if (removed.length > 0) {
-        setRemovingIds(prev => {
-          const next = new Set(prev);
-          removed.forEach(t => next.add(t.id));
-          return next;
-        });
-        
-        setTimeout(() => {
-          setTracks(prev => prev.filter(t => favoriteTrackIds.has(t.id)));
-          setRemovingIds(prev => {
-            const next = new Set(prev);
-            removed.forEach(t => next.delete(t.id));
-            return next;
-          });
-        }, 300);
-      }
-    }
+    if (favoritesPlaylist?.id !== id) return;
+
+    const removed = tracks.filter(t => !favoriteTrackIds.has(t.id));
+    if (removed.length === 0) return;
+
+    setRemovingIds(prev => {
+      const next = new Set(prev);
+      removed.forEach(t => next.add(t.id));
+      return next;
+    });
+
+    // The island can switch to another playlist before the exit animation ends.
+    // Clear this timer on every switch so it cannot filter a later playlist.
+    const timeoutId = window.setTimeout(() => {
+      setTracks(prev => prev.filter(t => favoriteTrackIds.has(t.id)));
+      setRemovingIds(prev => {
+        const next = new Set(prev);
+        removed.forEach(t => next.delete(t.id));
+        return next;
+      });
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
   }, [favoriteTrackIds, favoritesPlaylist?.id, id, tracks]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
+      try {
       // The island remains mounted while closing so its animation can finish.
       // Clear all playlist-specific state instead of letting the last opened
       // playlist leak into the next one.
@@ -194,6 +235,16 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
         }
       } else {
         setLoading(false);
+      }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error loading playlist:', error);
+          setTracks([]);
+        }
+      } finally {
+        // A rejected request must never leave a newly opened playlist showing
+        // its loading placeholders indefinitely.
+        if (!cancelled) setLoading(false);
       }
     }
     void load();
@@ -375,59 +426,62 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                   <div className="hidden md:flex items-center gap-2 shrink-0 w-[24%] relative">
                     {(() => {
                       const human = parseTags(track.human_tags);
-                      const subgenres = parseTags(track.subgenre);
+                      const subgenres = parseTags(track.arrangement);
                       const moods = parseTags(track.moods);
-                      const scenarios = parseTags(track.scenarios);
-                      const movement = parseTags(track.movement);
-                      
-                      const all = [...human, ...subgenres, ...moods, ...scenarios, ...movement];
-                      const unique = Array.from(new Set(all));
-                      const tags = unique.slice(0, 4);
-                      const remainingTags = unique.slice(4);
+                      const scenarios = parseTags(track.music_for);
+                      const tagMap: PlaylistTag[] = [
+                        ...human.map(val => ({ category: 'human_tags', val })),
+                        ...subgenres.map(val => ({ category: 'subgenre', val })),
+                        ...moods.map(val => ({ category: 'moods', val })),
+                        ...scenarios.map(val => ({ category: 'scenarios', val }))
+                      ];
+                      const uniqueTags: PlaylistTag[] = [];
+                      const seen = new Set<string>();
+                      for (const tag of tagMap) {
+                        if (!seen.has(tag.val)) {
+                          seen.add(tag.val);
+                          uniqueTags.push(tag);
+                        }
+                      }
+                      const tags = uniqueTags.slice(0, 6);
+                      const remainingTags = uniqueTags.slice(6);
                       
                       if (tags.length === 0) return <span className="text-[10px] text-black/30 font-bold uppercase tracking-widest">Tagging...</span>;
 
                       return (
-                        <div className="flex items-center gap-2">
-                          {tags.map((t, idx) => (
-                            <span 
-                              key={idx} 
-                              onClick={e => e.stopPropagation()} 
-                              className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
-                            >
-                              {t}
-                            </span>
-                          ))}
+                        <>
+                          {/* Only the tag run fades toward the waveform. The +N control is
+                              deliberately outside that mask, as it is on Browse. */}
+                          <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap flex-1" style={{ maskImage: 'linear-gradient(to right, black 80%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, black 80%, transparent 100%)' }}>
+                            {tags.map((tag, idx) => (
+                              <span
+                                key={idx}
+                                onClick={event => handleTagClick(tag, event)}
+                                className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
+                              >
+                                {tag.val}
+                              </span>
+                            ))}
+                          </div>
                           {remainingTags.length > 0 && (
-                            <div className="relative">
+                            <div className="relative shrink-0">
                               <span 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setExpandedTags(expandedTags?.trackId === track.id ? null : { trackId: track.id, tags: remainingTags });
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setExpandedTags(expandedTags?.trackId === track.id ? null : {
+                                    trackId: track.id,
+                                    tags: remainingTags,
+                                    anchor: { top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right) }
+                                  });
                                 }}
                                 className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
                               >
                                 +{remainingTags.length}
                               </span>
-                              {expandedTags?.trackId === track.id && (
-                                <>
-                                  <div className="fixed inset-0 z-[20]" onClick={(e) => { e.stopPropagation(); setExpandedTags(null); }} />
-                                  <div className="absolute top-full left-0 mt-2 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
-                                    {expandedTags?.tags.map((t, idx) => (
-                                      <span 
-                                        key={idx} 
-                                        onClick={e => e.stopPropagation()}
-                                        className="px-1.5 py-0.5 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
-                                      >
-                                        {t}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
                             </div>
                           )}
-                        </div>
+                        </>
                       );
                     })()}
                   </div>
@@ -482,6 +536,25 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
           )}
         </div>
       </div>
+      {expandedTags && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={expandedTagsRef}
+          className="fixed z-[70] w-64 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2"
+          style={{ top: expandedTags.anchor.top, right: expandedTags.anchor.right }}
+          onClick={event => event.stopPropagation()}
+        >
+          {expandedTags.tags.map((tag, idx) => (
+            <span
+              key={`${tag.category}-${tag.val}-${idx}`}
+              onClick={event => handleTagClick(tag, event)}
+              className="px-1.5 py-0.5 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+            >
+              {tag.val}
+            </span>
+          ))}
+        </div>,
+        document.body
+      )}
     </>
   );
 

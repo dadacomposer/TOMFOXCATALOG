@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { fetchPlaylists, supabase } from '../lib/supabase';
+import { fetchPlaylists } from '../lib/supabase';
 import { ChevronRight, Star, Search } from 'lucide-react';
 import PlaylistArtwork from '../components/PlaylistArtwork';
 import PlaylistIsland from '../components/PlaylistIsland';
@@ -55,21 +55,22 @@ export default function Playlists() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       try {
-        const [data, contentData] = await Promise.all([
-          fetchPlaylists(),
-          supabase.from('page_content').select('content').eq('page_id', 'playlists').single()
-        ]);
-        
-        setPlaylists(data || []);
+        // page_content was fetched here but never rendered. Removing it avoids
+        // holding the playlist grid behind an unrelated request.
+        const data = await fetchPlaylists();
+        if (!cancelled) setPlaylists(data || []);
       } catch (err) {
-        console.error('Error fetching data:', err);
+        if (!cancelled) console.error('Error fetching playlists:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    load();
+    void load();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {

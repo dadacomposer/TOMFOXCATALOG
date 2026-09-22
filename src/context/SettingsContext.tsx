@@ -51,7 +51,27 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   useEffect(() => {
-    fetchAll();
+    let cancelled = false;
+
+    const loadSettings = async () => {
+      try {
+        const { data, error } = await supabase.from('site_settings').select('*').eq('id', 'default').single();
+
+        if (cancelled) return;
+        if (data) {
+          setSettings({ ...defaultSettings, ...data });
+        } else if (error) {
+          console.error('Error fetching settings from DB:', error);
+        }
+      } catch (e) {
+        if (!cancelled) console.error('Error fetching settings:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadSettings();
+    return () => { cancelled = true; };
   }, []);
 
   return (

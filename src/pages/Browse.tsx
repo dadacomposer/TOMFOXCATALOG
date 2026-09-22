@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { toast } from 'react-hot-toast';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase, fetchTracks, searchTracksIntelligent, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds, fetchFilterOptions, fetchPlaylistTracks, fetchSuggestedTracks } from '../lib/supabase';
 import { analytics } from '../lib/analytics';
 import { useDownload } from '../context/DownloadContext';
@@ -147,8 +147,10 @@ type FilterOptions = {
 
 export default function Browse() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const playlistUrlId = searchParams.get('playlist');
+  const tagFromPlaylist = searchParams.get('tag');
   
   const [trendingTracks, setTrendingTracks] = useState<Track[]>([]);
   const [suggestedTracks, setSuggestedTracks] = useState<Track[]>([]);
@@ -176,6 +178,23 @@ export default function Browse() {
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({
     genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: []
   });
+
+  // A tag clicked inside a playlist arrives through the URL. Turn it into the
+  // same shadow-tag filter used for in-place Browse tag clicks.
+  useEffect(() => {
+    if (!tagFromPlaylist) return;
+
+    setActiveFilters(prev => {
+      const tags = (prev.shadow_tags as string[]) || [];
+      return tags.includes(tagFromPlaylist)
+        ? prev
+        : { ...prev, shadow_tags: [...tags, tagFromPlaylist] };
+    });
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('tag');
+    setSearchParams(nextParams, { replace: true });
+  }, [tagFromPlaylist, searchParams, setSearchParams]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [filterSearch, setFilterSearch] = useState(''); // search within filter panel
 
@@ -226,14 +245,38 @@ export default function Browse() {
   const [defaultTrackIds, setDefaultTrackIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [searchBarPortals, setSearchBarPortals] = useState<{ right: HTMLElement | null; bottom: HTMLElement | null }>({ right: null, bottom: null });
   const [isMyMusicOpen, setIsMyMusicOpen] = useState(true);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const searchCounter = useRef<number>(0);
+  // Every asynchronous result below is tied to the state that started it.
+  // A slower, older request must never replace a newer search/filter result.
+  const catalogRequestRef = useRef(0);
+  const searchCounter = useRef(0);
+  const shadowTagRequestRef = useRef(0);
+  const loadMoreInFlightRef = useRef(false);
   
   // Ref for audio element
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
   const tracksPerPage = 25;
+
+  // GlobalSearchBar owns these DOM targets. Browse can mount before that bar
+  // has committed (especially after auth/session hydration), so resolve them
+  // after each route change instead of querying once during render.
+  useEffect(() => {
+    if (!location.pathname.startsWith('/browse')) {
+      setSearchBarPortals({ right: null, bottom: null });
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      setSearchBarPortals({
+        right: document.getElementById('searchbar-right-portal'),
+        bottom: document.getElementById('searchbar-bottom-portal')
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -252,6 +295,7 @@ export default function Browse() {
 
   useEffect(() => {
     initEmbeddingModel();
+    let cancelled = false;
     
     async function loadData() {
       try {
@@ -262,12 +306,14 @@ export default function Browse() {
           fetchFilterOptions()
         ]);
         
+        if (cancelled) return;
+
         const newPlaylist = pData?.find((p: any) => p.title.toLowerCase().includes('new music'));
         if (newPlaylist) {
           setNewMusicPlaylist(newPlaylist);
           setPlaylists(pData);
           const newTrackIds = await fetchPlaylistTrackIds(newPlaylist.id);
-          setNewMusicTrackIds(new Set(newTrackIds));
+          if (!cancelled) setNewMusicTrackIds(new Set(newTrackIds));
         } else {
           setPlaylists(pData || []);
         }
@@ -282,22 +328,25 @@ export default function Browse() {
       } catch (error) {
         console.error("Error loading browse data:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadData();
+    void loadData();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadSuggested() {
       if (user?.id) {
         const tracks = await fetchSuggestedTracks(user.id);
-        setSuggestedTracks(tracks as Track[]);
+        if (!cancelled) setSuggestedTracks(tracks as Track[]);
       } else {
         setSuggestedTracks([]);
       }
     }
-    loadSuggested();
+    void loadSuggested();
+    return () => { cancelled = true; };
   }, [user?.id]);
 
 
@@ -332,36 +381,43 @@ export default function Browse() {
 
   useEffect(() => {
     const shadowTags = (activeFilters.shadow_tags as string[]) || [];
+    const requestId = ++shadowTagRequestRef.current;
+
     if (shadowTags.length === 0) {
       setShadowTagIds(null);
       return;
     }
-    
-    let isCancelled = false;
+
+    let cancelled = false;
     setIsSearching(true);
-    
+
     const resolve = async () => {
-      const idSets: Set<string>[] = [];
-      for (const tag of shadowTags) {
-        const textRaw = await searchTracksIntelligent(tag);
-        const ids = new Set<string>();
-        textRaw.forEach((r: any) => ids.add(r.id));
-        idSets.push(ids);
+      try {
+        const results = await Promise.all(shadowTags.map(tag => searchTracksIntelligent(tag)));
+        if (cancelled || shadowTagRequestRef.current !== requestId) return;
+
+        const idSets = results.map(textRaw => new Set<string>(textRaw.map((result: any) => result.id)));
+        let finalIds = Array.from(idSets[0] || []);
+        for (let i = 1; i < idSets.length; i++) {
+          finalIds = finalIds.filter(id => idSets[i].has(id));
+        }
+
+        setShadowTagIds(finalIds);
+      } catch (error) {
+        console.error('Error resolving tag filters:', error);
+        if (!cancelled && shadowTagRequestRef.current === requestId) {
+          // An error must resolve to an empty result, never an endless skeleton.
+          setShadowTagIds([]);
+        }
+      } finally {
+        if (!cancelled && shadowTagRequestRef.current === requestId) {
+          setIsSearching(false);
+        }
       }
-      
-      if (isCancelled) return;
-      
-      let finalIds = Array.from(idSets[0]);
-      for (let i = 1; i < idSets.length; i++) {
-        finalIds = finalIds.filter(id => idSets[i].has(id));
-      }
-      
-      setShadowTagIds(finalIds);
-      setIsSearching(false);
     };
-    
-    resolve();
-    return () => { isCancelled = true; };
+
+    void resolve();
+    return () => { cancelled = true; };
   }, [activeFilters.shadow_tags]);
 
   const totalActiveFilterCount = useMemo(() => {
@@ -373,48 +429,57 @@ export default function Browse() {
   }, [activeFilters]);
 
   useEffect(() => {
-    if (loading) return;
+    const requestId = ++catalogRequestRef.current;
+    loadMoreInFlightRef.current = false;
 
-    if (!searchQuery.trim()) {
-      const hasFilters = totalActiveFilterCount > 0;
-      
-      // If we are waiting for shadow tags to resolve, don't fetch yet
-      const shadowTags = (activeFilters.shadow_tags as string[]) || [];
-      if (shadowTags.length > 0 && shadowTagIds === null) return;
-      
-      if (!hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance' && !shadowTagIds) {
-        // Default browse view: Use pagination to avoid fetching 1000+ tracks at once
-        fetchTracksByIds(defaultTrackIds.slice(0, tracksPerPage)).then(data => {
-          setDisplayedTracks(data as Track[]);
-          setCurrentPage(1);
-          setHasMoreTracks(defaultTrackIds.length > tracksPerPage);
-          setIsInitialTracksLoaded(true);
-          setIsTypingSearch(false);
-          setIsSearching(false);
-        });
-      } else {
-        setIsSearching(true);
-        fetchTracks(1, tracksPerPage, activeFilters, sortBy, shadowTagIds || undefined).then(data => {
-          setDisplayedTracks(data as Track[]);
-          setCurrentPage(1);
-          setHasMoreTracks(data.length === tracksPerPage);
-          setIsInitialTracksLoaded(true);
-          setIsTypingSearch(false);
-          setIsSearching(false);
-        });
-      }
+    if (loading || searchQuery.trim()) return;
+
+    const shadowTags = (activeFilters.shadow_tags as string[]) || [];
+    if (shadowTags.length > 0 && shadowTagIds === null) {
+      setIsInitialTracksLoaded(false);
+      return;
     }
+
+    let cancelled = false;
+    setIsSearching(true);
+    setIsInitialTracksLoaded(false);
+
+    const loadTracks = async () => {
+      try {
+        const hasFilters = totalActiveFilterCount > 0;
+        const data = !hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance' && !shadowTagIds
+          ? await fetchTracksByIds(defaultTrackIds.slice(0, tracksPerPage))
+          : await fetchTracks(1, tracksPerPage, activeFilters, sortBy, shadowTagIds || undefined);
+
+        if (cancelled || catalogRequestRef.current !== requestId) return;
+
+        setDisplayedTracks(data as Track[]);
+        setCurrentPage(1);
+        setHasMoreTracks(!hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance' && !shadowTagIds
+          ? defaultTrackIds.length > tracksPerPage
+          : data.length === tracksPerPage);
+      } catch (error) {
+        console.error('Error loading browse tracks:', error);
+        if (!cancelled && catalogRequestRef.current === requestId) {
+          setDisplayedTracks([]);
+          setHasMoreTracks(false);
+        }
+      } finally {
+        if (!cancelled && catalogRequestRef.current === requestId) {
+          setIsInitialTracksLoaded(true);
+          setIsTypingSearch(false);
+          setIsSearching(false);
+        }
+      }
+    };
+
+    void loadTracks();
+    return () => { cancelled = true; };
   }, [searchQuery, loading, activeFilters, defaultTrackIds, sortBy, totalActiveFilterCount, shadowTagIds]);
 
-  const executeSearch = async (overrideQuery?: string) => {
-    const q = overrideQuery || searchQuery;
+  const executeSearch = async (q: string, currentSearchId: number) => {
     if (!q.trim()) return;
-    setIsSearching(true);
     analytics.trackSearch(q);
-    
-    // Increment search counter for race condition prevention
-    searchCounter.current += 1;
-    const currentSearchId = searchCounter.current;
     
     try {
       // Run intelligent text/tag search and semantic search in parallel
@@ -468,14 +533,23 @@ export default function Browse() {
   };
 
   useEffect(() => {
-    if (!searchQuery.trim() || !isTypingSearch) return;
+    if (!searchQuery.trim()) {
+      // Invalidate a debounced/in-flight search before restoring the normal catalog.
+      searchCounter.current += 1;
+      return;
+    }
+
+    const currentSearchId = ++searchCounter.current;
+    setIsTypingSearch(true);
+    setIsSearching(true);
+    setIsInitialTracksLoaded(false);
 
     const timeoutId = setTimeout(() => {
-      executeSearch();
+      void executeSearch(searchQuery, currentSearchId);
     }, 750);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, isTypingSearch]);
+  }, [searchQuery, activeFilters, sortBy, shadowTagIds]);
 
   const toggleFilter = (categoryKey: string, option: string) => {
     setActiveFilters(prev => {
@@ -553,33 +627,45 @@ export default function Browse() {
   };
 
   const handleLoadMore = async () => {
+    if (loadMoreInFlightRef.current || !hasMoreTracks || searchQuery.trim()) return;
+
+    const catalogRequestId = catalogRequestRef.current;
+    loadMoreInFlightRef.current = true;
     const nextPage = currentPage + 1;
     const hasFilters = Object.values(activeFilters).some(v => v.length > 0);
-    
-    if (!searchQuery.trim() && !hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance') {
-      const startIndex = currentPage * tracksPerPage;
-      const endIndex = startIndex + tracksPerPage;
-      const nextIds = defaultTrackIds.slice(startIndex, endIndex);
-      
-      const newTracks = await fetchTracksByIds(nextIds) as Track[];
-      setDisplayedTracks(prev => [...prev, ...newTracks]);
-      setCurrentPage(nextPage);
-      setHasMoreTracks(endIndex < defaultTrackIds.length);
-    } else if (!searchQuery.trim()) {
-      const newTracks = await fetchTracks(nextPage, tracksPerPage, activeFilters, sortBy);
-      setDisplayedTracks(prev => [...prev, ...newTracks]);
-      setCurrentPage(nextPage);
-      setHasMoreTracks(newTracks.length === tracksPerPage);
-    } else {
-      const moreTracks = await fetchTracks(nextPage, tracksPerPage, activeFilters, sortBy);
-      if (moreTracks.length > 0) {
-        setDisplayedTracks(prev => [...prev, ...moreTracks]);
-        setCurrentPage(nextPage);
-        if (moreTracks.length < tracksPerPage) {
-          setHasMoreTracks(false);
-        }
+
+    try {
+      let newTracks: Track[] = [];
+      let nextHasMore = false;
+
+      if (!hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance') {
+        const startIndex = currentPage * tracksPerPage;
+        const endIndex = startIndex + tracksPerPage;
+        newTracks = await fetchTracksByIds(defaultTrackIds.slice(startIndex, endIndex)) as Track[];
+        nextHasMore = endIndex < defaultTrackIds.length;
       } else {
+        // Shadow tags are resolved to IDs before querying; preserve that constraint
+        // for every subsequent page as well as the first one.
+        newTracks = await fetchTracks(nextPage, tracksPerPage, activeFilters, sortBy, shadowTagIds || undefined) as Track[];
+        nextHasMore = newTracks.length === tracksPerPage;
+      }
+
+      if (catalogRequestRef.current !== catalogRequestId) return;
+
+      setDisplayedTracks(previous => {
+        const existingIds = new Set(previous.map(track => track.id));
+        return [...previous, ...newTracks.filter(track => !existingIds.has(track.id))];
+      });
+      setCurrentPage(nextPage);
+      setHasMoreTracks(nextHasMore);
+    } catch (error) {
+      console.error('Error loading more browse tracks:', error);
+      if (catalogRequestRef.current === catalogRequestId) {
         setHasMoreTracks(false);
+      }
+    } finally {
+      if (catalogRequestRef.current === catalogRequestId) {
+        loadMoreInFlightRef.current = false;
       }
     }
   };
@@ -753,7 +839,7 @@ export default function Browse() {
     <div className="flex flex-col w-full h-full bg-[#fafafa] text-black relative no-radius !rounded-none">
       <div id="main-search-bar" />
       
-      {document.getElementById('searchbar-right-portal') && !playlistUrlId && createPortal(
+      {searchBarPortals.right && !playlistUrlId && createPortal(
         <>
           {selectedTrackIds.size > 0 && (() => {
             const allVisibleTracks = [...displayedTracks, ...trendingTracks];
@@ -856,10 +942,10 @@ export default function Browse() {
             </div>
           </div>
         </>,
-        document.getElementById('searchbar-right-portal')!
+        searchBarPortals.right
       )}
 
-      {document.getElementById('searchbar-bottom-portal') && !playlistUrlId && totalActiveFilterCount > 0 && createPortal(
+      {searchBarPortals.bottom && !playlistUrlId && totalActiveFilterCount > 0 && createPortal(
         <div className="w-full pt-4 flex flex-wrap gap-2 items-center">
           <span className="text-[10px] font-medium uppercase tracking-widest text-black/40 mr-1">Filtering:</span>
           {FILTER_CATEGORIES.map(cat =>
@@ -886,7 +972,7 @@ export default function Browse() {
           ))}
           <button onClick={() => setActiveFilters({ genre: [], subgenre: [], moods: [], instruments: [], textures: [], scenarios: [], human_tags: [], energy_level: [], movement: [], shadow_tags: [] })} className="text-[10px] font-medium uppercase tracking-wider text-black/40 hover:text-black underline ml-2 transition-colors">Clear all</button>
         </div>,
-        document.getElementById('searchbar-bottom-portal')!
+        searchBarPortals.bottom
       )}
 
       {/* Layout Wrapper */}

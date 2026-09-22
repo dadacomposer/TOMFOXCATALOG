@@ -63,6 +63,8 @@ export default function GlobalPlayer() {
   const [isBuffering, setIsBuffering] = React.useState(false);
   const [expandedTags, setExpandedTags] = React.useState<{trackId: string, tags: string[]} | null>(null);
   const originalPlaylistRef = React.useRef<Track[]>([]);
+  const similarRequestRef = React.useRef(0);
+  const similarLoadMoreRef = React.useRef(false);
 
   const expandSimilar = () => {
     if (!isSimilarExpanded) {
@@ -105,26 +107,45 @@ export default function GlobalPlayer() {
   };
 
   React.useEffect(() => {
+    const requestId = ++similarRequestRef.current;
+    let cancelled = false;
+    similarLoadMoreRef.current = false;
+
     if (isSimilarExpanded && referenceTrack) {
       setIsSimilarLoading(true);
       setSimilarOffset(0);
-      fetchSimilarTracks(referenceTrack.id, 10, 0).then(tracks => {
+      void fetchSimilarTracks(referenceTrack.id, 10, 0).then(tracks => {
+        if (cancelled || similarRequestRef.current !== requestId) return;
         setSimilarTracks(tracks);
         setHasMoreSimilar(tracks.length === 10);
-        setIsSimilarLoading(false);
+      }).catch(error => {
+        if (!cancelled && similarRequestRef.current === requestId) {
+          console.error('Error loading similar tracks:', error);
+          setSimilarTracks([]);
+          setHasMoreSimilar(false);
+        }
+      }).finally(() => {
+        if (!cancelled && similarRequestRef.current === requestId) setIsSimilarLoading(false);
       });
     } else if (!isSimilarExpanded) {
       setSimilarTracks([]);
       setSimilarOffset(0);
       setHasMoreSimilar(true);
     }
+
+    return () => { cancelled = true; };
   }, [isSimilarExpanded, referenceTrack]);
 
-  const handleLoadMoreSimilar = () => {
-    if (!referenceTrack || isSimilarLoading) return;
+  const handleLoadMoreSimilar = async () => {
+    if (!referenceTrack || isSimilarLoading || similarLoadMoreRef.current || !hasMoreSimilar) return;
+
+    const requestId = similarRequestRef.current;
+    similarLoadMoreRef.current = true;
     setIsSimilarLoading(true);
     const nextOffset = similarOffset === 0 ? 10 : similarOffset + 5;
-    fetchSimilarTracks(referenceTrack.id, 5, nextOffset).then(tracks => {
+    try {
+      const tracks = await fetchSimilarTracks(referenceTrack.id, 5, nextOffset);
+      if (similarRequestRef.current !== requestId) return;
       setSimilarTracks(prev => {
         // filter out potential duplicates to be safe
         const newTracks = tracks.filter(t => !prev.find(p => p.id === t.id));
@@ -132,8 +153,17 @@ export default function GlobalPlayer() {
       });
       setSimilarOffset(nextOffset);
       setHasMoreSimilar(tracks.length === 5);
-      setIsSimilarLoading(false);
-    });
+    } catch (error) {
+      if (similarRequestRef.current === requestId) {
+        console.error('Error loading more similar tracks:', error);
+        setHasMoreSimilar(false);
+      }
+    } finally {
+      if (similarRequestRef.current === requestId) {
+        similarLoadMoreRef.current = false;
+        setIsSimilarLoading(false);
+      }
+    }
   };
 
   const handlePlaySimilar = (track: Track) => {

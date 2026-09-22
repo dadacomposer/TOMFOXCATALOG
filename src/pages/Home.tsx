@@ -118,6 +118,7 @@ export default function Home() {
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const [isTopPicksScrolledLeft, setIsTopPicksScrolledLeft] = useState(false);
   const [topPicksPreloadedTracks, setTopPicksPreloadedTracks] = useState<Record<string, Track[]>>({});
+  const playlistPlayRequestRef = useRef(0);
 
   const newMusicRef = useRef<HTMLDivElement>(null);
   const featuredRef = useRef<HTMLDivElement>(null);
@@ -136,24 +137,31 @@ export default function Home() {
   } = usePlayer();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadData() {
       try {
         const [pData, tData] = await Promise.all([
           fetchPlaylists(),
           fetchTrendingTracks()
         ]);
-        setPlaylists(pData || []);
-        setTrendingTracks(tData || []);
+        if (!cancelled) {
+          setPlaylists(pData || []);
+          setTrendingTracks(tData || []);
+        }
       } catch (error) {
-        console.error("Error loading home data:", error);
+        if (!cancelled) console.error("Error loading home data:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadData();
+    void loadData();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadSuggested() {
       if (user?.id) {
         const [results, recentResults, suggestedTrks] = await Promise.all([
@@ -161,19 +169,24 @@ export default function Home() {
           fetchRecentlyPlayedTracks(user.id),
           fetchSuggestedTracks(user.id)
         ]);
-        setSuggestedPlaylists(results as any[]);
-        setRecentlyPlayedTracks(recentResults as any[]);
-        setSuggestedTracks(suggestedTrks as any[]);
+        if (!cancelled) {
+          setSuggestedPlaylists(results as any[]);
+          setRecentlyPlayedTracks(recentResults as any[]);
+          setSuggestedTracks(suggestedTrks as any[]);
+        }
       } else {
         setSuggestedPlaylists([]);
         setRecentlyPlayedTracks([]);
         setSuggestedTracks([]);
       }
     }
-    loadSuggested();
-  }, [user]);
+    void loadSuggested();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function preloadTopPicks() {
       if (!user && playlists.length > 0) {
         const topPicks = playlists
@@ -181,18 +194,17 @@ export default function Home() {
           .sort((a, b) => (a.top_pick_position || 99) - (b.top_pick_position || 99))
           .slice(0, 10);
         
-        const preloadData: Record<string, Track[]> = {};
-        for (const pl of topPicks) {
-           const tIds = await fetchPlaylistTrackIds(pl.id);
-           if (tIds.length > 0) {
-              const tracks = await fetchTracksByIds(tIds.slice(0, 15));
-              preloadData[pl.id] = tracks as Track[];
-           }
-        }
-        setTopPicksPreloadedTracks(preloadData);
+        const entries = await Promise.all(topPicks.map(async pl => {
+          const ids = await fetchPlaylistTrackIds(pl.id);
+          const tracks = ids.length > 0 ? await fetchTracksByIds(ids.slice(0, 15)) : [];
+          return [pl.id, tracks as Track[]] as const;
+        }));
+
+        if (!cancelled) setTopPicksPreloadedTracks(Object.fromEntries(entries));
       }
     }
-    preloadTopPicks();
+    void preloadTopPicks();
+    return () => { cancelled = true; };
   }, [user, playlists]);
 
   useEffect(() => {
@@ -341,14 +353,27 @@ export default function Home() {
                       togglePlay();
                       return;
                     }
+                    const requestId = ++playlistPlayRequestRef.current;
                     setLoadingPlaylistId(pl.id);
-                    const tracks = await fetchPlaylistTracks(pl.id);
-                    if (tracks && tracks.length > 0) {
-                      playPlaylist(tracks);
-                      setCurrentSource('playlist');
-                      setPlayingPlaylistId(pl.id);
+                    try {
+                      const tracks = await fetchPlaylistTracks(pl.id);
+                      // If another card was clicked while this request was in flight,
+                      // only the latest click is allowed to take over the player.
+                      if (playlistPlayRequestRef.current !== requestId) return;
+                      if (tracks.length > 0) {
+                        playPlaylist(tracks);
+                        setCurrentSource('playlist');
+                        setPlayingPlaylistId(pl.id);
+                      }
+                    } catch (error) {
+                      if (playlistPlayRequestRef.current === requestId) {
+                        console.error('Error loading top-pick playlist:', error);
+                      }
+                    } finally {
+                      if (playlistPlayRequestRef.current === requestId) {
+                        setLoadingPlaylistId(null);
+                      }
                     }
-                    setLoadingPlaylistId(null);
                   };
 
                   return (
