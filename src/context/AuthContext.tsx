@@ -105,32 +105,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return typeof window !== 'undefined' && window.location.hash.includes('type=invite');
   });
   const [studioProjects, setStudioProjects] = useState<any[]>([]);
+  const userId = user?.id;
+
+  const applyWorkspaces = (ws: any[]) => {
+    setWorkspaces(ws);
+    if (ws && ws.length > 0) {
+      setActiveWorkspace((prev: any) => {
+        if (!prev) return ws[0];
+        const updated = ws.find(w => w.id === prev.id);
+        return updated || prev;
+      });
+    } else {
+      setActiveWorkspace(null);
+    }
+  };
 
   const fetchWorkspaces = async (userId: string) => {
     try {
       const ws = await getUserWorkspaces(userId);
-      setWorkspaces(ws);
-      if (ws && ws.length > 0) {
-        setActiveWorkspace((prev: any) => {
-          if (!prev) return ws[0];
-          const updated = ws.find(w => w.id === prev.id);
-          return updated || prev;
-        });
-      }
+      applyWorkspaces(ws);
     } catch (e) {
       console.error("Error loading workspaces", e);
     }
-  };
-
-  const loadProfile = async (userId: string) => {
-    const data = await fetchProfile(userId);
-    setProfile(data || null);
-    
-    // Also load workspaces
-    await fetchWorkspaces(userId);
-    
-    // Load studio projects
-    await fetchProjects();
   };
 
   const fetchProjects = async () => {
@@ -143,48 +139,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loadUserData = async (userId: string) => {
+    const [profileResult, workspacesResult, projectsResult] = await Promise.allSettled([
+      fetchProfile(userId),
+      getUserWorkspaces(userId),
+      import('../lib/supabase').then(({ getUserStudioProjects }) => getUserStudioProjects()),
+    ]);
+
+    if (profileResult.status === 'rejected') {
+      console.error("Error loading profile", profileResult.reason);
+    }
+    if (workspacesResult.status === 'rejected') {
+      console.error("Error loading workspaces", workspacesResult.reason);
+    }
+    if (projectsResult.status === 'rejected') {
+      console.error("Error loading studio projects", projectsResult.reason);
+    }
+
+    return {
+      profile: profileResult.status === 'fulfilled' ? profileResult.value : null,
+      workspaces: workspacesResult.status === 'fulfilled' ? workspacesResult.value : [],
+      studioProjects: projectsResult.status === 'fulfilled' ? projectsResult.value : [],
+    };
+  };
+
+  const applyUserData = (data: Awaited<ReturnType<typeof loadUserData>>) => {
+    setProfile(data.profile || null);
+    applyWorkspaces(data.workspaces);
+    setStudioProjects(data.studioProjects);
+  };
+
   useEffect(() => {
     let mounted = true;
 
-
-    // Listen for auth changes
+    // Keep this callback synchronous. Calling Supabase APIs from inside
+    // onAuthStateChange can deadlock the client while a session is refreshing.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT' || !session?.user) {
-        if (mounted) {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-        }
-        return;
-      }
-
-      if (event === 'INITIAL_SESSION') {
-        // Validate session with the server asynchronously to avoid deadlocking the auth state change listener
-        supabase.auth.getUser().then(({ data: { user }, error }) => {
-          if (error || !user) {
-            supabase.auth.signOut();
-          }
-        });
-      }
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted) return;
 
       if (event === 'PASSWORD_RECOVERY') {
-        if (mounted) {
-          setUpdatePasswordModalOpen(true);
-        }
+        setUpdatePasswordModalOpen(true);
       }
 
-      if (mounted) {
-        setSession(session);
-        if (session?.user) {
-          setUser(session.user);
-          await loadProfile(session.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (event === 'SIGNED_OUT' || !nextSession?.user) {
+        setProfile(null);
+        setWorkspaces([]);
+        setActiveWorkspace(null);
+        setStudioProjects([]);
         setLoading(false);
       }
     });
@@ -195,13 +201,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const hydrateUser = async () => {
+      setLoading(true);
+      try {
+        const data = await loadUserData(userId);
+        if (!cancelled) {
+          applyUserData(data);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void hydrateUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   const refreshProfile = async () => {
     if (user) {
-      await loadProfile(user.id);
+      const data = await loadUserData(user.id);
+      applyUserData(data);
     }
   };
 
