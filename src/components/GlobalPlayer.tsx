@@ -1,6 +1,7 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2, Download, ShoppingBag, TrendingUp, Shuffle, Repeat, Zap } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import WaveformView from './WaveformView';
 import { usePlayer } from '../context/PlayerContext';
 import { getComposers } from '../utils/trackUtils';
@@ -45,8 +46,15 @@ const parseTags = (t: string[] | string | undefined): string[] => {
   return arr.filter(s => typeof s === 'string' && s.trim().length > 0).map(s => s.trim());
 };
 
+type ExpandedTags = {
+  trackId: string;
+  tags: string[];
+  anchor: { top: number; right: number };
+};
+
 export default function GlobalPlayer() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isSharedPage = location.pathname.startsWith('/share');
   
   const { currentTrack, currentPlaylist, isPlaying, setIsPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId, setSelectedTrackForDetails, volume, setVolume, toggleMute, isShuffleEnabled, setIsShuffleEnabled, isRepeatEnabled, setIsRepeatEnabled } = usePlayer();
@@ -61,7 +69,8 @@ export default function GlobalPlayer() {
   const [similarOffset, setSimilarOffset] = React.useState(0);
   const [hasMoreSimilar, setHasMoreSimilar] = React.useState(true);
   const [isBuffering, setIsBuffering] = React.useState(false);
-  const [expandedTags, setExpandedTags] = React.useState<{trackId: string, tags: string[]} | null>(null);
+  const [expandedTags, setExpandedTags] = React.useState<ExpandedTags | null>(null);
+  const expandedTagsRef = React.useRef<HTMLDivElement>(null);
   const originalPlaylistRef = React.useRef<Track[]>([]);
   const similarRequestRef = React.useRef(0);
   const similarLoadMoreRef = React.useRef(false);
@@ -79,9 +88,36 @@ export default function GlobalPlayer() {
 
   const closeSimilar = () => {
     setIsSimilarExpanded(false);
+    setExpandedTags(null);
     if (originalPlaylistRef.current.length > 0) {
       setCurrentPlaylist(originalPlaylistRef.current);
     }
+  };
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (expandedTagsRef.current && !expandedTagsRef.current.contains(event.target as Node)) {
+        setExpandedTags(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  React.useEffect(() => {
+    if (!expandedTags) return;
+
+    // Keep the tag menu anchored to its row instead of letting it float over
+    // a different row while the Similar Tracks panel scrolls.
+    const closeOnScroll = () => setExpandedTags(null);
+    document.addEventListener('scroll', closeOnScroll, true);
+    return () => document.removeEventListener('scroll', closeOnScroll, true);
+  }, [expandedTags]);
+
+  const handleSimilarTagClick = (tag: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    closeSimilar();
+    navigate(`/browse?tag=${encodeURIComponent(tag)}`);
   };
 
   const handleNextTrack = () => {
@@ -464,7 +500,7 @@ export default function GlobalPlayer() {
             </div>
           </div>
         )}
-        <div className="flex-grow overflow-y-auto hide-scrollbar px-4 py-4">
+        <div className="flex-grow overflow-y-auto overscroll-contain hide-scrollbar px-4 py-4">
           {isSimilarLoading && similarTracks.length === 0 ? (
             // Initial Skeleton Loader
             [...Array(10)].map((_, i) => (
@@ -530,52 +566,43 @@ export default function GlobalPlayer() {
                       
                       const all = [...human, ...subgenres, ...moods, ...scenarios, ...movement];
                       const unique = Array.from(new Set(all));
-                      const tags = unique.slice(0, 4);
-                      const remainingTags = unique.slice(4);
+                      const tags = unique.slice(0, 6);
+                      const remainingTags = unique.slice(6);
                       
                       if (tags.length === 0) return <span className="text-[10px] text-black/30 font-bold uppercase tracking-widest">Tagging...</span>;
 
                       return (
-                        <div className="flex items-center gap-2">
-                          {tags.map((t, idx) => (
-                            <span 
-                              key={idx} 
-                              onClick={e => e.stopPropagation()} 
-                              className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
-                            >
-                              {t}
-                            </span>
-                          ))}
+                        <>
+                          <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap flex-1" style={{ maskImage: 'linear-gradient(to right, black 80%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, black 80%, transparent 100%)' }}>
+                            {tags.map((t, idx) => (
+                              <span
+                                key={idx}
+                                onClick={event => handleSimilarTagClick(t, event)}
+                                className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
                           {remainingTags.length > 0 && (
-                            <div className="relative">
+                            <div className="relative shrink-0">
                               <span 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setExpandedTags(expandedTags?.trackId === track.id ? null : { trackId: track.id, tags: remainingTags });
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setExpandedTags(expandedTags?.trackId === track.id ? null : {
+                                    trackId: track.id,
+                                    tags: remainingTags,
+                                    anchor: { top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right) }
+                                  });
                                 }}
                                 className="px-1.5 py-0.5 shrink-0 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest cursor-pointer transition-colors"
                               >
                                 +{remainingTags.length}
                               </span>
-                              {expandedTags?.trackId === track.id && (
-                                <>
-                                  <div className="fixed inset-0 z-[20]" onClick={(e) => { e.stopPropagation(); setExpandedTags(null); }} />
-                                  <div className="absolute top-full mt-2 left-0 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2 z-[30] w-64" onClick={(e) => e.stopPropagation()}>
-                                    {expandedTags?.tags.map((t, idx) => (
-                                      <span 
-                                        key={idx} 
-                                        onClick={e => e.stopPropagation()}
-                                        className="px-1.5 py-0.5 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
-                                      >
-                                        {t}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
                             </div>
                           )}
-                        </div>
+                        </>
                       );
                     })()}
                   </div>
@@ -652,6 +679,25 @@ export default function GlobalPlayer() {
           )}
         </div>
       </div>
+      {expandedTags && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={expandedTagsRef}
+          className="fixed z-[70] w-64 p-2 bg-white border border-black/10 shadow-lg rounded-xl flex flex-wrap gap-2"
+          style={{ top: expandedTags.anchor.top, right: expandedTags.anchor.right }}
+          onClick={event => event.stopPropagation()}
+        >
+          {expandedTags.tags.map((tag, idx) => (
+            <span
+              key={`${tag}-${idx}`}
+              onClick={event => handleSimilarTagClick(tag, event)}
+              className="px-1.5 py-0.5 bg-black/5 hover:bg-black/10 rounded text-[9px] font-medium text-black/60 hover:text-black uppercase tracking-widest whitespace-nowrap cursor-pointer transition-colors"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

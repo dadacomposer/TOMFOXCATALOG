@@ -349,7 +349,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
           </div>
         </div>
 
-        <div className={inline ? "px-4 md:px-8 py-6 bg-[#fafafa]" : "flex-grow overflow-y-auto px-4 md:px-8 py-6 bg-[#fafafa]"}>
+        <div className={inline ? "px-4 md:px-8 py-6 bg-[#fafafa]" : "flex-grow overflow-y-auto overscroll-contain px-4 md:px-8 py-6 bg-[#fafafa]"}>
           {loading && initialTrackCount !== 0 ? (
             <div className="flex flex-col gap-1 pb-16">
               {[...Array(8)].map((_, i) => (
@@ -375,7 +375,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
               ))}
             </div>
           ) : (
-            <div className={`flex flex-col gap-1 pb-16 ${isScrollableContainer ? 'max-h-[640px] overflow-y-auto pr-2 custom-scrollbar' : ''}`}>
+            <div className={`flex flex-col gap-1 pb-16 ${isScrollableContainer ? 'max-h-[640px] overflow-y-auto overscroll-contain pr-2 custom-scrollbar' : ''}`}>
               {tracks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-6 py-20 text-black/40">
                   <img src="/search-for-documents.svg" alt="Empty playlist" className="w-80 h-80" />
