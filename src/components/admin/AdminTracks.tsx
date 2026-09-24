@@ -151,21 +151,20 @@ export default function AdminTracks() {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [isPlaylistLoading, setIsPlaylistLoading] = useState(false);
-  const [playlistSearchQuery, setPlaylistSearchQuery] = useState('');
+  const [playlistListSearchQuery, setPlaylistListSearchQuery] = useState('');
+  const [playlistTrackSearchQuery, setPlaylistTrackSearchQuery] = useState('');
   const [isAddingTracks, setIsAddingTracks] = useState(false);
+  const [isPlaylistSaving, setIsPlaylistSaving] = useState(false);
   const [draftPlaylist, setDraftPlaylist] = useState<any>(null);
   const [draftPlaylistTracks, setDraftPlaylistTracks] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const playlistTracksRequestRef = useRef(0);
   const [playlistCategories, setPlaylistCategories] = useState<string[]>([
     "Journalism", "Explainer", "Lifestyle", 
     "Drum and Percussion Energy", "Science and Innovation", 
     "Corporate Minimal", "Dramatic Strings", "Global Rhythms", 
     "Epic Trailers", "Dark Forces", "Future Tech", "Human Stories"
   ]);
-  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [editingCategoriesStr, setEditingCategoriesStr] = useState('');
-
   const { isMounted: isBulkModalMounted, isAnimating: isBulkModalAnimating } = useModalAnimation(bulkAction !== 'none');
   const { isMounted: isLinkModalMounted, isAnimating: isLinkModalAnimating } = useModalAnimation(isLinkManagerOpen);
   const { isMounted: isPlaylistModalMounted, isAnimating: isPlaylistModalAnimating } = useModalAnimation(isPlaylistManagerOpen);
@@ -181,26 +180,6 @@ export default function AdminTracks() {
     }
   };
 
-  const handleSaveCategories = async () => {
-    const loadingToast = toast.loading('Saving categories...');
-    try {
-      const cleaned = editingCategoriesStr.split(',').map((c: string) => c.trim()).filter(Boolean);
-      
-      const { data } = await supabase.from('page_content').select('*').eq('page_id', 'playlists').single();
-      const currentContent = data?.content || {};
-      currentContent.categories = cleaned;
-      
-      const { error } = await supabase.from('page_content').upsert({ page_id: 'playlists', content: currentContent });
-      if (error) throw error;
-      
-      setPlaylistCategories(cleaned);
-      setIsCategoryManagerOpen(false);
-      toast.success("Categories updated", { id: loadingToast });
-    } catch (e) {
-      toast.error("Failed to update categories", { id: loadingToast });
-    }
-  };
-
   const fetchPlaylists = async () => {
     try {
       const { data, error } = await supabase.from('playlists').select('*').is('user_id', null).order('created_at', { ascending: false });
@@ -208,10 +187,12 @@ export default function AdminTracks() {
       setAllPlaylists(data || []);
     } catch (e) {
       console.error('Error fetching playlists', e);
+      toast.error('Could not load catalog playlists');
     }
   };
 
   const fetchPlaylistTracks = async (playlistId: string) => {
+    const requestId = ++playlistTracksRequestRef.current;
     setIsPlaylistLoading(true);
     try {
       const { data, error } = await supabase
@@ -220,12 +201,19 @@ export default function AdminTracks() {
         .eq('playlist_id', playlistId)
         .order('position', { ascending: true });
       if (error) throw error;
+      if (requestId !== playlistTracksRequestRef.current) return;
       setPlaylistTracks(data || []);
       setDraftPlaylistTracks(data || []);
     } catch (e) {
       console.error('Error fetching playlist tracks', e);
+      if (requestId !== playlistTracksRequestRef.current) return;
+      setPlaylistTracks([]);
+      setDraftPlaylistTracks([]);
+      toast.error('Could not load playlist tracks');
     } finally {
-      setIsPlaylistLoading(false);
+      if (requestId === playlistTracksRequestRef.current) {
+        setIsPlaylistLoading(false);
+      }
     }
   };
 
@@ -238,6 +226,8 @@ export default function AdminTracks() {
           setSelectedPlaylistId(id);
           const p = allPlaylists.find(pl => pl.id === id);
           setDraftPlaylist(p ? { ...p } : null);
+          setIsAddingTracks(false);
+          setPlaylistTrackSearchQuery('');
           fetchPlaylistTracks(id);
           setConfirmModal(null);
         }
@@ -247,6 +237,8 @@ export default function AdminTracks() {
     setSelectedPlaylistId(id);
     const p = allPlaylists.find(pl => pl.id === id);
     setDraftPlaylist(p ? { ...p } : null);
+    setIsAddingTracks(false);
+    setPlaylistTrackSearchQuery('');
     fetchPlaylistTracks(id);
   };
 
@@ -264,44 +256,26 @@ export default function AdminTracks() {
   };
 
   const handleSaveChanges = async () => {
-    if (!selectedPlaylistId || !draftPlaylist) return;
+    if (!selectedPlaylistId || !draftPlaylist || isPlaylistSaving) return;
     
     const loadingToast = toast.loading('Saving changes...');
+    setIsPlaylistSaving(true);
     try {
-      const updates = {
-        title: draftPlaylist.title,
-        categories: draftPlaylist.categories,
-        is_featured: draftPlaylist.is_featured,
-        cover_url: draftPlaylist.cover_url,
-        track_count: draftPlaylistTracks.length
-      };
-      
-      const { error: metadataError } = await supabase.from('playlists').update(updates).eq('id', selectedPlaylistId);
-      if (metadataError) throw metadataError;
-      
       const trackUpdates = draftPlaylistTracks.map((pt, idx) => ({
-        playlist_id: selectedPlaylistId,
         track_id: pt.track_id,
         position: idx,
         is_hidden: pt.is_hidden
       }));
-      
-      if (trackUpdates.length > 0) {
-        const { error: tracksError } = await supabase.from('playlist_tracks').upsert(trackUpdates);
-        if (tracksError) throw tracksError;
-      }
-      
-      const originalTrackIds = playlistTracks.map(t => t.track_id);
-      const draftTrackIds = draftPlaylistTracks.map(t => t.track_id);
-      const deletedTrackIds = originalTrackIds.filter(id => !draftTrackIds.includes(id));
-      
-      if (deletedTrackIds.length > 0) {
-        const { error: deleteError } = await supabase.from('playlist_tracks')
-          .delete()
-          .eq('playlist_id', selectedPlaylistId)
-          .in('track_id', deletedTrackIds);
-        if (deleteError) throw deleteError;
-      }
+
+      const { error } = await supabase.rpc('save_catalog_playlist', {
+        p_playlist_id: selectedPlaylistId,
+        p_title: draftPlaylist.title,
+        p_categories: draftPlaylist.categories || [],
+        p_is_featured: Boolean(draftPlaylist.is_featured),
+        p_cover_url: draftPlaylist.cover_url || null,
+        p_tracks: trackUpdates
+      });
+      if (error) throw error;
 
       toast.success('Changes saved and published to public view!', { id: loadingToast, icon: '🚀' });
       setHasUnsavedChanges(false);
@@ -310,8 +284,24 @@ export default function AdminTracks() {
       await fetchPlaylistTracks(selectedPlaylistId);
       
     } catch (e) {
+      console.error('Failed to save catalog playlist', e);
       toast.error('Failed to save changes', { id: loadingToast });
+    } finally {
+      setIsPlaylistSaving(false);
     }
+  };
+
+  const resetPlaylistManagerState = () => {
+    playlistTracksRequestRef.current += 1;
+    setSelectedPlaylistId(null);
+    setPlaylistTracks([]);
+    setDraftPlaylist(null);
+    setDraftPlaylistTracks([]);
+    setPlaylistListSearchQuery('');
+    setPlaylistTrackSearchQuery('');
+    setIsAddingTracks(false);
+    setIsPlaylistLoading(false);
+    setHasUnsavedChanges(false);
   };
 
   const handleClosePlaylistManager = () => {
@@ -319,12 +309,13 @@ export default function AdminTracks() {
       setConfirmModal({
         message: 'You have unsaved changes. Are you sure you want to discard them and close?',
         onConfirm: () => {
-          setHasUnsavedChanges(false);
+          resetPlaylistManagerState();
           setIsPlaylistManagerOpen(false);
           setConfirmModal(null);
         }
       });
     } else {
+      resetPlaylistManagerState();
       setIsPlaylistManagerOpen(false);
     }
   };
@@ -334,7 +325,7 @@ export default function AdminTracks() {
       const { error } = await supabase.from('playlists').delete().eq('id', id);
       if (error) throw error;
       setAllPlaylists(prev => prev.filter(p => p.id !== id));
-      setSelectedPlaylistId(null);
+      resetPlaylistManagerState();
       toast.success('Playlist deleted');
     } catch (e) {
       toast.error('Failed to delete playlist');
@@ -399,10 +390,9 @@ export default function AdminTracks() {
       tracks: track
     };
     
-    setDraftPlaylistTracks(prev => [newPt, ...prev]);
-    setDraftPlaylist((prev: any) => ({ ...prev, track_count: (prev?.track_count || 0) + 1 }));
+    setDraftPlaylistTracks(prev => [...prev, newPt]);
     setHasUnsavedChanges(true);
-    setPlaylistSearchQuery('');
+    setPlaylistTrackSearchQuery('');
     setIsAddingTracks(false);
     toast.success('Track added to draft (remember to save)');
   };
@@ -810,7 +800,8 @@ toast.success('Track restored successfully');
       const { data: plData, error: plError } = await supabase.from('playlists').insert([{ 
         title: bulkForm.playlist_name, 
         cover_url: bulkForm.playlist_cover || null,
-        track_count: mainTrackIds.length
+        // Membership triggers update this once the tracks are inserted.
+        track_count: 0
       }]).select().single();
       if (plError) throw plError;
       
@@ -1907,34 +1898,25 @@ toast.success('Track restored successfully');
       {isPlaylistModalMounted && (
         <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isPlaylistModalAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
           <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isPlaylistModalAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={handleClosePlaylistManager} />
-          <div className={`relative z-10 bg-[#fafafa] rounded-[32px] shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col border border-black/5 transition-all duration-500 ease-out ${isPlaylistModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
+          <div className={`relative z-10 bg-[#fafafa] rounded-[32px] shadow-2xl w-full max-w-6xl h-[90vh] min-h-0 overflow-hidden flex flex-row border border-black/5 transition-all duration-500 ease-out ${isPlaylistModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
             
             {/* Sidebar: Playlist List */}
-            <div className="w-1/3 border-r border-black/10 flex flex-col bg-black/[0.02]">
+            <div className="w-1/3 min-w-[18rem] min-h-0 border-r border-black/10 flex flex-col bg-black/[0.02]">
               <div className="p-6 border-b border-black/5 shrink-0 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
+                <div>
                   <h3 className="text-xl font-bold">Playlists</h3>
-                  <button 
-                    onClick={() => {
-                      setEditingCategoriesStr(playlistCategories.join(', '));
-                      setIsCategoryManagerOpen(true);
-                    }}
-                    className="px-3 py-1.5 bg-black/5 hover:bg-black/10 text-black text-[10px] font-bold rounded-lg uppercase tracking-wider transition-colors"
-                  >
-                    Manage Categories
-                  </button>
                 </div>
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
                   <input
                     type="text"
-                    value={playlistSearchQuery}
-                    onChange={(e) => setPlaylistSearchQuery(e.target.value)}
+                    value={playlistListSearchQuery}
+                    onChange={(e) => setPlaylistListSearchQuery(e.target.value)}
                     placeholder="Search playlists..."
                     className="w-full bg-black/5 border-none rounded-xl pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-black/10 outline-none transition-all"
                   />
-                  {playlistSearchQuery && (
-                    <button onClick={() => setPlaylistSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black">
+                  {playlistListSearchQuery && (
+                    <button onClick={() => setPlaylistListSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black">
                       <X className="w-3 h-3" />
                     </button>
                   )}
@@ -1942,7 +1924,7 @@ toast.success('Track restored successfully');
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {allPlaylists
-                  .filter(p => p.title?.toLowerCase().includes(playlistSearchQuery.toLowerCase()))
+                  .filter(p => p.title?.toLowerCase().includes(playlistListSearchQuery.toLowerCase()))
                   .map(p => (
                   <button 
                     key={p.id}
@@ -1953,12 +1935,12 @@ toast.success('Track restored successfully');
                     <div className="text-xs text-black/50 mt-1">{p.track_count} Tracks</div>
                   </button>
                 ))}
-                {allPlaylists.filter(p => p.title?.toLowerCase().includes(playlistSearchQuery.toLowerCase())).length === 0 && <div className="text-center text-sm text-black/40 p-4">No playlists found</div>}
+                {allPlaylists.filter(p => p.title?.toLowerCase().includes(playlistListSearchQuery.toLowerCase())).length === 0 && <div className="text-center text-sm text-black/40 p-4">No playlists found</div>}
               </div>
             </div>
 
             {/* Main Area: Edit Selected Playlist */}
-            <div className="flex-1 flex flex-col relative bg-white">
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col relative bg-white">
               {!selectedPlaylistId ? (
                 <>
                   <div className="flex justify-end p-6 shrink-0">
@@ -1999,10 +1981,10 @@ toast.success('Track restored successfully');
                               </button>
                               <button
                                 onClick={handleSaveChanges}
-                                disabled={!hasUnsavedChanges}
-                                className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border ${hasUnsavedChanges ? 'text-black bg-black/5 hover:bg-black hover:text-white border-transparent' : 'text-black/30 bg-black/5 border-transparent cursor-not-allowed opacity-50'}`}
+                                disabled={!hasUnsavedChanges || isPlaylistSaving}
+                                className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border ${hasUnsavedChanges && !isPlaylistSaving ? 'text-black bg-black/5 hover:bg-black hover:text-white border-transparent' : 'text-black/30 bg-black/5 border-transparent cursor-not-allowed opacity-50'}`}
                               >
-                                Save
+                                {isPlaylistSaving ? 'Saving…' : 'Save'}
                               </button>
                               <div className="w-px h-6 bg-black/10 mx-2"></div>
                               <button onClick={handleClosePlaylistManager} className="p-2 hover:bg-black/5 rounded-full text-black/50 hover:text-black" title="Close Manager">
@@ -2107,22 +2089,22 @@ toast.success('Track restored successfully');
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40" />
                                 <input 
                                   type="text" 
-                                  value={playlistSearchQuery}
-                                  onChange={(e) => setPlaylistSearchQuery(e.target.value)}
+                                  value={playlistTrackSearchQuery}
+                                  onChange={(e) => setPlaylistTrackSearchQuery(e.target.value)}
                                   placeholder="Search all tracks..."
                                   className="w-full h-10 pl-10 pr-10 bg-white border border-black/10 rounded-xl focus:outline-none focus:border-black/30 text-sm"
                                 />
-                                {playlistSearchQuery && (
-                                  <button onClick={() => setPlaylistSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-black/40 hover:text-black transition-colors rounded-full hover:bg-black/5" title="Clear search">
+                                {playlistTrackSearchQuery && (
+                                  <button onClick={() => setPlaylistTrackSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-black/40 hover:text-black transition-colors rounded-full hover:bg-black/5" title="Clear search">
                                     <X className="w-4 h-4" />
                                   </button>
                                 )}
                               </div>
-                              {playlistSearchQuery && (
+                              {playlistTrackSearchQuery && (
                                 <div className="mt-2 max-h-48 overflow-y-auto bg-white border border-black/10 rounded-lg shadow-sm">
                                   {allFetchedTracks.filter(t => {
                                     if (t.deleted_at || t.track_type !== 'main') return false;
-                                    const q = playlistSearchQuery.toLowerCase();
+                                    const q = playlistTrackSearchQuery.toLowerCase();
                                     if (t.file_name.toLowerCase().includes(q)) return true;
                                     
                                     const parse = (val: any) => {
@@ -2270,30 +2252,6 @@ toast.success('Track restored successfully');
             setFormatManagerTrack(updatedTrack);
           }} 
         />
-      )}
-      {/* Category Manager Modal */}
-      {isCategoryManagerOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsCategoryManagerOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl border border-black/10 p-6 animate-slide-in-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">Manage Categories</h3>
-              <button onClick={() => setIsCategoryManagerOpen(false)} className="p-2 hover:bg-black/5 rounded-full text-black/50 hover:text-black">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-sm text-black/50 mb-4">Edit playlist categories below as a comma-separated list.</p>
-            <textarea 
-              value={editingCategoriesStr}
-              onChange={(e) => setEditingCategoriesStr(e.target.value)}
-              className="w-full h-40 p-3 bg-black/[0.02] border border-black/10 rounded-xl focus:outline-none focus:border-black/30 font-sans text-sm leading-relaxed resize-none"
-              placeholder="E.g. Cinematic & Film, Dark & Tension, Electronic & Synth..."
-            />
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setIsCategoryManagerOpen(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider text-black/60 hover:bg-black/5 hover:text-black">Cancel</button>
-              <button onClick={handleSaveCategories} className="px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider bg-black text-white hover:scale-105 transition-all">Save</button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

@@ -582,25 +582,27 @@ export default function AdminUploadModal({ onClose, onComplete, existingTracks }
         if (updateError) throw new Error(updateError.message);
 
         if (realPlaylistId) {
-          const { count } = await supabase.from('playlist_tracks').select('*', { count: 'exact', head: true }).eq('playlist_id', realPlaylistId);
-          await supabase.from('playlist_tracks').insert([{
+          const { count, error: playlistCountError } = await supabase.from('playlist_tracks').select('*', { count: 'exact', head: true }).eq('playlist_id', realPlaylistId);
+          if (playlistCountError) throw playlistCountError;
+          const { error: playlistInsertError } = await supabase.from('playlist_tracks').insert([{
             playlist_id: realPlaylistId,
             track_id: track.dbId,
             position: count || 0
           }]);
-          await supabase.from('playlists').update({ track_count: (count || 0) + 1 }).eq('id', realPlaylistId);
+          if (playlistInsertError) throw playlistInsertError;
         }
 
         if (addToNewMusic && track.type === 'main') {
           const newMusicPlaylist = playlists.find(p => p.title.toLowerCase().includes('new music'));
           if (newMusicPlaylist && newMusicPlaylist.id !== realPlaylistId) {
-             const { count: nmCount } = await supabase.from('playlist_tracks').select('*', { count: 'exact', head: true }).eq('playlist_id', newMusicPlaylist.id);
-             await supabase.from('playlist_tracks').insert([{
+             const { count: nmCount, error: newMusicCountError } = await supabase.from('playlist_tracks').select('*', { count: 'exact', head: true }).eq('id', newMusicPlaylist.id);
+             if (newMusicCountError) throw newMusicCountError;
+             const { error: newMusicInsertError } = await supabase.from('playlist_tracks').insert([{
                playlist_id: newMusicPlaylist.id,
                track_id: track.dbId,
                position: nmCount || 0
              }]);
-             await supabase.from('playlists').update({ track_count: (nmCount || 0) + 1 }).eq('id', newMusicPlaylist.id);
+             if (newMusicInsertError) throw newMusicInsertError;
           }
         }
 

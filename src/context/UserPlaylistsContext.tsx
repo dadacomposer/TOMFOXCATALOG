@@ -131,8 +131,11 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
       });
       
       try {
-        await supabase.from('playlist_tracks').delete().match({ playlist_id: favPl.id, track_id: trackId });
-        await supabase.from('playlists').update({ track_count: Math.max(0, favPl.track_count - 1) }).eq('id', favPl.id);
+        const { error } = await supabase
+          .from('playlist_tracks')
+          .delete()
+          .match({ playlist_id: favPl.id, track_id: trackId });
+        if (error) throw error;
         fetchUserPlaylists(); // Sync count
       } catch (e) {
         console.error('Failed to remove favorite', e);
@@ -153,8 +156,10 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
       
       try {
         const position = favoriteTrackIds.size;
-        await supabase.from('playlist_tracks').insert([{ playlist_id: favPl.id, track_id: trackId, position }]);
-        await supabase.from('playlists').update({ track_count: favPl.track_count + 1 }).eq('id', favPl.id);
+        const { error } = await supabase
+          .from('playlist_tracks')
+          .insert([{ playlist_id: favPl.id, track_id: trackId, position }]);
+        if (error) throw error;
         fetchUserPlaylists(); // Sync count
       } catch (e) {
         console.error('Failed to add favorite', e);
@@ -178,7 +183,8 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
           workspace_id: activeWorkspace.id,
           title: title,
           is_favorites: false,
-          track_count: trackId ? 1 : 0
+          // Membership triggers are the single source of truth for this value.
+          track_count: 0
         }])
         .select()
         .single();
@@ -186,7 +192,10 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
       if (error) throw error;
       
       if (trackId) {
-        await supabase.from('playlist_tracks').insert([{ playlist_id: data.id, track_id: trackId, position: 0 }]);
+        const { error: trackError } = await supabase
+          .from('playlist_tracks')
+          .insert([{ playlist_id: data.id, track_id: trackId, position: 0 }]);
+        if (trackError) throw trackError;
       }
       
       await fetchUserPlaylists();
@@ -209,14 +218,20 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
       const newIds = trackIds.filter(id => !existingSet.has(id));
       if (newIds.length === 0) return true; // all already exist
 
+      const { count, error: countError } = await supabase
+        .from('playlist_tracks')
+        .select('*', { count: 'exact', head: true })
+        .eq('playlist_id', playlistId);
+      if (countError) throw countError;
+
       const inserts = newIds.map((id, index) => ({
         playlist_id: playlistId,
         track_id: id,
-        position: pl.track_count + index
+        position: (count || 0) + index
       }));
 
-      await supabase.from('playlist_tracks').insert(inserts);
-      await supabase.from('playlists').update({ track_count: pl.track_count + newIds.length }).eq('id', playlistId);
+      const { error: insertError } = await supabase.from('playlist_tracks').insert(inserts);
+      if (insertError) throw insertError;
       
       if (pl.is_favorites) {
         setFavoriteTrackIds(prev => {
@@ -244,8 +259,11 @@ export function UserPlaylistsProvider({ children }: { children: React.ReactNode 
     if (!pl) return false;
     
     try {
-      await supabase.from('playlist_tracks').delete().match({ playlist_id: playlistId, track_id: trackId });
-      await supabase.from('playlists').update({ track_count: Math.max(0, pl.track_count - 1) }).eq('id', playlistId);
+      const { error } = await supabase
+        .from('playlist_tracks')
+        .delete()
+        .match({ playlist_id: playlistId, track_id: trackId });
+      if (error) throw error;
       if (pl.is_favorites) {
         setFavoriteTrackIds(prev => {
           const next = new Set(prev);
