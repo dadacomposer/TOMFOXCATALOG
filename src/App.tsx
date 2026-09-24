@@ -44,7 +44,6 @@ import ContactSalesModal from './components/ContactSalesModal';
 import ContactModal from './components/ContactModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
-import UnderConstruction from './components/UnderConstruction';
 import UpdatePasswordModal from './components/UpdatePasswordModal';
 
 import MyMusic from './pages/MyMusic';
@@ -163,26 +162,24 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <UnderConstruction>
-      <SettingsProvider>
-        <AuthProvider>
-          <LicenseProvider>
-            <PlayerProvider>
-              <DownloadProvider>
-                <UserPlaylistsProvider>
-                  <SearchBarProvider>
-                    <Router>
-                      <AppLayout />
-                      <DownloadModal />
-                      <LicenseModal />
-                    </Router>
-                  </SearchBarProvider>
-                </UserPlaylistsProvider>
-              </DownloadProvider>
-            </PlayerProvider>
-          </LicenseProvider>
-        </AuthProvider>
-      </SettingsProvider>
-    </UnderConstruction>
+    <SettingsProvider>
+      <AuthProvider>
+        <LicenseProvider>
+          <PlayerProvider>
+            <DownloadProvider>
+              <UserPlaylistsProvider>
+                <SearchBarProvider>
+                  <Router>
+                    <AppLayout />
+                    <DownloadModal />
+                    <LicenseModal />
+                  </Router>
+                </SearchBarProvider>
+              </UserPlaylistsProvider>
+            </DownloadProvider>
+          </PlayerProvider>
+        </LicenseProvider>
+      </AuthProvider>
+    </SettingsProvider>
   );
 }
