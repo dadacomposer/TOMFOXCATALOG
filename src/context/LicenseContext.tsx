@@ -15,7 +15,9 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
 
   const openLicenseModal = (track?: any) => {
-    if (track) setLicenseTrack(track);
+    // A general enquiry has no track selected. Explicitly clear the previous
+    // selection so reopening the form cannot carry a stale track forward.
+    setLicenseTrack(track ?? null);
     setIsLicenseModalOpen(true);
   };
 

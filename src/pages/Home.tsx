@@ -132,7 +132,7 @@ export default function Home() {
   const suggestedTracksRef = useRef<HTMLDivElement>(null);
   const recentlyPlayedRef = useRef<HTMLDivElement>(null);
 
-  const { user, setLoginModalOpen, setGeneralContactModalOpen } = useAuth();
+  const { user, setLoginModalOpen } = useAuth();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
   const { 
@@ -320,22 +320,6 @@ export default function Home() {
           </div>
         )}
 
-        {!user && (
-          <section className="relative z-40 mx-8 md:mx-16 border-y border-white/10 py-12 md:py-20">
-            <blockquote className="mx-auto max-w-5xl text-center">
-              <p className="text-2xl font-medium leading-[1.08] tracking-tight text-white md:text-4xl lg:text-5xl">
-                &ldquo;Tom&rsquo;s music helps our stories truly come alive. He brings real emotion to every track, and has a track for every emotion. Tom is simply the best!&rdquo;
-              </p>
-              <footer className="mt-8 md:mt-12">
-                <cite className="not-italic">
-                  <span className="block text-lg font-bold uppercase tracking-tight text-white md:text-2xl">Cleo Abram</span>
-                  <span className="mt-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-white/55 md:text-xs">Journalist, Video Creator: &lsquo;Huge If True&rsquo;</span>
-                </cite>
-              </footer>
-            </blockquote>
-          </section>
-        )}
-
         {/* Top Picks For You */}
         <div className={`w-full relative group/section no-radius !rounded-none ${!user ? 'pt-0 pb-12 md:pb-24' : 'pt-12 pb-8 overflow-hidden'}`}>
           {/* Constrained Sun Animation (Only when Light Mode / Authenticated) */}
@@ -478,6 +462,22 @@ export default function Home() {
                 Explore the catalog
               </Link>
             </div>
+          )}
+
+          {!user && (
+            <section className="relative z-40 mx-4 mt-12 border-t border-white/10 pt-12 md:mx-8 md:mt-20 md:pt-16">
+              <blockquote className="mx-auto max-w-3xl text-center">
+                <p className="text-lg font-medium leading-[1.35] tracking-tight text-white md:text-2xl lg:text-3xl">
+                  &ldquo;Tom&rsquo;s music helps our stories truly come alive. He brings real emotion to every track, and has a track for every emotion. Tom is simply the best!&rdquo;
+                </p>
+                <footer className="mt-6 md:mt-8">
+                  <cite className="not-italic">
+                    <span className="block text-base font-bold uppercase tracking-tight text-white md:text-lg">Cleo Abram</span>
+                    <span className="mt-2 block text-[10px] font-medium uppercase tracking-[0.16em] text-white/55 md:text-[11px]">Journalist, Video Creator: &lsquo;Huge If True&rsquo;</span>
+                  </cite>
+                </footer>
+              </blockquote>
+            </section>
           )}
         </div>
         
@@ -733,7 +733,7 @@ export default function Home() {
                 <p>
                   For licensing inquiries, please use{' '}
                   <button
-                    onClick={() => setGeneralContactModalOpen(true)}
+                    onClick={() => openLicenseModal()}
                     className="font-medium text-white underline decoration-white/50 underline-offset-4 transition-colors hover:text-white/60 hover:decoration-white/30"
                   >
                     this form
