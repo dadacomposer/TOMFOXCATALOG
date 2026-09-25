@@ -54,6 +54,11 @@ entrypoint = "./functions/r2_presigned_url/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/r2_presigned_url/*.html" ]
 
+[functions.send-contact-email]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/send-contact-email/index.ts"
+
 [functions.fix-db-urls]
 enabled = true
 verify_jwt = false
