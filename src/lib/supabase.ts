@@ -235,7 +235,12 @@ export async function fetchRecentlyPlayedTracks(userId: string) {
   return fullTracks;
 }
 
-export async function fetchSuggestedPlaylists(userId: string) {
+/**
+ * Fetch only the recommendation order. Home already loads the public playlist
+ * catalogue, so callers can hydrate these IDs locally instead of making a
+ * second request against the playlists table.
+ */
+export async function fetchSuggestedPlaylistIds(userId: string): Promise<string[]> {
   if (!userId) return [];
   const { data, error } = await supabase.rpc('get_suggested_playlists', {
     p_user_id: userId
@@ -245,10 +250,18 @@ export async function fetchSuggestedPlaylists(userId: string) {
     console.error('Error fetching suggested playlists:', error);
     return [];
   }
-  
-  if (!data || data.length === 0) return [];
-  
-  const finalIds = data.map((p: { playlist_id: string }) => p.playlist_id);
+  const recommendedPlaylists = (data || []) as Array<{ playlist_id: string | null }>;
+  return recommendedPlaylists.flatMap(({ playlist_id }) => playlist_id ? [playlist_id] : []);
+}
+
+/**
+ * Kept for callers outside Home that need complete records. Home uses the
+ * lighter ID helper above so personalized playlists can render without a
+ * redundant database round trip.
+ */
+export async function fetchSuggestedPlaylists(userId: string) {
+  const finalIds = await fetchSuggestedPlaylistIds(userId);
+  if (finalIds.length === 0) return [];
   
   // Now fetch full playlist objects
   const { data: playlistsData, error: playlistsError } = await supabase

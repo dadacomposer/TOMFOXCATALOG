@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchPersonalizedTrackShelves, fetchPlaylistTrackIds, fetchTracksByIds } from '../lib/supabase';
+import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylistIds, fetchPersonalizedTrackShelves, fetchPlaylistTrackIds, fetchTracksByIds } from '../lib/supabase';
 import { Play, Pause, TrendingUp, Loader2, Star } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import TrackArtwork from '../components/TrackArtwork';
@@ -107,8 +107,10 @@ export default function Home() {
   
   const [loading, setLoading] = useState(true);
   const [playlists, setPlaylists] = useState<any[]>([]);
+  const [isPlaylistsLoading, setIsPlaylistsLoading] = useState(true);
   const [trendingTracks, setTrendingTracks] = useState<any[]>([]);
   const [suggestedPlaylists, setSuggestedPlaylists] = useState<any[]>([]);
+  const [suggestedPlaylistIds, setSuggestedPlaylistIds] = useState<string[] | null>(null);
   const [recentlyPlayedTracks, setRecentlyPlayedTracks] = useState<any[]>([]);
   const [suggestedTracks, setSuggestedTracks] = useState<any[]>([]);
   const [isSuggestedPlaylistsLoading, setIsSuggestedPlaylistsLoading] = useState(false);
@@ -155,23 +157,31 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadData() {
-      try {
-        const [pData, tData] = await Promise.all([
-          fetchPlaylists(),
-          fetchTrendingTracks()
-        ]);
-        if (!cancelled) {
-          setPlaylists(pData || []);
-          setTrendingTracks(tData || []);
-        }
-      } catch (error) {
-        if (!cancelled) console.error("Error loading home data:", error);
-      } finally {
+    // These shelves do not depend on one another. Publishing playlists as
+    // soon as they arrive also lets "Suggested for you" hydrate locally,
+    // instead of waiting for the trending-track request to finish.
+    void fetchPlaylists()
+      .then(data => {
+        if (!cancelled) setPlaylists(data || []);
+      })
+      .catch(error => {
+        if (!cancelled) console.error('Error loading home playlists:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setIsPlaylistsLoading(false);
+      });
+
+    void fetchTrendingTracks()
+      .then(data => {
+        if (!cancelled) setTrendingTracks(data || []);
+      })
+      .catch(error => {
+        if (!cancelled) console.error('Error loading trending tracks:', error);
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    }
-    void loadData();
+      });
+
     return () => { cancelled = true; };
   }, []);
 
@@ -181,6 +191,7 @@ export default function Home() {
     if (!user?.id) {
       latestCompletedTrackRef.current = null;
       setSuggestedPlaylists([]);
+      setSuggestedPlaylistIds(null);
       setRecentlyPlayedTracks([]);
       setSuggestedTracks([]);
       setIsSuggestedPlaylistsLoading(false);
@@ -194,16 +205,16 @@ export default function Home() {
     latestCompletedTrackRef.current = null;
     setIsSuggestedPlaylistsLoading(true);
     setIsPersonalTracksLoading(true);
+    setSuggestedPlaylists([]);
+    setSuggestedPlaylistIds(null);
 
-    void fetchSuggestedPlaylists(user.id)
-      .then(results => {
-        if (!cancelled) setSuggestedPlaylists(results as any[]);
+    void fetchSuggestedPlaylistIds(user.id)
+      .then(ids => {
+        if (!cancelled) setSuggestedPlaylistIds(ids);
       })
       .catch(error => {
         if (!cancelled) console.error('Error loading suggested playlists:', error);
-      })
-      .finally(() => {
-        if (!cancelled) setIsSuggestedPlaylistsLoading(false);
+        if (!cancelled) setSuggestedPlaylistIds([]);
       });
 
     void fetchPersonalizedTrackShelves(user.id)
@@ -229,6 +240,25 @@ export default function Home() {
 
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || suggestedPlaylistIds === null || isPlaylistsLoading) return;
+
+    const playlistsById = new Map(playlists.map(playlist => [playlist.id, playlist]));
+    const personalizedPlaylists = suggestedPlaylistIds
+      .map(id => playlistsById.get(id))
+      .filter(Boolean);
+
+    // A signed-in listener should always see this shelf. New accounts, or an
+    // unavailable recommendation response, receive a compact curated fallback
+    // without exposing any private playlist or delaying the rest of the page.
+    const fallbackPlaylists = playlists
+      .filter(playlist => playlist.track_count !== 0)
+      .slice(0, 3);
+
+    setSuggestedPlaylists(personalizedPlaylists.length > 0 ? personalizedPlaylists : fallbackPlaylists);
+    setIsSuggestedPlaylistsLoading(false);
+  }, [user?.id, suggestedPlaylistIds, playlists, isPlaylistsLoading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -374,7 +404,7 @@ export default function Home() {
             onScroll={!user ? (e) => setIsTopPicksScrolledLeft(e.currentTarget.scrollLeft > 20) : undefined}
             className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? 'max-md:pr-4 md:pr-[280px]' : ''}`}
           >
-            {loading ? (
+            {isPlaylistsLoading ? (
               [...Array(4)].map((_, i) => (
                 <div key={i} className={`relative shrink-0 snap-always snap-center md:snap-start aspect-[3/4] rounded-[32px] overflow-hidden ${!user ? 'bg-white/10 w-[280px]' : 'bg-black/5 w-[280px] md:w-[340px]'} animate-pulse`}>
                 </div>
