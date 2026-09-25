@@ -57,7 +57,11 @@ export default function InviteCollaboratorModal({
       
       if (error) throw error;
       
-      toast.success('Invitation sent!');
+      if (data?.emailDelivery === 'failed') {
+        toast.error('The collaborator was added, but the email could not be delivered. Please contact them directly.');
+      } else {
+        toast.success('Invitation sent!');
+      }
       setEmail('');
       fetchCollaborators(); // Refresh the list
     } catch (e: any) {

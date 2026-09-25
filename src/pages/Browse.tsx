@@ -8,7 +8,6 @@ import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { generateEmbedding } from '../lib/embedding';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
 import { ChevronLeft, ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers, Plus, Heart, X, Loader2 } from 'lucide-react';
 import Footer from '../components/Footer';
@@ -583,6 +582,11 @@ export default function Browse() {
       if (typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches) {
         void (async () => {
           try {
+            // Semantic enhancement is useful on larger screens, but its model
+            // runtime is several hundred KB. Import it only after a desktop
+            // search has settled so Browse remains light and responsive on
+            // initial load (especially on phones).
+            const { generateEmbedding } = await import('../lib/embedding');
             const vector = await generateEmbedding(q);
             const semanticRaw = await searchTracksByEmbedding(vector);
             if (searchCounter.current !== currentSearchId) return;
@@ -1366,7 +1370,7 @@ export default function Browse() {
                 className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
               >
                 <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
+                <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                   {currentTrack?.id === track.id && isPlaying ? (
                     <Pause className="w-4 h-4 fill-white text-white" />
                   ) : (
@@ -1495,7 +1499,7 @@ export default function Browse() {
                 />
               </div>
 
-              <div className={`flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2`}>
+              <div className={`ml-auto flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto max-md:gap-2 md:gap-2`}>
                 <TrackActionButtons trackId={track.id} />
                 <div className="hidden md:block text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
                   {track.duration ? formatTime(track.duration) : '0:00'}
@@ -1507,7 +1511,7 @@ export default function Browse() {
                     <Download className="w-4 h-4" />
                   </button>
                 )}
-                <button className="flex items-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(track); }}>
+                <button className="flex items-center justify-center gap-1.5 md:gap-2 max-md:w-8 max-md:h-8 max-md:p-0 md:px-4 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(track); }}>
                   <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden md:inline">License</span>
                 </button>
               </div>
@@ -1526,7 +1530,7 @@ export default function Browse() {
                   >
                     <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5">
                       <TrackArtwork track={version} className="absolute inset-0 w-full h-full" />
-                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === version.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/version:opacity-100 max-md:opacity-100'}`}>
+                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === version.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/version:opacity-100'}`}>
                         {currentTrack?.id === version.id && isPlaying ? (
                           <Pause className="w-3 h-3 fill-white text-white" />
                         ) : (
@@ -1554,7 +1558,7 @@ export default function Browse() {
                         previewEndPct={isPreviewMode ? getPreviewTimings(version)?.endPct : undefined}
                       />
                     </div>
-                    <div className={`flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2`}>
+                    <div className={`ml-auto flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto max-md:gap-2 md:gap-2`}>
                       <TrackActionButtons trackId={version.id} />
                       <div className="hidden md:block text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
                         {version.duration ? formatTime(version.duration) : '0:00'}
@@ -1566,7 +1570,7 @@ export default function Browse() {
                           <Download className="w-4 h-4" />
                         </button>
                       )}
-                      <button className="flex items-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(version); }}>
+                      <button className="flex items-center justify-center gap-1.5 md:gap-2 max-md:w-8 max-md:h-8 max-md:p-0 md:px-4 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={e => { if (e.shiftKey || e.metaKey || e.ctrlKey) return; e.stopPropagation(); openLicenseModal(version); }}>
                         <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden md:inline">License</span>
                       </button>
                     </div>

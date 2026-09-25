@@ -169,6 +169,9 @@ export default function CreateSubscriptionModal({ isOpen, onClose, onSuccess, al
       } else {
         toast.success("Subscription created successfully!");
       }
+      if (data?.emailDelivery === 'failed') {
+        toast.error('The subscription was created, but its notification email could not be delivered. Please contact the client directly.');
+      }
       onSuccess();
       resetForm();
       handleClose();

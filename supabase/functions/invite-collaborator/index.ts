@@ -81,6 +81,7 @@ serve(async (req) => {
     }
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    let emailDelivery: 'sent' | 'failed' = 'failed';
     if (resendApiKey) {
       const emailHtml = `
 <!DOCTYPE html>
@@ -113,23 +114,34 @@ serve(async (req) => {
 </html>
       `;
 
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${resendApiKey}`
-        },
-        body: JSON.stringify({
-          from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
-          to: email,
-          bcc: ['dadacomposer@gmail.com'],
-          subject: 'You have been invited to collaborate on project: ' + project.title,
-          html: emailHtml
-        })
-      }).catch(e => console.error('Failed to send Resend email:', e));
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`
+          },
+          body: JSON.stringify({
+            from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
+            to: email,
+            bcc: ['dadacomposer@gmail.com'],
+            subject: 'You have been invited to collaborate on project: ' + project.title,
+            html: emailHtml
+          })
+        });
+        if (response.ok) {
+          emailDelivery = 'sent';
+        } else {
+          console.error('Failed to send Resend collaborator email:', await response.text());
+        }
+      } catch (error) {
+        console.error('Failed to send Resend collaborator email:', error);
+      }
+    } else {
+      console.error('RESEND_API_KEY is not set; collaborator email was not sent');
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, emailDelivery }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

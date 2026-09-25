@@ -241,9 +241,14 @@ serve(async (req) => {
     }
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const emailDeliveryFailures: string[] = [];
     
     async function sendProjectEmail(toEmail, aLink, invUrl) {
-      if (!resendApiKey || !toEmail) return;
+      if (!toEmail) return true;
+      if (!resendApiKey) {
+        console.error('RESEND_API_KEY is not set; project email was not sent');
+        return false;
+      }
       const invoiceBlock = (invUrl) 
         ? `<div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(0,0,0,0.1);">
              <p style="margin-bottom: 16px;">An invoice has been generated for this project.</p>
@@ -284,24 +289,36 @@ serve(async (req) => {
 </html>
       `;
 
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${resendApiKey}`
-        },
-        body: JSON.stringify({
-          from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
-          to: toEmail,
-          bcc: ['dadacomposer@gmail.com'],
-          subject: `You have been invited to project: ${newProject.title}`,
-          html: emailHtml
-        })
-      }).catch(e => console.error('Failed to send Resend email:', e));
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`
+          },
+          body: JSON.stringify({
+            from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
+            to: toEmail,
+            bcc: ['dadacomposer@gmail.com'],
+            subject: `You have been invited to project: ${newProject.title}`,
+            html: emailHtml
+          })
+        });
+        if (!response.ok) {
+          console.error('Failed to send Resend project email:', await response.text());
+          return false;
+        }
+        return true;
+      } catch (error) {
+        console.error('Failed to send Resend project email:', error);
+        return false;
+      }
     }
 
     // Send email to primary client
-    await sendProjectEmail(customerEmail, finalLinkToEmail, createInvoice ? invoiceUrl : null);
+    if (!(await sendProjectEmail(customerEmail, finalLinkToEmail, createInvoice ? invoiceUrl : null))) {
+      emailDeliveryFailures.push(customerEmail || 'primary client');
+    }
 
     // Process collaborators
     if (Array.isArray(collaboratorEmails) && collaboratorEmails.length > 0) {
@@ -351,14 +368,18 @@ serve(async (req) => {
         });
 
         // Send email to collaborator (no invoice attached for them)
-        await sendProjectEmail(collEmail, finalCollLinkToEmail, null);
+        if (!(await sendProjectEmail(collEmail, finalCollLinkToEmail, null))) {
+          emailDeliveryFailures.push(collEmail);
+        }
       }
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
       project: newProject,
-      invoiceUrl: invoiceUrl 
+      invoiceUrl: invoiceUrl,
+      emailDelivery: emailDeliveryFailures.length === 0 ? 'sent' : 'partial_failure',
+      emailDeliveryFailures,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

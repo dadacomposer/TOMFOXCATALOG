@@ -36,7 +36,6 @@ export default function DiscoverBrowseWrapper() {
       ? (isMobile ? '76dvh' : '75vh')
       : `${isMobile ? 76 : 90}px`;
 
-  const isDiscover = location.pathname === '/';
   const searchBarHeight = 69; // 68px for py-6 + input, 1px for border-t
 
   // Height calculation for translate-y:
@@ -45,25 +44,33 @@ export default function DiscoverBrowseWrapper() {
       
       {/* Background Layer: Discover (Home) */}
       <div 
-        className="absolute inset-0 z-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+        className={`absolute inset-0 z-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] ${isBrowse ? 'invisible pointer-events-none' : ''}`}
         id="discover-scroll-container"
+        aria-hidden={isBrowse}
       >
         <Home />
       </div>
       
       {/* Foreground Layer: Search Bar + Browse */}
-      <div 
-        className={`discover-browse-panel absolute inset-x-0 z-10 flex flex-col max-md:min-h-0 motion-page no-radius !rounded-none`}
-        style={{ 
+      <div
+        key={isBrowse ? 'browse' : 'discover'}
+        className={`discover-browse-panel absolute inset-x-0 z-10 flex flex-col max-md:min-h-0 no-radius !rounded-none ${isBrowse ? '' : 'motion-page'}`}
+        style={isBrowse ? {
+          // Keep Browse in a dedicated, fully opaque layer. Re-mounting on
+          // route changes prevents a partially completed Discover animation
+          // from exposing Home below the sticky search bar on mobile Safari.
+          top: `${navHeight}px`,
+          bottom: 0,
+          height: 'auto',
+          transform: 'none',
+        } : {
           // On Discover the search bar is the visible edge of this panel. Keep
           // that edge directly above the persistent player instead of allowing
           // the player to cover it. Browse keeps its existing full-height panel
           // and transition behaviour.
-          bottom: isDiscover ? playerReservation : 0,
-          height: isDiscover
-            ? `calc(100dvh - ${navHeight}px - ${playerReservation})`
-            : `calc(100dvh - ${navHeight}px)`,
-          transform: isBrowse ? 'translateY(0)' : `translateY(calc(100% - ${searchBarHeight}px))`
+          bottom: playerReservation,
+          height: `calc(100dvh - ${navHeight}px - ${playerReservation})`,
+          transform: `translateY(calc(100% - ${searchBarHeight}px))`
         }}
       >
         {/* We keep GlobalSearchBar sticky at the top of this sliding panel */}

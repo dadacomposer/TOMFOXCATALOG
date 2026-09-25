@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ShieldAlert, User, Music, Users, FileText, Ticket, LogOut, ExternalLink, Settings, Tag, BarChart, ListMusic, Palette } from 'lucide-react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { DadaLogo } from '../components/shared/DadaLogo';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import NotFound from './NotFound';
 import { usePlayer } from '../context/PlayerContext';
 import { useAuth } from '../context/AuthContext';
@@ -11,8 +10,6 @@ import { Wrench } from 'lucide-react';
 export default function Admin() {
   const { currentTrack } = usePlayer();
   const { user, profile, loading, setAccountPanelOpen, setLoginModalOpen } = useAuth();
-  const location = useLocation();
-  const isAdminTheaterRoute = /^\/admin\/studio\/[^/]+/.test(location.pathname);
 
   // Prevent indexing of admin page
   useEffect(() => {
@@ -59,14 +56,12 @@ export default function Admin() {
         <div id="admin-navbar-center" className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"></div>
         
         <nav className="hidden md:flex items-center gap-10 font-bold uppercase text-xs tracking-widest relative z-10">
-          {!isAdminTheaterRoute && (
-            <>
-              <Link to="/" className="transition-colors hover:text-black/50">Discover</Link>
-              <Link to="/browse" className="transition-colors hover:text-black/50">Browse</Link>
-              <Link to="/playlists" className="transition-colors hover:text-black/50">Playlists</Link>
-              <Link to="/my-music" className="transition-colors hover:text-black/50">My Music</Link>
-            </>
-          )}
+          <>
+            <Link to="/" className="transition-colors hover:text-black/50">Discover</Link>
+            <Link to="/browse" className="transition-colors hover:text-black/50">Browse</Link>
+            <Link to="/playlists" className="transition-colors hover:text-black/50">Playlists</Link>
+            <Link to="/my-music" className="transition-colors hover:text-black/50">My Music</Link>
+          </>
           <Link 
             to="/admin" 
             className="flex items-center justify-center ml-4 w-8 h-8 rounded-full transition-colors hover:bg-black/5 text-black"
@@ -136,16 +131,6 @@ export default function Admin() {
             <div className="w-6 h-6 shrink-0 flex items-center justify-center"><BarChart className="w-5 h-5" /></div>
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Statistics</span>
           </NavLink>
-
-
-          <NavLink
-            to="/admin/studio"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
-            title="Studio"
-          >
-            <div className="w-6 h-6 shrink-0 flex items-center justify-center"><DadaLogo className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Studio</span>
-          </NavLink>
           <NavLink
             to="/admin/features"
             className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
@@ -188,7 +173,7 @@ export default function Admin() {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0 max-md:min-h-[calc(100dvh-8rem)] bg-[#fafafa]">
-        <main className={`flex-1 flex flex-col min-h-0 ${isAdminTheaterRoute ? 'p-4 pb-0' : 'p-8 pb-0 max-md:p-4 max-md:pb-0'}`}>
+        <main className="flex-1 flex flex-col min-h-0 p-8 pb-0 max-md:p-4 max-md:pb-0">
           <Outlet />
         </main>
 

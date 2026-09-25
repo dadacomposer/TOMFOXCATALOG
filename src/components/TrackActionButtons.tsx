@@ -38,11 +38,11 @@ export default function TrackActionButtons({ trackId, hideHeart }: TrackActionBu
 
   return (
     <>
-      <div className="flex items-center gap-4 transition-opacity">
+      <div className="flex items-center gap-4 max-md:gap-2 transition-opacity">
         {!hideHeart && (
           <button 
             onClick={handleHeartClick}
-            className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-red-500"
+            className="p-1.5 max-md:w-8 max-md:h-8 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-red-500"
             title={isFavorite ? "Remove from Favourites" : "Add to Favourites"}
           >
             <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
@@ -50,7 +50,7 @@ export default function TrackActionButtons({ trackId, hideHeart }: TrackActionBu
         )}
         <button 
           onClick={handlePlusClick}
-          className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black"
+          className="p-1.5 max-md:w-8 max-md:h-8 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black"
           title="Add to Playlist"
         >
           <Plus className="w-4 h-4" />

@@ -599,7 +599,7 @@ export default function GlobalPlayer() {
                 >
                   <div className="w-12 h-12 max-md:w-10 max-md:h-10 rounded bg-black/5 overflow-hidden flex items-center justify-center relative shrink-0">
                     <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
+                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       {currentTrack?.id === track.id && isPlaying ? (
                         <Pause className="w-5 h-5 fill-white text-white" />
                       ) : (

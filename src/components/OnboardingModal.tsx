@@ -22,7 +22,9 @@ export default function OnboardingModal() {
   const [step, setStep] = useState(1);
   const [justPaid, setJustPaid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isOnboardingOpen = !authLoading && !!user && (!profile?.onboarding_completed || justPaid);
+  // A deleted account can briefly retain a stale browser session. Do not
+  // mistake a missing profile for a brand-new user and reopen onboarding.
+  const isOnboardingOpen = !authLoading && !!user && !!profile && (!profile.onboarding_completed || justPaid);
   useLockBodyScroll(isOnboardingOpen);
 
   // Step 1 State
@@ -225,6 +227,7 @@ export default function OnboardingModal() {
       setStep(5);
     } catch (e) {
       console.error(e);
+      toast.error('We could not send every team invitation. Please try again before continuing.');
     } finally {
       setIsSubmitting(false);
     }

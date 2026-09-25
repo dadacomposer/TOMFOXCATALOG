@@ -47,8 +47,6 @@ const AdminUsers = lazy(() => import('./components/admin/AdminUsers'));
 const AdminLicensing = lazy(() => import('./components/admin/AdminLicensing'));
 const AdminSettings = lazy(() => import('./components/admin/AdminSettings'));
 const AdminFeatures = lazy(() => import('./components/admin/AdminFeatures'));
-const AdminTomFoxStudio = lazy(() => import('./components/admin/AdminTomFoxStudio'));
-const AdminTheater = lazy(() => import('./components/admin/AdminTheater'));
 const AdminStatistics = lazy(() => import('./components/admin/AdminStatistics'));
 const SharedPlayer = lazy(() => import('./pages/SharedPlayer'));
 const TomFoxStudio = lazy(() => import('./pages/TomFoxStudio'));
@@ -126,8 +124,7 @@ function AppLayout() {
 
               <Route path="settings" element={<AdminSettings />} />
               <Route path="features" element={<AdminFeatures />} />
-              <Route path="studio" element={<AdminTomFoxStudio />} />
-              <Route path="studio/:projectId" element={<AdminTheater />} />
+              <Route path="studio/*" element={<Navigate to="../tracks" replace />} />
               <Route path="statistics" element={<AdminStatistics />} />
             </Route>
             <Route path="/studio/:project_id" element={<TomFoxStudio />} />

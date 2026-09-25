@@ -316,7 +316,7 @@ export default function SharedPlayer() {
               >
                 <div className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}>
                   <TrackArtwork track={track} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
+                  <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                     {currentTrack?.id === track.id && isPlaying ? (
                       <Pause className="w-4 h-4 fill-white text-white" />
                     ) : (

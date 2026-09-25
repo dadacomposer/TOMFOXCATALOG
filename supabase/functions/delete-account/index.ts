@@ -91,22 +91,35 @@ serve(async (req) => {
     // 2. Delete the user's workspaces
     // Workspaces should ideally be deleted via RLS/triggers or foreign keys ON DELETE CASCADE.
     // However, to be absolutely safe and wipe out all data, we do it explicitly using the admin role.
-    const { data: workspaces } = await supabaseAdmin
-      .from('workspace_members')
-      .select('workspace_id, role')
-      .eq('user_id', user.id)
-      .eq('role', 'owner');
+    const { data: workspaces, error: workspaceQueryError } = await supabaseAdmin
+      .from('workspaces')
+      .select('id')
+      .eq('user_id', user.id);
+    if (workspaceQueryError) throw workspaceQueryError;
       
     if (workspaces && workspaces.length > 0) {
-      const workspaceIds = workspaces.map(w => w.workspace_id);
-      await supabaseAdmin.from('workspaces').delete().in('id', workspaceIds);
+      const workspaceIds = workspaces.map(w => w.id);
+      const { error: deleteWorkspacesError } = await supabaseAdmin.from('workspaces').delete().in('id', workspaceIds);
+      if (deleteWorkspacesError) throw deleteWorkspacesError;
     }
 
-    // 3. Delete Profile
+    // 3. Remove membership/invitation records for workspaces owned by other
+    // people. Without this, a restrictive foreign key can make Auth deletion
+    // fail and leave the browser in a confusing half-deleted state.
+    const [{ error: membershipDeleteError }, { error: inviteDeleteError }] = await Promise.all([
+      supabaseAdmin.from('workspace_members').delete().eq('user_id', user.id),
+      user.email
+        ? supabaseAdmin.from('workspace_invites').delete().ilike('email', user.email)
+        : Promise.resolve({ error: null }),
+    ]);
+    if (membershipDeleteError) throw membershipDeleteError;
+    if (inviteDeleteError) throw inviteDeleteError;
+
+    // 4. Delete Profile
     // (Auth deletion usually cascades to public.profiles if foreign keys are setup properly, but doing it manually is safer if unsure)
     await supabaseAdmin.from('profiles').delete().eq('id', user.id);
 
-    // 4. Finally, delete the Auth User from Supabase
+    // 5. Finally, delete the Auth User from Supabase
     const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteUserError) {
       throw deleteUserError;

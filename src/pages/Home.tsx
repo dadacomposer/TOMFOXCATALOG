@@ -78,7 +78,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0, rightOffsetClass = 'max-
   return (
     <>
       <button 
-        className={`absolute max-md:left-2 md:left-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 max-md:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        className={`absolute max-md:hidden md:left-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
@@ -88,7 +88,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0, rightOffsetClass = 'max-
         <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
       <button 
-        className={`absolute ${rightOffsetClass} top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 max-md:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        className={`absolute max-md:hidden ${rightOffsetClass} top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
@@ -111,6 +111,7 @@ export default function Home() {
   const [suggestedPlaylists, setSuggestedPlaylists] = useState<any[]>([]);
   const [recentlyPlayedTracks, setRecentlyPlayedTracks] = useState<any[]>([]);
   const [suggestedTracks, setSuggestedTracks] = useState<any[]>([]);
+  const [isPersonalLoading, setIsPersonalLoading] = useState(false);
   
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
   const [supportsDesktopDrag, setSupportsDesktopDrag] = useState(() =>
@@ -176,21 +177,28 @@ export default function Home() {
     let cancelled = false;
 
     async function loadSuggested() {
-      if (user?.id) {
-        const [results, recentResults, suggestedTrks] = await Promise.all([
-          fetchSuggestedPlaylists(user.id),
-          fetchRecentlyPlayedTracks(user.id),
-          fetchSuggestedTracks(user.id)
-        ]);
-        if (!cancelled) {
-          setSuggestedPlaylists(results as any[]);
-          setRecentlyPlayedTracks(recentResults as any[]);
-          setSuggestedTracks(suggestedTrks as any[]);
+      try {
+        if (user?.id) {
+          setIsPersonalLoading(true);
+          const [results, recentResults, suggestedTrks] = await Promise.all([
+            fetchSuggestedPlaylists(user.id),
+            fetchRecentlyPlayedTracks(user.id),
+            fetchSuggestedTracks(user.id)
+          ]);
+          if (!cancelled) {
+            setSuggestedPlaylists(results as any[]);
+            setRecentlyPlayedTracks(recentResults as any[]);
+            setSuggestedTracks(suggestedTrks as any[]);
+          }
+        } else if (!cancelled) {
+          setSuggestedPlaylists([]);
+          setRecentlyPlayedTracks([]);
+          setSuggestedTracks([]);
         }
-      } else {
-        setSuggestedPlaylists([]);
-        setRecentlyPlayedTracks([]);
-        setSuggestedTracks([]);
+      } catch (error) {
+        if (!cancelled) console.error('Error loading personalized home data:', error);
+      } finally {
+        if (!cancelled) setIsPersonalLoading(false);
       }
     }
     void loadSuggested();
@@ -323,7 +331,7 @@ export default function Home() {
               <FeaturedSun isHovered={isFeaturedHovered} />
             </div>
           )}
-          <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} max-md:px-[calc(50vw-140px)] md:px-8`}>
+          <div className={`w-full relative ${!user ? 'z-40' : 'z-10'} max-md:px-4 md:px-8`}>
             {!user && (
               <>
                 <div 
@@ -338,7 +346,7 @@ export default function Home() {
           <div 
             ref={topPicksRef} 
             onScroll={!user ? (e) => setIsTopPicksScrolledLeft(e.currentTarget.scrollLeft > 20) : undefined}
-            className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 touch-pan-x ${!user ? 'pr-48 md:pr-[280px]' : ''}`}
+            className={`flex gap-6 w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-4 ${!user ? 'max-md:pr-4 md:pr-[280px]' : ''}`}
           >
             {loading ? (
               [...Array(4)].map((_, i) => (
@@ -427,7 +435,7 @@ export default function Home() {
                           
                           {/* Play Button */}
                           <button 
-                            className="w-10 h-10 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 max-md:opacity-100 transition-opacity duration-300 shadow-xl hover:bg-white/30"
+                            className={`w-10 h-10 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center transition-opacity duration-300 shadow-xl hover:bg-white/30 ${playingPlaylistId === pl.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                             onClick={handlePlayTopPick}
                           >
                             {loadingPlaylistId === pl.id ? (
@@ -467,16 +475,16 @@ export default function Home() {
       <div className={`w-full pt-12 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
         <h2 className={`text-[22px] font-medium uppercase tracking-tighter mb-6 px-8 ${!user ? 'text-white' : 'text-black'}`}>Trending tracks</h2>
         
-        <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
+        <div className="w-full relative max-md:px-4 md:px-8">
           <ScrollArrows 
             scrollRef={trendingRef} 
             isDark={!user} 
             offsetY={8} 
-            rightOffsetClass={!user ? 'max-md:right-40 md:right-[280px]' : 'max-md:right-2 md:right-12'}
+            rightOffsetClass={!user ? 'max-md:right-2 md:right-[280px]' : 'max-md:right-2 md:right-12'}
           />
           <div 
             ref={trendingRef} 
-            className={`w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory touch-pan-x ${!user ? '[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] pr-40 md:pr-[300px]' : ''}`}
+            className={`w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory ${!user ? 'md:[mask-image:linear-gradient(to_right,black_60%,transparent_100%)] md:pr-[300px]' : ''}`}
           >
             {loading ? (
               [...Array(16)].map((_, i) => (
@@ -503,7 +511,7 @@ export default function Home() {
                 >
                   <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 ${!user ? 'bg-white/5' : 'bg-black/5'}`}>
                     <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
+                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
                     </div>
                     {trendingTrackIds.has(track.id) && (
@@ -543,14 +551,20 @@ export default function Home() {
 
 
       {/* Suggested For You */}
-      {suggestedPlaylists.length > 0 && (
+      {(isPersonalLoading || suggestedPlaylists.length > 0) && (
         <div className="w-full pt-4 pb-2 flex flex-col relative group/section no-radius !rounded-none">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black px-8">Suggested for you</h2>
           
-          <div className="w-full relative max-md:px-[calc(50vw-120px)] sm:max-md:px-[calc(50vw-130px)] md:px-8">
+          <div className="w-full relative max-md:px-4 md:px-8">
             <ScrollArrows scrollRef={suggestedRef} offsetY={8} />
-            <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar snap-x snap-mandatory touch-pan-x">
-              {suggestedPlaylists.map((pl) => (
+            <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar snap-x snap-mandatory">
+              {isPersonalLoading ? Array.from({ length: 3 }, (_, index) => (
+                <div key={`suggested-skeleton-${index}`} className="w-[240px] sm:w-[260px] md:w-[280px] shrink-0 animate-pulse">
+                  <div className="aspect-[4/3] rounded-2xl bg-black/5" />
+                  <div className="mt-3 h-3 w-3/4 rounded bg-black/5" />
+                  <div className="mt-2 h-2.5 w-1/2 rounded bg-black/5" />
+                </div>
+              )) : suggestedPlaylists.map((pl) => (
                 <div 
                   key={pl.id} 
                   className="flex flex-col bg-transparent hover:bg-[#f6f6f6] p-4 rounded-[32px] group cursor-pointer transition-all duration-300 border border-transparent hover:border-black/5 relative shrink-0 w-[240px] sm:w-[260px] md:w-[280px] snap-always snap-center"
@@ -592,7 +606,7 @@ export default function Home() {
         <div className={`w-full px-8 pt-0 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
           <div className="w-full relative">
             <ScrollArrows scrollRef={suggestedTracksRef} isDark={!user} offsetY={8} />
-            <div ref={suggestedTracksRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4 touch-pan-x">
+            <div ref={suggestedTracksRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
               <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
                 {suggestedTracks.slice(0, 16).map((track, i) => {
                   const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
@@ -606,7 +620,7 @@ export default function Home() {
                     >
                       <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 ${!user ? 'bg-white/5' : 'bg-black/5'}`}>
                         <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
+                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                           {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
                         </div>
                       </div>
@@ -631,14 +645,19 @@ export default function Home() {
       )}
 
       {/* Recently Played */}
-      {recentlyPlayedTracks.length > 0 && (
+      {(isPersonalLoading || recentlyPlayedTracks.length > 0) && (
         <div className="w-full pt-4 pb-12 flex flex-col relative group/section no-radius !rounded-none">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black px-8">Recently Played</h2>
           
-          <div className="w-full relative max-md:px-[calc(50vw-150px)] md:px-8">
+          <div className="w-full relative max-md:px-4 md:px-8">
             <ScrollArrows scrollRef={recentlyPlayedRef} offsetY={16} />
-            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-8 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory touch-pan-x">
-                {recentlyPlayedTracks.map((track, i) => {
+            <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-8 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory">
+                {isPersonalLoading ? Array.from({ length: 6 }, (_, index) => (
+                  <div key={`recent-skeleton-${index}`} className="flex items-center gap-3 py-2 animate-pulse">
+                    <div className="h-12 w-12 shrink-0 rounded bg-black/5" />
+                    <div className="min-w-0 flex-1 space-y-2"><div className="h-3 w-3/4 rounded bg-black/5" /><div className="h-2.5 w-1/2 rounded bg-black/5" /></div>
+                  </div>
+                )) : recentlyPlayedTracks.map((track, i) => {
                   const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
                   return (
                     <div 
@@ -650,7 +669,7 @@ export default function Home() {
                     >
                       <div className="w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5">
                         <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
+                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                           {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
                         </div>
                       </div>

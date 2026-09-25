@@ -6,13 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const productionOrigin = 'https://tomfoxcatalog.com'
+
+const resolveRedirectOrigin = (origin: string | null) => {
+  // Invitation links must not be turned into open redirects by a forged Origin.
+  // Localhost remains available for development, all other environments use
+  // the canonical public site.
+  if (origin && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return origin
+  return productionOrigin
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { email, workspaceId } = await req.json()
+    const { email: rawEmail, workspaceId } = await req.json()
+    const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : ''
 
     if (!email || !workspaceId) {
       throw new Error('Email and workspaceId are required')
@@ -30,47 +41,70 @@ serve(async (req) => {
       }
     )
 
-    // First insert into workspace_invites
-    const { error: inviteError } = await supabaseAdmin
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) throw new Error('Unauthorized')
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(authHeader.slice('Bearer '.length))
+    if (userError || !userData.user) throw new Error('Unauthorized')
+
+    const [{ data: membership, error: membershipError }, { data: workspace, error: workspaceError }] = await Promise.all([
+      supabaseAdmin.from('workspace_members').select('role').eq('workspace_id', workspaceId).eq('user_id', userData.user.id).maybeSingle(),
+      supabaseAdmin.from('workspaces').select('id, name, user_id').eq('id', workspaceId).maybeSingle(),
+    ])
+    if (membershipError || workspaceError || !workspace) throw new Error('Workspace not found')
+    const canInvite = workspace.user_id === userData.user.id || membership?.role === 'owner' || membership?.role === 'admin'
+    if (!canInvite) throw new Error('Only workspace owners and admins can invite team members')
+
+    // Resending an existing pending invitation is intentional. It should not
+    // duplicate data or turn a delivery retry into a database failure.
+    const { data: existingInvite, error: existingInviteError } = await supabaseAdmin
       .from('workspace_invites')
-      .insert([{ workspace_id: workspaceId, email, status: 'pending' }])
-      
-    if (inviteError) {
-      throw inviteError
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .ilike('email', email)
+      .eq('status', 'pending')
+      .limit(1)
+      .maybeSingle()
+    if (existingInviteError) throw existingInviteError
+
+    let invitationId = existingInvite?.id
+    if (!invitationId) {
+      const { data: invitation, error: inviteError } = await supabaseAdmin
+        .from('workspace_invites')
+        .insert([{ workspace_id: workspaceId, email, status: 'pending' }])
+        .select('id')
+        .single()
+      if (inviteError || !invitation) throw inviteError || new Error('Could not create invitation')
+      invitationId = invitation.id
     }
 
-    const origin = req.headers.get('origin') || 'https://tomfoxcatalog.com'
-    const redirectTo = `${origin}/login?accept_invite=true`
+    // Login is presented as a global modal, not a standalone /login route.
+    // Returning to the home route lets InviteManager open the pending invite
+    // after either sign-in or account creation.
+    const redirectTo = `${resolveRedirectOrigin(req.headers.get('origin'))}/?accept_invite=true`
 
-    // Try to invite the user natively
-    const { data: inviteData, error: nativeInviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo
+    // generateLink gives us a signed link but sends no native Supabase email.
+    // Resend is therefore the only delivery path and reports delivery errors
+    // back to the client for both new and existing users.
+    let { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'invite',
+      email,
+      options: { redirectTo },
     })
-
-    if (nativeInviteError) {
-      // If user already exists, Supabase throws "User already registered" (Status 400, or 422)
-      console.log('Native invite failed (likely user exists):', nativeInviteError.message)
-      
-      // Generate magic link for existing user
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    if (linkError) {
+      const fallback = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email,
-        options: {
-          redirectTo
-        }
+        options: { redirectTo },
       })
+      linkData = fallback.data
+      linkError = fallback.error
+    }
+    if (linkError || !linkData?.properties?.action_link) throw linkError || new Error('Could not generate invitation link')
 
-      if (linkError) {
-        throw linkError
-      }
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    if (!resendApiKey) throw new Error('Email service is not configured')
 
-      // Send Email via Resend using the exact same HTML template as native invite
-      const resendApiKey = Deno.env.get('RESEND_API_KEY')
-      if (!resendApiKey) {
-        throw new Error('RESEND_API_KEY is not set')
-      }
-
-      const emailHtml = `
+    const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -93,38 +127,37 @@ serve(async (req) => {
     <div class="logo"><img src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" alt="TOM FOX." /></div>
     <div class="title">Invitation</div>
     <h1>You're Invited.</h1>
-    <p>You have been invited to join a team workspace on Tom Fox Catalog. Follow the link below to review and accept the invitation.</p>
-    <a href="${linkData.properties?.action_link || ''}" class="btn" style="color: #ffffff;">Review Invitation</a>
+    <p>You have been invited to join ${workspace.name || 'a team workspace'} on Tom Fox Catalog. Follow the link below to review and accept the invitation.</p>
+    <a href="${linkData.properties.action_link}" class="btn" style="color: #ffffff;">Review Invitation</a>
   </div>
   <div class="footer">If you believe this invitation was sent in error, you can safely ignore this email.</div>
 </body>
 </html>
-      `
+    `
 
-      const resResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${resendApiKey}`
-        },
-        body: JSON.stringify({
-          from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
-          to: email,
-          bcc: ['dadacomposer@gmail.com'],
-          subject: 'You have been invited to a workspace',
-          html: emailHtml
-        })
+    const resResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${resendApiKey}`
+      },
+      body: JSON.stringify({
+        from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
+        to: email,
+        bcc: ['dadacomposer@gmail.com'],
+        subject: `Invitation to ${workspace.name || 'a Tom Fox Catalog workspace'}`,
+        html: emailHtml
       })
+    })
 
-      if (!resResponse.ok) {
-        const errorData = await resResponse.text()
-        console.error('Failed to send Resend email:', errorData)
-        throw new Error('Failed to send notification email')
-      }
+    if (!resResponse.ok) {
+      const errorData = await resResponse.text()
+      console.error('Failed to send Resend email:', errorData)
+      throw new Error('The invitation email could not be delivered')
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, invitationId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { X, Plus, Check, Settings, Bell, LogOut, FileText, CreditCard, Users, Star, LayoutGrid, Upload, Crown, Search, Download, ExternalLink } from 'lucide-react';
-import { supabase, updateWorkspace, getWorkspaceMembers, createWorkspace, updateWorkspaceMember, inviteTeamMember } from '../lib/supabase';
+import { supabase, updateWorkspace, getWorkspaceMembers, createWorkspace, inviteTeamMember } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
 import ProfileSettings from './ProfileSettings';
@@ -10,9 +10,8 @@ import UpgradePlan from './UpgradePlan';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function AccountPanel() {
-  const { user, profile, workspaces, setWorkspaces, activeWorkspace, setActiveWorkspace, isAccountPanelOpen, setAccountPanelOpen, signOut, fetchWorkspaces, refreshProfile, studioProjects } = useAuth();
+  const { user, profile, workspaces, activeWorkspace, setActiveWorkspace, isAccountPanelOpen, setAccountPanelOpen, fetchWorkspaces, refreshProfile, studioProjects } = useAuth();
   const { settings } = useSettings();
-  const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
   useLockBodyScroll(isAccountPanelOpen);
   
@@ -24,8 +23,10 @@ export default function AccountPanel() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
+  const [memberSearch, setMemberSearch] = useState('');
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [newOwnerId, setNewOwnerId] = useState<string>('');
+  const [isTransferringOwnership, setIsTransferringOwnership] = useState(false);
   
   // Invite Member Modal State
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -47,23 +48,29 @@ export default function AccountPanel() {
 
   useEffect(() => {
     if (activeView === 'billing') {
+      let cancelled = false;
       const syncBillingAndFetchInvoices = async () => {
         try {
           setIsLoadingInvoices(true);
-          await supabase.functions.invoke('sync-stripe-subscription');
+          const { error: syncError } = await supabase.functions.invoke('sync-stripe-subscription');
+          if (syncError) throw syncError;
           await refreshProfile();
           
           const { data, error } = await supabase.functions.invoke('list-invoices');
-          if (data && data.invoices) {
+          if (error) throw error;
+          if (!cancelled && data && data.invoices) {
             setInvoices(data.invoices);
           }
         } catch (e) {
           console.error("Failed to sync billing or fetch invoices:", e);
         } finally {
-          setIsLoadingInvoices(false);
+          if (!cancelled) setIsLoadingInvoices(false);
         }
       };
       syncBillingAndFetchInvoices();
+      return () => {
+        cancelled = true;
+      };
     }
   }, [activeView]);
 
@@ -99,14 +106,28 @@ export default function AccountPanel() {
   };
 
   useEffect(() => {
+    let cancelled = false;
     if (activeWorkspace) {
       setEditName(activeWorkspace.name || '');
       setEditCompany(activeWorkspace.company_name || '');
       setEditIndustry(activeWorkspace.company_industry || '');
-      getWorkspaceMembers(activeWorkspace.id).then(m => {
-        setMembers(m);
-      });
+      setMemberSearch('');
+      setMembers([]);
+      getWorkspaceMembers(activeWorkspace.id)
+        .then((workspaceMembers) => {
+          if (!cancelled) setMembers(workspaceMembers);
+        })
+        .catch((error) => {
+          console.error('Failed to load workspace members:', error);
+          if (!cancelled) setMembers([]);
+        });
+    } else {
+      setMembers([]);
+      setMemberSearch('');
     }
+    return () => {
+      cancelled = true;
+    };
   }, [activeWorkspace]);
 
   useEffect(() => {
@@ -220,6 +241,29 @@ export default function AccountPanel() {
     }
   };
 
+  const handleTransferOwnership = async () => {
+    if (!activeWorkspace || !newOwnerId) return;
+
+    try {
+      setIsTransferringOwnership(true);
+      const { error } = await supabase.functions.invoke('transfer-workspace-ownership', {
+        body: { workspaceId: activeWorkspace.id, newOwnerId }
+      });
+      if (error) throw error;
+
+      setIsTransferModalOpen(false);
+      setNewOwnerId('');
+      await fetchWorkspaces(user.id);
+      setMembers(await getWorkspaceMembers(activeWorkspace.id));
+      toast.success('Workspace ownership transferred successfully.');
+    } catch (error: any) {
+      console.error('Failed to transfer workspace ownership:', error);
+      toast.error(error.message || 'Failed to transfer workspace ownership.');
+    } finally {
+      setIsTransferringOwnership(false);
+    }
+  };
+
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWsName.trim()) return;
@@ -252,6 +296,8 @@ export default function AccountPanel() {
   const currentUserRole = members.find(m => m.user_id === user.id)?.role;
   // In our DB structure, the creator is marked in activeWorkspace.user_id, but might not have an 'owner' role in workspace_members due to legacy setup
   const isOwnerOrAdmin = activeWorkspace?.user_id === user?.id || currentUserRole === 'owner' || currentUserRole === 'admin';
+  const workspaceOwnerId = activeWorkspace?.user_id || currentOwner?.user_id;
+  const canTransferOwnership = workspaceOwnerId === user.id || currentUserRole === 'owner';
 
   // When expanding, the panel goes from 384px (max-w-sm) to 1152px (triple width)
   const isExpanded = activeView !== 'menu';
@@ -270,14 +316,14 @@ export default function AccountPanel() {
       {/* Expanding Side Panel */}
       <div 
         ref={panelRef}
-        className={`relative h-full bg-[#fafafa]/85 backdrop-blur-xl text-black shadow-2xl flex flex-col overflow-hidden motion-drawer ${isAccountPanelOpen ? 'translate-x-0' : 'translate-x-full'} ${isExpanded ? 'w-[1152px]' : 'w-[384px]'} max-md:w-full max-md:max-w-none`}
+        className={`relative h-full bg-[#fafafa]/85 backdrop-blur-xl text-black shadow-2xl flex flex-col overflow-hidden motion-drawer ${isAccountPanelOpen ? 'translate-x-0' : 'translate-x-full'} ${isExpanded ? 'w-[1152px]' : 'w-[384px]'} max-xl:w-full max-xl:max-w-none`}
       >
         {/* Global Panel Header */}
-        <div className="px-6 py-4 flex justify-between items-center bg-transparent z-20 shrink-0 max-md:px-4 max-md:pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="px-6 py-4 flex justify-between items-center bg-transparent z-20 shrink-0 max-xl:px-4 max-xl:pt-[max(1rem,env(safe-area-inset-top))]">
           <button 
             onClick={() => {
               setActiveWorkspace(null);
-              if (activeView === 'overview') setActiveView('menu');
+              setActiveView('menu');
             }}
             className="flex items-center gap-3 text-left group"
             title="Switch to personal context"
@@ -315,7 +361,7 @@ export default function AccountPanel() {
                 type="button"
                 onClick={() => setActiveView('menu')}
                 aria-label="Back to account menu"
-                className="hidden max-md:inline-flex px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-black/60 hover:text-black transition-colors"
+                className="hidden max-xl:inline-flex px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-black/60 hover:text-black transition-colors"
               >
                 ← Back
               </button>
@@ -333,10 +379,10 @@ export default function AccountPanel() {
         </div>
 
         {/* Inner Flex Container - Fixed 1152px width, letting the parent clip it */}
-        <div className="flex-1 min-h-0 flex w-[1152px] border-t border-black/10 max-md:w-full">
+        <div className="flex-1 min-h-0 flex w-[1152px] border-t border-black/10 max-xl:w-full">
           
           {/* LEFT COLUMN: MAIN MENU (384px) */}
-          <div className={`w-[384px] h-full bg-transparent border-r border-black/10 shrink-0 max-md:w-full max-md:border-r-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:pb-[max(1rem,env(safe-area-inset-bottom))] ${isExpanded ? 'max-md:hidden' : ''}`}>
+          <div className={`w-[384px] h-full bg-transparent border-r border-black/10 shrink-0 max-xl:w-full max-xl:border-r-0 max-xl:overflow-y-auto max-xl:overscroll-contain max-xl:pb-[max(1rem,env(safe-area-inset-bottom))] ${isExpanded ? 'max-xl:hidden' : ''}`}>
             <div className="p-3">
               <div className="flex flex-col gap-1.5">
                 {/* Workspaces List */}
@@ -491,7 +537,7 @@ export default function AccountPanel() {
           </div>
 
           {/* RIGHT COLUMN: OVERVIEW DETAILS (768px) */}
-          <div className={`w-[768px] h-full bg-black/[0.02] shrink-0 p-8 max-md:w-full max-md:overflow-y-auto max-md:overscroll-contain max-md:p-5 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] ${!isExpanded ? 'max-md:hidden' : ''}`}>
+          <div className={`w-[768px] h-full bg-black/[0.02] shrink-0 p-8 max-xl:w-full max-xl:overflow-y-auto max-xl:overscroll-contain max-xl:p-5 max-xl:pb-[max(1rem,env(safe-area-inset-bottom))] ${!isExpanded ? 'max-xl:hidden' : ''}`}>
             
             {/* OVERVIEW CONTENT */}
             {activeView === 'overview' && (
@@ -512,7 +558,7 @@ export default function AccountPanel() {
                 </button>
               </div>
 
-              <div className="flex-1 grid grid-cols-2 gap-8 min-h-0 max-md:grid-cols-1 max-md:gap-5">
+              <div className="flex-1 grid grid-cols-2 gap-8 min-h-0 max-xl:grid-cols-1 max-xl:gap-5">
                 {/* Left side: Avatar & Form */}
                 <div className="flex flex-col gap-5">
                   {/* Workspace Avatar */}
@@ -567,7 +613,8 @@ export default function AccountPanel() {
                         type="text" 
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="w-full bg-white border border-black/10 p-2 font-sans text-xs focus:ring-1 focus:ring-black outline-none" 
+                        disabled={!isOwnerOrAdmin}
+                        className="w-full bg-white border border-black/10 p-2 font-sans text-xs focus:ring-1 focus:ring-black outline-none disabled:cursor-not-allowed disabled:bg-black/[0.03] disabled:text-black/50"
                       />
                     </div>
                     
@@ -579,7 +626,8 @@ export default function AccountPanel() {
                           value={editCompany}
                           onChange={(e) => setEditCompany(e.target.value)}
                           placeholder="E.g. Acme Corp"
-                          className="w-full bg-white border border-black/10 p-2 font-sans text-xs focus:ring-1 focus:ring-black outline-none" 
+                          disabled={!isOwnerOrAdmin}
+                          className="w-full bg-white border border-black/10 p-2 font-sans text-xs focus:ring-1 focus:ring-black outline-none disabled:cursor-not-allowed disabled:bg-black/[0.03] disabled:text-black/50"
                         />
                       </div>
 
@@ -590,7 +638,8 @@ export default function AccountPanel() {
                           value={editIndustry}
                           onChange={(e) => setEditIndustry(e.target.value)}
                           placeholder="E.g. Film"
-                          className="w-full bg-white border border-black/10 p-2 font-sans text-xs focus:ring-1 focus:ring-black outline-none" 
+                          disabled={!isOwnerOrAdmin}
+                          className="w-full bg-white border border-black/10 p-2 font-sans text-xs focus:ring-1 focus:ring-black outline-none disabled:cursor-not-allowed disabled:bg-black/[0.03] disabled:text-black/50"
                         />
                       </div>
                     </div>
@@ -614,8 +663,8 @@ export default function AccountPanel() {
                     </div>
                     <button 
                       onClick={() => setIsTransferModalOpen(true)}
-                      disabled={!isOwnerOrAdmin}
-                      title={!isOwnerOrAdmin ? "Only workspace admins can transfer ownership" : ""}
+                      disabled={!canTransferOwnership}
+                      title={!canTransferOwnership ? "Only the current workspace owner can transfer ownership" : ""}
                       className="text-[10px] border border-black/20 bg-black/5 px-3 py-1.5 hover:bg-black hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-black/5 disabled:hover:text-black"
                     >
                       Transfer
@@ -666,7 +715,15 @@ export default function AccountPanel() {
 
             {/* TEAM CONTENT */}
             {activeView === 'team' && (() => {
-              const isIndividualPlan = !profile?.subscription_status || profile.subscription_status !== 'active';
+              const normalizedMemberSearch = memberSearch.trim().toLowerCase();
+              const filteredMembers = normalizedMemberSearch
+                ? members.filter((member) => [
+                    member.profiles?.first_name,
+                    member.profiles?.last_name,
+                    member.profiles?.email,
+                    member.role,
+                  ].some((value) => value?.toLowerCase().includes(normalizedMemberSearch)))
+                : members;
               
               return (
                 <div className="w-full h-full flex flex-col gap-4">
@@ -674,7 +731,7 @@ export default function AccountPanel() {
                   <div className="flex justify-between items-start shrink-0">
                     <div>
                       <h1 className="text-2xl font-medium tracking-tight mb-0.5">Team</h1>
-                      <p className="text-[10px] font-sans text-black/50">Viewing 1-{members.length} of {members.length}</p>
+                      <p className="text-[10px] font-sans text-black/50">Viewing {filteredMembers.length} of {members.length}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <button 
@@ -695,6 +752,8 @@ export default function AccountPanel() {
                   <input 
                     type="text" 
                     placeholder="Search" 
+                    value={memberSearch}
+                    onChange={(event) => setMemberSearch(event.target.value)}
                     className="bg-transparent border-none outline-none font-sans text-xs w-full text-black placeholder:text-black/40"
                   />
                 </div>
@@ -709,7 +768,7 @@ export default function AccountPanel() {
                 {/* Members List (Scrollable) */}
                 <div className="flex-1 overflow-y-auto min-h-0">
                   <div className="flex flex-col">
-                    {members.map(member => (
+                    {filteredMembers.map(member => (
                       <div key={member.user_id} className="grid grid-cols-12 gap-4 py-2 px-2 items-center border-b border-black/5 hover:bg-black/5 transition-colors group">
                         <div className="col-span-5 flex items-center gap-2">
                           {member.profiles?.avatar_url ? (
@@ -737,7 +796,7 @@ export default function AccountPanel() {
                         </div>
                         <div className="col-span-3 flex items-center justify-between">
                           <span className="font-sans text-xs capitalize text-black/70">{member.role}</span>
-                          {member.role === 'owner' && (
+                          {member.role === 'owner' && canTransferOwnership && (
                             <button 
                               onClick={() => setIsTransferModalOpen(true)}
                               className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 border border-black/10 text-[10px] hover:bg-white hover:border-black/20 whitespace-nowrap bg-white shadow-sm"
@@ -1043,7 +1102,7 @@ export default function AccountPanel() {
             
             <h2 className="text-xl font-medium tracking-tight mb-2">Transfer workspace ownership</h2>
             <p className="text-black/60 text-sm mb-8 px-4 leading-relaxed">
-              Select the new workspace owner. They will receive an email to confirm the transfer.
+              Select the new workspace owner. Their access will update immediately.
             </p>
 
             <div className="w-full flex flex-col gap-2 text-left mb-8">
@@ -1072,25 +1131,11 @@ export default function AccountPanel() {
                 Cancel
               </button>
               <button 
-                onClick={async () => {
-                  if (!activeWorkspace || !newOwnerId) return;
-                  try {
-                    // Promote the new owner FIRST to avoid losing RLS permissions mid-transaction
-                    await updateWorkspaceMember(activeWorkspace.id, newOwnerId, { role: 'owner' });
-                    // Then demote the current owner
-                    await updateWorkspaceMember(activeWorkspace.id, user.id, { role: 'admin' });
-                    setIsTransferModalOpen(false);
-                    setNewOwnerId('');
-                    await fetchWorkspaces(user.id);
-                  } catch (err) {
-                    console.error(err);
-                    toast.error("Failed to transfer ownership");
-                  }
-                }}
-                disabled={!newOwnerId}
+                onClick={handleTransferOwnership}
+                disabled={!newOwnerId || isTransferringOwnership}
                 className="flex-1 p-4 bg-black text-white text-xs hover:bg-black/90 transition-colors disabled:opacity-50"
               >
-                Transfer
+                {isTransferringOwnership ? 'Transferring...' : 'Transfer'}
               </button>
             </div>
           </div>

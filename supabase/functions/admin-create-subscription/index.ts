@@ -218,6 +218,7 @@ serve(async (req) => {
 
     // 3. Prepare and send custom email
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    let emailDelivery: 'not_requested' | 'sent' | 'failed' = customerEmail ? 'failed' : 'not_requested';
     
     if (resendApiKey && customerEmail) {
       const emailHtml = `
@@ -251,26 +252,36 @@ serve(async (req) => {
 </html>
       `;
 
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${resendApiKey}`
-        },
-        body: JSON.stringify({
-          from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
-          to: customerEmail,
-          bcc: ['dadacomposer@gmail.com'],
-          subject: `Your New Subscription: ${subscriptionTitle}`,
-          html: emailHtml
-        })
-      }).catch(e => console.error('Failed to send Resend email:', e));
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`
+          },
+          body: JSON.stringify({
+            from: 'Tom Fox Catalog <noreply@tomfoxcatalog.com>',
+            to: customerEmail,
+            bcc: ['dadacomposer@gmail.com'],
+            subject: `Your New Subscription: ${subscriptionTitle}`,
+            html: emailHtml
+          })
+        });
+        if (response.ok) {
+          emailDelivery = 'sent';
+        } else {
+          console.error('Failed to send Resend subscription email:', await response.text());
+        }
+      } catch (error) {
+        console.error('Failed to send Resend subscription email:', error);
+      }
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
       subscriptionId: subscription.id,
-      invoiceUrl: invoiceUrl 
+      invoiceUrl: invoiceUrl,
+      emailDelivery,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

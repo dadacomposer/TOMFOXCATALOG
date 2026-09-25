@@ -284,6 +284,9 @@ export default function AdminTomFoxStudio() {
       } else {
         toast.success("Project created successfully!");
       }
+      if (data?.emailDelivery === 'partial_failure') {
+        toast.error('The project was created, but one or more invitation emails could not be delivered. Please resend them from the project team area.');
+      }
       setCreateModalOpen(false);
       fetchProjects();
       resetForm();

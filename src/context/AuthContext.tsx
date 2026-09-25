@@ -263,7 +263,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const showOnboarding = !!user && (!profile || !profile.onboarding_completed);
+  // A missing profile after a failed/deleted session is not an onboarding
+  // state. The modal is reserved for an authenticated account with a real
+  // profile that has not completed setup.
+  const showOnboarding = !!user && !!profile && !profile.onboarding_completed;
 
   return (
     <AuthContext.Provider value={{ 

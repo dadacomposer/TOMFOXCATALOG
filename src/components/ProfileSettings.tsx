@@ -25,6 +25,13 @@ export default function ProfileSettings() {
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  useEffect(() => {
+    setFirstName(profile?.first_name || '');
+    setLastName(profile?.last_name || '');
+    setEmail(user?.email || '');
+    setNotifyNewMusic(profile?.notify_new_music ?? true);
+  }, [profile, user?.email]);
   
   useEffect(() => {
     async function loadIdentities() {
@@ -118,7 +125,11 @@ export default function ProfileSettings() {
         const { error: emailError } = await supabase.auth.updateUser({ email });
         if (emailError) throw emailError;
         // Optionally update email in profiles table as well, though it's typically synced via triggers
-        await supabase.from('profiles').update({ email }).eq('id', user.id);
+        const { error: profileEmailError } = await supabase
+          .from('profiles')
+          .update({ email })
+          .eq('id', user.id);
+        if (profileEmailError) throw profileEmailError;
         emailChanged = true;
       }
 
@@ -224,7 +235,7 @@ export default function ProfileSettings() {
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-2 pb-8">
-        <div className="grid grid-cols-2 gap-8 mb-12">
+        <div className="grid grid-cols-1 min-[640px]:grid-cols-2 gap-8 mb-12">
         
         {/* Left Column: Personal Info */}
         <div className="flex flex-col gap-5">
@@ -336,8 +347,8 @@ export default function ProfileSettings() {
       {/* Danger Zone */}
       <div className="mt-8 pt-8 border-t border-red-100 flex flex-col gap-4">
         <h3 className="text-xs font-bold uppercase tracking-widest text-red-600">Danger Zone</h3>
-        <div className="flex items-center justify-between p-4 bg-red-50/50 border border-red-100 rounded-lg">
-          <div className="flex flex-col gap-1 max-w-[60%]">
+        <div className="flex flex-col min-[480px]:flex-row min-[480px]:items-center justify-between gap-4 p-4 bg-red-50/50 border border-red-100 rounded-lg">
+          <div className="flex flex-col gap-1 min-[480px]:max-w-[60%]">
             <span className="text-sm font-bold text-red-900">Delete Account</span>
             <span className="text-xs text-red-700/80 leading-relaxed font-sans">
               Permanently delete your account and all personal data. This action is irreversible.
@@ -440,17 +451,24 @@ export default function ProfileSettings() {
                   Cancel
                 </button>
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
                     setIsSaving(true);
-                    supabase.functions.invoke('delete-account').then(({ error }) => {
-                      if (error) {
-                        toast.error("Failed to delete account: " + error.message);
-                        setIsSaving(false);
-                      } else {
-                        toast.success("Account deleted successfully.");
-                        window.location.href = '/';
-                      }
-                    });
+                    try {
+                      const { error } = await supabase.functions.invoke('delete-account');
+                      if (error) throw error;
+
+                      // Deleting an Auth user does not immediately remove the
+                      // browser's cached access token. Explicitly clear the
+                      // local session first so the public page cannot reopen
+                      // onboarding for an account that no longer exists.
+                      await supabase.auth.signOut({ scope: 'local' });
+                      toast.success('Account deleted successfully.');
+                      window.location.replace('/');
+                    } catch (error: any) {
+                      console.error('Account deletion failed:', error);
+                      toast.error('Failed to delete account: ' + (error.message || 'Unknown error'));
+                      setIsSaving(false);
+                    }
                   }}
                   disabled={deleteConfirmText !== 'DELETE' || isSaving}
                   className="flex-1 p-3 bg-red-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-red-700 transition-colors disabled:opacity-50"

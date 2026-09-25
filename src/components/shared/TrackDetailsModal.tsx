@@ -187,12 +187,12 @@ export default function TrackDetailsModal() {
         {/* Close Button - Top Right Aligned */}
         <button 
           onClick={() => setSelectedTrackForDetails(null)} 
-          className="absolute top-6 right-6 md:top-10 md:right-10 w-10 h-10 z-50 rounded-full bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors"
+          className="absolute top-3 right-3 md:top-10 md:right-10 w-10 h-10 z-50 rounded-full bg-black/10 backdrop-blur-sm flex items-center justify-center hover:bg-black/15 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="p-6 md:p-10 flex flex-col md:flex-row gap-8 md:gap-12 relative z-10">
+        <div className="p-6 pt-16 md:p-10 flex flex-col md:flex-row gap-8 md:gap-12 relative z-10">
           {/* Left Column: Artwork & Player */}
           <div className="w-full md:w-[40%] lg:w-1/3 shrink-0 flex flex-col gap-6">
             <div className="w-full aspect-square bg-black/5 rounded-2xl overflow-hidden relative shadow-lg group">
@@ -385,7 +385,7 @@ export default function TrackDetailsModal() {
                           }}
                         >
                           <TrackArtwork track={simTrack} className="absolute inset-0 w-full h-full transition-transform duration-500 group-hover:scale-105" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 max-md:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className={`absolute inset-0 bg-black/40 transition-opacity flex items-center justify-center ${currentTrack?.id === simTrack.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                             <button 
                               className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-105 transition-transform"
                               onClick={(e) => {

@@ -460,7 +460,7 @@ export async function getWorkspaceMembers(workspaceId: string) {
     .select(`
       id,
       role,
-      profiles:user_id ( id, first_name, last_name, avatar_url ),
+      profiles:user_id ( id, first_name, last_name, email, avatar_url ),
       user_id
     `)
     .eq('workspace_id', workspaceId);
@@ -506,5 +506,4 @@ export async function declineWorkspaceInvite(inviteId: string) {
   const { error } = await supabase.rpc('decline_workspace_invite', { p_invite_id: inviteId });
   if (error) throw error;
 }
-
 

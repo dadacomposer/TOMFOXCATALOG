@@ -401,7 +401,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                       onClick={(e) => { e.stopPropagation(); handlePlayPauseIsland(track); }}
                     >
                       <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
+                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                         {currentTrack?.id === track.id && isPlaying ? (
                           <Pause className="w-4 h-4 fill-white text-white" />
                         ) : (
