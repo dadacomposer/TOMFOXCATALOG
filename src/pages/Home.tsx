@@ -78,7 +78,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0, rightOffsetClass = 'max-
   return (
     <>
       <button 
-        className={`absolute max-md:left-2 md:left-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        className={`absolute max-md:left-2 md:left-12 top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollLeft ? 'opacity-0 group-hover/section:opacity-100 max-md:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
@@ -88,7 +88,7 @@ const ScrollArrows = ({ scrollRef, isDark, offsetY = 0, rightOffsetClass = 'max-
         <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
       <button 
-        className={`absolute ${rightOffsetClass} top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
+        className={`absolute ${rightOffsetClass} top-1/2 w-10 h-10 no-radius rounded-full shadow-lg flex items-center justify-center z-30 transition-all ${canScrollRight ? 'opacity-0 group-hover/section:opacity-100 max-md:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${btnClass}`}
         style={{ borderRadius: '50%', transform: `translateY(calc(-50% - ${offsetY}px))` }}
         onClick={(e) => {
           e.stopPropagation();
@@ -414,7 +414,7 @@ export default function Home() {
                           
                           {/* Play Button */}
                           <button 
-                            className="w-10 h-10 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-xl hover:bg-white/30"
+                            className="w-10 h-10 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 max-md:opacity-100 transition-opacity duration-300 shadow-xl hover:bg-white/30"
                             onClick={handlePlayTopPick}
                           >
                             {loadingPlaylistId === pl.id ? (
@@ -490,7 +490,7 @@ export default function Home() {
                 >
                   <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 ${!user ? 'bg-white/5' : 'bg-black/5'}`}>
                     <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
                       {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
                     </div>
                     {trendingTrackIds.has(track.id) && (
@@ -593,7 +593,7 @@ export default function Home() {
                     >
                       <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 ${!user ? 'bg-white/5' : 'bg-black/5'}`}>
                         <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
                           {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
                         </div>
                       </div>
@@ -637,7 +637,7 @@ export default function Home() {
                     >
                       <div className="w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5">
                         <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
                           {isThisPlaying ? <Pause className="w-5 h-5 fill-white text-white" /> : <Play className="w-5 h-5 fill-white text-white" style={{ transform: 'translateX(4.166%)' }} />}
                         </div>
                       </div>

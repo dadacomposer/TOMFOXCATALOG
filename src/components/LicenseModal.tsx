@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Loader2, ArrowRight, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useLicense } from '../context/LicenseContext';
 import { supabase } from '../lib/supabase';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function LicenseModal() {
   const { licenseTrack, isLicenseModalOpen, closeLicenseModal } = useLicense();
+  useLockBodyScroll(isLicenseModalOpen);
   
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,11 +107,11 @@ export default function LicenseModal() {
   };
 
   return (
-    <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isLicenseModalOpen ? '' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 max-md:items-start max-md:overflow-y-auto max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,calc(env(safe-area-inset-bottom)+1rem))] ${isLicenseModalOpen ? '' : 'pointer-events-none'}`}>
       <div className={`absolute inset-0 motion-overlay ${isLicenseModalOpen ? 'bg-black/20 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={handleClose} />
 
       {/* Modal Content */}
-      <div className={`relative z-10 w-full max-w-2xl bg-[#F9FAFB] shadow-2xl overflow-hidden rounded-xl border border-black/5 motion-surface ${isLicenseModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-2xl bg-[#F9FAFB] shadow-2xl overflow-hidden rounded-xl border border-black/5 motion-surface max-md:my-auto max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto max-md:overscroll-contain ${isLicenseModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
         
         {/* Close button */}
         <button 
@@ -119,7 +121,7 @@ export default function LicenseModal() {
           <X className="w-5 h-5 text-black/60" />
         </button>
 
-        <div className="p-8 md:p-12">
+        <div className="p-8 md:p-12 max-md:p-5">
           
           {step === 1 && (
             <div className="animate-scale-in">
@@ -202,7 +204,7 @@ export default function LicenseModal() {
                     </div>
                     
                     {isDropdownOpen && (
-                      <div className="absolute z-10 w-full mt-2 bg-white border border-black/10 rounded-xl shadow-lg overflow-hidden py-2 motion-popover">
+                      <div className="absolute z-10 w-full mt-2 bg-white border border-black/10 rounded-xl shadow-lg overflow-hidden py-2 motion-popover max-md:max-h-[min(50dvh,260px)] max-md:overflow-y-auto">
                         {[
                           "Content Creator / Youtube Channel",
                           "Freelancer / Client Work",

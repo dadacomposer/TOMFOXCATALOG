@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 
 export default function InviteCollaboratorModal({ 
   isOpen, 
@@ -18,6 +19,7 @@ export default function InviteCollaboratorModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  useLockBodyScroll(isOpen);
 
   useEffect(() => {
     if (isOpen) {
@@ -88,8 +90,8 @@ export default function InviteCollaboratorModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in">
-      <div className="animate-scale-in bg-white rounded-[32px] w-full max-w-md p-8 relative flex flex-col gap-6 shadow-2xl">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4 bg-black/20 backdrop-blur-sm animate-fade-in">
+      <div className="animate-scale-in bg-white rounded-[32px] w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 md:p-8 relative flex flex-col gap-6 shadow-2xl">
         <button 
           onClick={onClose}
           className="absolute top-6 right-6 text-black/40 hover:text-black transition-colors"

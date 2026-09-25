@@ -8,10 +8,12 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 import { useModalAnimation } from '../hooks/useModalAnimation';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function Login() {
   const { isLoginModalOpen, setLoginModalOpen, setPlayIntro } = useAuth();
   const { isMounted, isAnimating } = useModalAnimation(isLoginModalOpen);
+  useLockBodyScroll(isLoginModalOpen);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -152,10 +154,10 @@ export default function Login() {
   if (!isMounted) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto px-4 py-4 ${isAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <div className={`absolute inset-0 bg-black/60 motion-overlay ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setLoginModalOpen(false)} />
       
-      <div className={`relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-md max-h-[calc(100dvh-2rem)] bg-white border border-black/10 rounded-[32px] p-6 md:p-12 shadow-2xl overflow-y-auto motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
         {/* Close Button */}
         <button 
           onClick={() => {

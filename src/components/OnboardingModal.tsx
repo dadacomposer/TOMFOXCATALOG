@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase, updateProfile, createWorkspace, inviteTeamMember } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { Building2, Check, ChevronRight, X, Plus, User, Pencil } from 'lucide-react';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 const ROLES = [
   'Producer',
@@ -21,6 +22,8 @@ export default function OnboardingModal() {
   const [step, setStep] = useState(1);
   const [justPaid, setJustPaid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isOnboardingOpen = !authLoading && !!user && (!profile?.onboarding_completed || justPaid);
+  useLockBodyScroll(isOnboardingOpen);
 
   // Step 1 State
   const [workspaceName, setWorkspaceName] = useState('');
@@ -89,8 +92,7 @@ export default function OnboardingModal() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [step, isSubmitting, workspaceName, firstName, lastName, role, inviteEmail, invites, workspaceId, user, personalAvatarUrl]);
 
-  if (authLoading || !user) return null;
-  if (profile?.onboarding_completed && !justPaid) return null;
+  if (!isOnboardingOpen) return null;
 
   const handleNextStep1 = async () => {
     const trimmedName = workspaceName.trim();
@@ -246,11 +248,10 @@ export default function OnboardingModal() {
   };
 
   return (
-    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-200 motion-overlay">
+    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-200 motion-overlay max-md:items-start max-md:overflow-y-auto max-md:px-4 max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,calc(env(safe-area-inset-bottom)+1rem))]">
       <div 
-        className="relative bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-200 motion-surface"
+        className="relative w-[480px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-200 motion-surface max-md:w-full max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto max-md:overscroll-contain max-md:my-auto"
         style={{ 
-          width: '480px',
           height: (step === 5 || step === 0) ? '400px' : step === 2 ? '740px' : '600px',
         }}
       >
@@ -270,11 +271,11 @@ export default function OnboardingModal() {
           </div>
         )}
 
-        <div className={`flex-1 flex ${step === 4 ? 'flex-row' : 'flex-col'} h-full w-full`}>
+        <div className={`flex-1 flex ${step === 4 ? 'flex-row' : 'flex-col'} h-full w-full max-md:min-h-full max-md:flex-col`}>
           
           {/* STEP 4 SPLIT LAYOUT - LEFT SIDE */}
           {step === 4 && (
-            <div className="w-[45%] relative bg-black flex flex-col justify-end p-8 text-white overflow-hidden">
+            <div className="w-[45%] relative bg-black flex flex-col justify-end p-8 text-white overflow-hidden max-md:hidden">
               {/* NOTE: Replace with actual Pop Culture Quirk artwork URL */}
               <img 
                 src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=1000&auto=format&fit=crop" 
@@ -293,7 +294,7 @@ export default function OnboardingModal() {
           )}
 
           {/* MAIN CONTENT AREA */}
-          <div className={`flex flex-col h-full ${step === 4 ? 'w-[55%] p-10 pt-16' : step === 0 ? 'w-full' : 'p-10 pt-16'}`}>
+          <div className={`flex flex-col h-full ${step === 4 ? 'w-[55%] p-10 pt-16' : step === 0 ? 'w-full' : 'p-10 pt-16'} max-md:w-full max-md:p-6 max-md:pt-14 max-md:pb-[max(1.5rem,env(safe-area-inset-bottom))]`}>
             
             {/* STEP 0: WELCOME AFTER PAYMENT */}
             {step === 0 && (

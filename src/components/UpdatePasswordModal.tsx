@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function UpdatePasswordModal() {
   const { isUpdatePasswordModalOpen, setUpdatePasswordModalOpen } = useAuth();
@@ -10,6 +11,7 @@ export default function UpdatePasswordModal() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useLockBodyScroll(isUpdatePasswordModalOpen);
 
   if (!isUpdatePasswordModalOpen) return null;
 
@@ -46,10 +48,10 @@ export default function UpdatePasswordModal() {
   };
 
   return (
-    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center px-4 pointer-events-auto motion-overlay">
+    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center overflow-y-auto px-4 py-4 pointer-events-auto motion-overlay">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setUpdatePasswordModalOpen(false)} />
       
-      <div className="animate-scale-in motion-surface relative z-10 w-full max-w-md bg-white border border-black/10 rounded-[32px] p-8 md:p-12 shadow-2xl overflow-hidden">
+      <div className="animate-scale-in motion-surface relative z-10 w-full max-w-md max-h-[calc(100dvh-2rem)] bg-white border border-black/10 rounded-[32px] p-6 md:p-12 shadow-2xl overflow-y-auto">
         {/* Close Button */}
         <button 
           onClick={() => setUpdatePasswordModalOpen(false)} 

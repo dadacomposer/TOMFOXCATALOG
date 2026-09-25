@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Plus, CheckCircle2, ListMusic, Loader2 } from 'lucide-react';
 import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { useNavigate } from 'react-router-dom';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 type Props = {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
   const [isCreating, setIsCreating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  useLockBodyScroll(isOpen);
   
   const handleClose = () => {
     setIsCreating(false);
@@ -52,8 +54,8 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId }: Props) 
   };
 
   const content = (
-    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in motion-overlay" onClick={handleClose}>
-      <div className="bg-white rounded-[24px] w-full max-w-md overflow-hidden shadow-2xl relative animate-scale-in motion-surface" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center overflow-y-auto p-4 backdrop-blur-sm animate-fade-in motion-overlay" onClick={handleClose}>
+      <div className="bg-white rounded-[24px] w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl relative animate-scale-in motion-surface" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-black/5">
           <h2 className="text-2xl font-bold uppercase tracking-tighter">Add to Playlist</h2>
           <button onClick={handleClose} className="p-2 hover:bg-black/5 rounded-full transition-colors">

@@ -1064,8 +1064,8 @@ toast.success('Track restored successfully');
           </button>
         </div>
       </div>
-      <div className="flex gap-4 shrink-0">
-        <div className="relative flex-1 group">
+      <div className="flex flex-col gap-3 shrink-0 md:flex-row md:gap-4">
+        <div className="relative w-full flex-1 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black/40" />
           <input 
             type="text" 
@@ -1080,7 +1080,7 @@ toast.success('Track restored successfully');
             </button>
           )}
         </div>
-        <div className="relative flex items-center gap-2 px-4 bg-white border border-black/10 rounded-xl shadow-sm shrink-0 h-12" ref={sortDropdownRef}>
+        <div className="relative flex h-12 w-full items-center gap-2 px-4 bg-white border border-black/10 rounded-xl shadow-sm shrink-0 md:w-auto" ref={sortDropdownRef}>
           <span className="text-[10px] font-bold tracking-widest uppercase text-black/40">Sort</span>
           <button 
             onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
@@ -1117,7 +1117,7 @@ toast.success('Track restored successfully');
         </div>
 
         {/* Tags Filters Dropdown */}
-        <div className="relative flex items-center gap-2 px-4 bg-white border border-black/10 rounded-xl shadow-sm shrink-0 h-12" ref={tagsFilterDropdownRef}>
+        <div className="relative flex h-12 w-full items-center gap-2 px-4 bg-white border border-black/10 rounded-xl shadow-sm shrink-0 md:w-auto" ref={tagsFilterDropdownRef}>
           <span className="text-[10px] font-bold tracking-widest uppercase text-black/40">Filters</span>
           <button 
             onClick={() => setIsTagsFilterDropdownOpen(!isTagsFilterDropdownOpen)}
@@ -1159,21 +1159,21 @@ toast.success('Track restored successfully');
 
         <button 
           onClick={() => setIsImportModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-4 bg-black text-white rounded-xl shadow-sm shrink-0 h-12 hover:bg-black/80 transition-colors"
+          className="flex h-12 w-full items-center justify-center gap-2 px-4 bg-black text-white rounded-xl shadow-sm shrink-0 hover:bg-black/80 transition-colors md:w-auto"
         >
           <Upload className="w-4 h-4" />
           <span className="text-[11px] font-bold tracking-widest uppercase">Import CSV</span>
         </button>
-        <div className="flex items-center bg-black/5 rounded-xl h-12 shrink-0 overflow-hidden border border-black/5 p-1 gap-1">
+        <div className="flex h-12 w-full items-center bg-black/5 rounded-xl shrink-0 overflow-hidden border border-black/5 p-1 gap-1 md:w-auto">
           <button
             onClick={() => setActiveTab('active')}
-            className={`px-4 text-[11px] font-bold tracking-widest uppercase transition-all h-full flex items-center justify-center rounded-lg ${activeTab === 'active' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/10'}`}
+            className={`flex h-full flex-1 items-center justify-center px-4 text-[11px] font-bold tracking-widest uppercase transition-all rounded-lg md:flex-none ${activeTab === 'active' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/10'}`}
           >
             Active ({tracks.filter(t => !t.deleted_at).length})
           </button>
           <button
             onClick={() => setActiveTab('trash')}
-            className={`px-4 transition-all flex items-center justify-center h-full rounded-lg ${activeTab === 'trash' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/10'}`}
+            className={`flex h-full flex-1 items-center justify-center px-4 transition-all rounded-lg md:flex-none ${activeTab === 'trash' ? 'bg-black text-white shadow-sm' : 'text-black/60 hover:text-black hover:bg-black/10'}`}
             title={`Trash (${tracks.filter(t => t.deleted_at).length})`}
           >
             <Trash2 className="w-4 h-4" />
@@ -1183,8 +1183,8 @@ toast.success('Track restored successfully');
 
       {/* Bulk Action Bar */}
       {selectedTracks.size > 0 && (
-        <div className="bg-black text-white px-6 py-4 rounded-xl flex items-start justify-between sticky top-4 z-40 shadow-xl">
-          <div className="flex flex-col flex-1 mr-4">
+        <div className="sticky top-4 z-40 flex flex-col items-stretch gap-4 rounded-xl bg-black px-4 py-4 text-white shadow-xl md:flex-row md:items-start md:justify-between md:px-6">
+          <div className="flex min-w-0 flex-col flex-1 md:mr-4">
             <div className="font-bold text-sm tracking-wider uppercase">
               {selectedTracks.size} Track{selectedTracks.size !== 1 && 's'} Selected
             </div>
@@ -1192,7 +1192,7 @@ toast.success('Track restored successfully');
               {Array.from(selectedTracks).map(id => allFetchedTracks.find(t => t.id === id)?.file_name).filter(Boolean).join(', ')}
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 md:gap-3">
             <button onClick={() => setBulkAction('playlist')} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">
               Create Playlist
             </button>
@@ -1896,13 +1896,13 @@ toast.success('Track restored successfully');
 
       {/* Playlist Manager Modal */}
       {isPlaylistModalMounted && (
-        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isPlaylistModalAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-4 ${isPlaylistModalAnimating ? 'pointer-events-auto' : 'pointer-events-none'}`}>
           <div className={`absolute inset-0 bg-black/60 transition-all duration-500 ease-out ${isPlaylistModalAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={handleClosePlaylistManager} />
-          <div className={`relative z-10 bg-[#fafafa] rounded-[32px] shadow-2xl w-full max-w-6xl h-[90vh] min-h-0 overflow-hidden flex flex-row border border-black/5 transition-all duration-500 ease-out ${isPlaylistModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
+          <div className={`relative z-10 flex h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-black/5 bg-[#fafafa] shadow-2xl transition-all duration-500 ease-out md:h-[90vh] md:flex-row md:rounded-[32px] ${isPlaylistModalAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
             
             {/* Sidebar: Playlist List */}
-            <div className="w-1/3 min-w-[18rem] min-h-0 border-r border-black/10 flex flex-col bg-black/[0.02]">
-              <div className="p-6 border-b border-black/5 shrink-0 flex flex-col gap-4">
+            <div className="flex h-[35%] min-h-[12rem] w-full shrink-0 flex-col border-b border-black/10 bg-black/[0.02] md:h-auto md:min-h-0 md:w-1/3 md:min-w-[18rem] md:border-b-0 md:border-r">
+              <div className="flex shrink-0 flex-col gap-3 border-b border-black/5 p-4 md:gap-4 md:p-6">
                 <div>
                   <h3 className="text-xl font-bold">Playlists</h3>
                 </div>
@@ -1922,14 +1922,14 @@ toast.success('Track restored successfully');
                   )}
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <div className="flex-1 space-y-2 overflow-y-auto overscroll-contain p-3 md:p-4">
                 {allPlaylists
                   .filter(p => p.title?.toLowerCase().includes(playlistListSearchQuery.toLowerCase()))
                   .map(p => (
                   <button 
                     key={p.id}
                     onClick={() => handlePlaylistSelect(p.id)}
-                    className={`w-full text-left p-4 rounded-xl transition-all border ${selectedPlaylistId === p.id ? 'bg-white border-black/20 shadow-sm' : 'border-transparent hover:bg-black/5'}`}
+                    className={`w-full rounded-xl border p-3 text-left transition-all md:p-4 ${selectedPlaylistId === p.id ? 'bg-white border-black/20 shadow-sm' : 'border-transparent hover:bg-black/5'}`}
                   >
                     <div className="font-bold text-black">{p.title}</div>
                     <div className="text-xs text-black/50 mt-1">{p.track_count} Tracks</div>
@@ -1940,17 +1940,17 @@ toast.success('Track restored successfully');
             </div>
 
             {/* Main Area: Edit Selected Playlist */}
-            <div className="flex-1 min-w-0 min-h-0 flex flex-col relative bg-white">
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-white">
               {!selectedPlaylistId ? (
                 <>
-                  <div className="flex justify-end p-6 shrink-0">
+                  <div className="flex shrink-0 justify-end p-4 md:p-6">
                     <button onClick={handleClosePlaylistManager} className="p-2 hover:bg-black/5 rounded-full text-black/50 hover:text-black">
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <div className="flex-1 flex items-center justify-center pb-20">
-                    <div className="flex flex-col items-center gap-6 text-black/40 -mt-24">
-                      <img src="/search-for-documents.svg" alt="Select playlist" className="w-96 h-96" />
+                  <div className="flex flex-1 items-center justify-center px-4 pb-10 md:pb-20">
+                    <div className="-mt-8 flex flex-col items-center gap-4 text-black/40 md:-mt-24 md:gap-6">
+                      <img src="/search-for-documents.svg" alt="Select playlist" className="h-40 w-40 md:h-96 md:w-96" />
                       <span className="font-bold uppercase tracking-widest text-sm text-center">Select a playlist to manage</span>
                     </div>
                   </div>
@@ -1960,11 +1960,11 @@ toast.success('Track restored successfully');
                   {(() => {
                     const activePlaylist = draftPlaylist;
                     return (
-                      <div className="flex-1 overflow-y-auto">
-                        <div className="p-8 border-b border-black/5">
-                          <div className="flex items-center justify-between mb-6">
+                      <div className="flex-1 overflow-y-auto overscroll-contain">
+                        <div className="border-b border-black/5 p-4 md:p-8">
+                          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 md:mb-6">
                             <h3 className="text-sm font-bold uppercase tracking-widest text-black/50">Playlist Details</h3>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <button
                                 onClick={() => {
                                   setConfirmModal({
@@ -1986,14 +1986,14 @@ toast.success('Track restored successfully');
                               >
                                 {isPlaylistSaving ? 'Saving…' : 'Save'}
                               </button>
-                              <div className="w-px h-6 bg-black/10 mx-2"></div>
+                              <div className="mx-1 hidden h-6 w-px bg-black/10 sm:block md:mx-2"></div>
                               <button onClick={handleClosePlaylistManager} className="p-2 hover:bg-black/5 rounded-full text-black/50 hover:text-black" title="Close Manager">
                                 <X className="w-5 h-5" />
                               </button>
                             </div>
                           </div>
-                          <div className="flex gap-8 items-start">
-                            <div className="w-48 h-48 bg-black/5 rounded-xl flex-shrink-0 overflow-hidden relative group">
+                          <div className="flex flex-col items-start gap-5 md:flex-row md:gap-8">
+                            <div className="group relative h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-black/5 md:h-48 md:w-48">
                               {activePlaylist?.cover_url ? (
                                 <img src={activePlaylist.cover_url} className="w-full h-full object-cover" alt="Cover" />
                               ) : (
@@ -2001,7 +2001,7 @@ toast.success('Track restored successfully');
                                   <Music className="w-12 h-12 text-black/20" />
                                 </div>
                               )}
-                              <label className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs font-bold uppercase tracking-wider">
+                              <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/60 text-xs font-bold uppercase tracking-wider text-white opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                                 Change
                                 <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                                   const file = e.target.files?.[0];
@@ -2022,7 +2022,7 @@ toast.success('Track restored successfully');
                               </label>
                             </div>
                             
-                            <div className="flex-1 min-h-48 flex flex-col justify-center gap-6 py-2">
+                            <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 py-0 md:min-h-48 md:gap-6 md:py-2">
                               <div>
                                 <input 
                                   key={`title-${activePlaylist?.id}`}
@@ -2033,7 +2033,7 @@ toast.success('Track restored successfully');
                                       handleUpdatePlaylistMetadata({ title: e.target.value });
                                     }
                                   }}
-                                  className="w-full text-4xl font-bold bg-transparent border-b border-transparent hover:border-black/10 focus:border-black/30 outline-none pb-1 transition-colors px-0 placeholder:text-black/20" 
+                                  className="w-full border-b border-transparent bg-transparent px-0 pb-1 text-2xl font-bold outline-none transition-colors placeholder:text-black/20 hover:border-black/10 focus:border-black/30 md:text-4xl"
                                   placeholder="Playlist Title"
                                 />
                               </div>
@@ -2075,10 +2075,10 @@ toast.success('Track restored successfully');
                           </div>
                         </div>
 
-                        <div className="p-8">
-                          <div className="flex items-center justify-between mb-6">
+                        <div className="p-4 md:p-8">
+                          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 md:mb-6">
                             <h3 className="text-sm font-bold uppercase tracking-widest text-black/50">Tracks ({draftPlaylistTracks.length})</h3>
-                            <button onClick={() => setIsAddingTracks(!isAddingTracks)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider bg-black/5 hover:bg-black/10 px-3 py-1.5 rounded-lg transition-colors">
+                            <button onClick={() => setIsAddingTracks(!isAddingTracks)} className="flex items-center gap-2 rounded-lg bg-black/5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors hover:bg-black/10">
                               <Plus className="w-4 h-4" /> Add Tracks
                             </button>
                           </div>

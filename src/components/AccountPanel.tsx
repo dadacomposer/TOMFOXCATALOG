@@ -7,12 +7,14 @@ import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
 import ProfileSettings from './ProfileSettings';
 import UpgradePlan from './UpgradePlan';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function AccountPanel() {
   const { user, profile, workspaces, setWorkspaces, activeWorkspace, setActiveWorkspace, isAccountPanelOpen, setAccountPanelOpen, signOut, fetchWorkspaces, refreshProfile, studioProjects } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
+  useLockBodyScroll(isAccountPanelOpen);
   
   const [activeView, setActiveView] = useState<'menu' | 'overview' | 'licenses' | 'team' | 'settings' | 'billing'>('menu');
   const [editName, setEditName] = useState('');
@@ -268,10 +270,10 @@ export default function AccountPanel() {
       {/* Expanding Side Panel */}
       <div 
         ref={panelRef}
-        className={`relative h-full bg-[#fafafa]/85 backdrop-blur-xl text-black shadow-2xl flex flex-col overflow-hidden motion-drawer ${isAccountPanelOpen ? 'translate-x-0' : 'translate-x-full'} ${isExpanded ? 'w-[1152px]' : 'w-[384px]'}`}
+        className={`relative h-full bg-[#fafafa]/85 backdrop-blur-xl text-black shadow-2xl flex flex-col overflow-hidden motion-drawer ${isAccountPanelOpen ? 'translate-x-0' : 'translate-x-full'} ${isExpanded ? 'w-[1152px]' : 'w-[384px]'} max-md:w-full max-md:max-w-none`}
       >
         {/* Global Panel Header */}
-        <div className="px-6 py-4 flex justify-between items-center bg-transparent z-20 shrink-0">
+        <div className="px-6 py-4 flex justify-between items-center bg-transparent z-20 shrink-0 max-md:px-4 max-md:pt-[max(1rem,env(safe-area-inset-top))]">
           <button 
             onClick={() => {
               setActiveWorkspace(null);
@@ -307,22 +309,34 @@ export default function AccountPanel() {
               )}
             </div>
           </button>
-          <button 
-            onClick={() => {
-              setAccountPanelOpen(false);
-              setTimeout(() => setActiveView('menu'), 300);
-            }}
-            className="p-2 bg-black/5 hover:bg-black/10 rounded-full transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isExpanded && (
+              <button
+                type="button"
+                onClick={() => setActiveView('menu')}
+                aria-label="Back to account menu"
+                className="hidden max-md:inline-flex px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-black/60 hover:text-black transition-colors"
+              >
+                ← Back
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setAccountPanelOpen(false);
+                setTimeout(() => setActiveView('menu'), 300);
+              }}
+              className="p-2 bg-black/5 hover:bg-black/10 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Inner Flex Container - Fixed 1152px width, letting the parent clip it */}
-        <div className="flex-1 flex w-[1152px] border-t border-black/10">
+        <div className="flex-1 min-h-0 flex w-[1152px] border-t border-black/10 max-md:w-full">
           
           {/* LEFT COLUMN: MAIN MENU (384px) */}
-          <div className="w-[384px] h-full bg-transparent border-r border-black/10 shrink-0">
+          <div className={`w-[384px] h-full bg-transparent border-r border-black/10 shrink-0 max-md:w-full max-md:border-r-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:pb-[max(1rem,env(safe-area-inset-bottom))] ${isExpanded ? 'max-md:hidden' : ''}`}>
             <div className="p-3">
               <div className="flex flex-col gap-1.5">
                 {/* Workspaces List */}
@@ -477,7 +491,7 @@ export default function AccountPanel() {
           </div>
 
           {/* RIGHT COLUMN: OVERVIEW DETAILS (768px) */}
-          <div className="w-[768px] h-full bg-black/[0.02] shrink-0 p-8">
+          <div className={`w-[768px] h-full bg-black/[0.02] shrink-0 p-8 max-md:w-full max-md:overflow-y-auto max-md:overscroll-contain max-md:p-5 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] ${!isExpanded ? 'max-md:hidden' : ''}`}>
             
             {/* OVERVIEW CONTENT */}
             {activeView === 'overview' && (
@@ -498,7 +512,7 @@ export default function AccountPanel() {
                 </button>
               </div>
 
-              <div className="flex-1 grid grid-cols-2 gap-8 min-h-0">
+              <div className="flex-1 grid grid-cols-2 gap-8 min-h-0 max-md:grid-cols-1 max-md:gap-5">
                 {/* Left side: Avatar & Form */}
                 <div className="flex flex-col gap-5">
                   {/* Workspace Avatar */}
@@ -976,10 +990,10 @@ export default function AccountPanel() {
       </div>
 
       {/* Cancel Subscription Modal */}
-      <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isCancelSubModalOpen ? '' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 max-md:items-start max-md:overflow-y-auto max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,calc(env(safe-area-inset-bottom)+1rem))] ${isCancelSubModalOpen ? '' : 'pointer-events-none'}`}>
         <div className={`absolute inset-0 motion-overlay ${isCancelSubModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsCancelSubModalOpen(false)} />
-        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface ${isCancelSubModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
-          <div className="p-8 flex flex-col items-center text-center">
+        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface max-md:my-auto max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto max-md:overscroll-contain ${isCancelSubModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+          <div className="p-8 flex flex-col items-center text-center max-md:p-5">
             <button onClick={() => setIsCancelSubModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors">
               <X className="w-4 h-4" />
             </button>
@@ -1019,10 +1033,10 @@ export default function AccountPanel() {
       </div>
 
       {/* Transfer Ownership Modal */}
-      <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isTransferModalOpen ? '' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 max-md:items-start max-md:overflow-y-auto max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,calc(env(safe-area-inset-bottom)+1rem))] ${isTransferModalOpen ? '' : 'pointer-events-none'}`}>
         <div className={`absolute inset-0 motion-overlay ${isTransferModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsTransferModalOpen(false)} />
-        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface ${isTransferModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
-          <div className="p-8 flex flex-col items-center text-center">
+        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface max-md:my-auto max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto max-md:overscroll-contain ${isTransferModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+          <div className="p-8 flex flex-col items-center text-center max-md:p-5">
             <button onClick={() => setIsTransferModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors">
               <X className="w-4 h-4" />
             </button>
@@ -1084,9 +1098,9 @@ export default function AccountPanel() {
       </div>
 
       {/* Create Workspace Modal */}
-      <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${isCreateModalOpen ? '' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 max-md:items-start max-md:overflow-y-auto max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,calc(env(safe-area-inset-bottom)+1rem))] ${isCreateModalOpen ? '' : 'pointer-events-none'}`}>
         <div className={`absolute inset-0 motion-overlay ${isCreateModalOpen ? 'bg-black/20 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsCreateModalOpen(false)} />
-        <div className={`bg-white/90 backdrop-blur-2xl border border-white/20 rounded-2xl p-6 w-full max-w-md relative z-10 shadow-2xl overflow-hidden motion-surface ${isCreateModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+        <div className={`bg-white/90 backdrop-blur-2xl border border-white/20 rounded-2xl p-6 w-full max-w-md relative z-10 shadow-2xl overflow-hidden motion-surface max-md:my-auto max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto max-md:overscroll-contain max-md:p-5 ${isCreateModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
           <h3 className="font-sans text-lg font-bold text-black mb-1">Create New Workspace</h3>
           <p className="font-sans text-sm text-black/60 mb-6">Create a new collaborative space for your team or project.</p>
           
@@ -1130,10 +1144,10 @@ export default function AccountPanel() {
       </div>
 
       {/* Invite Member Modal */}
-      <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${isInviteModalOpen ? '' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-[200] flex items-center justify-center px-4 max-md:items-start max-md:overflow-y-auto max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,calc(env(safe-area-inset-bottom)+1rem))] ${isInviteModalOpen ? '' : 'pointer-events-none'}`}>
         <div className={`absolute inset-0 motion-overlay ${isInviteModalOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={() => setIsInviteModalOpen(false)} />
-        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface ${isInviteModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
-          <div className="p-8 flex flex-col items-center text-center">
+        <div className={`bg-[#fcfcfc] w-full max-w-md relative z-10 shadow-2xl overflow-hidden border border-black/5 motion-surface max-md:my-auto max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto max-md:overscroll-contain ${isInviteModalOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+          <div className="p-8 flex flex-col items-center text-center max-md:p-5">
             <button onClick={() => setIsInviteModalOpen(false)} className="absolute top-4 right-4 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors">
               <X className="w-4 h-4" />
             </button>

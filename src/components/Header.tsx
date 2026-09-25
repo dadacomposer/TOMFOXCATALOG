@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { Wrench, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function Header() {
   const [isHeaderDark, setIsHeaderDark] = useState(false);
@@ -15,6 +16,21 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, profile, setAccountPanelOpen, setLoginModalOpen, studioProjects } = useAuth();
   const { settings } = useSettings();
+
+  // The menu is a phone-only overlay. Keep the page beneath it stationary and
+  // close it if a responsive resize exposes the desktop navigation instead.
+  useLockBodyScroll(isMobileMenuOpen);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const closeOnDesktop = () => {
+      if (mediaQuery.matches) setIsMobileMenuOpen(false);
+    };
+
+    closeOnDesktop();
+    mediaQuery.addEventListener('change', closeOnDesktop);
+    return () => mediaQuery.removeEventListener('change', closeOnDesktop);
+  }, []);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -238,7 +254,7 @@ export default function Header() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`absolute top-full left-0 w-full shadow-xl flex flex-col p-6 gap-4 md:hidden z-10 border-b ${isHeaderDark ? 'bg-[#111111] border-white/10' : 'bg-[#fafafa] border-black/10'}`}
+            className={`absolute top-full left-0 w-full max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain shadow-xl flex flex-col p-6 gap-4 md:hidden z-10 border-b ${isHeaderDark ? 'bg-[#111111] border-white/10' : 'bg-[#fafafa] border-black/10'}`}
           >
             <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Discover</NavLink>
             <NavLink to="/browse" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Browse</NavLink>
@@ -253,7 +269,7 @@ export default function Header() {
               </>
             )}
             {isAdmin && (
-              <Link to="/admin" className={`hidden md:flex items-center gap-2 ${isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black'}`}>
+              <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-2 ${isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black'}`}>
                 <Wrench className="w-5 h-5" />
                 Admin Panel
               </Link>

@@ -15,6 +15,7 @@ import { useUserPlaylists } from '../context/UserPlaylistsContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useModalAnimation } from '../hooks/useModalAnimation';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 const parseTags = (t: string[] | string | undefined): string[] => {
   if (!t) return [];
@@ -70,6 +71,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const { isMounted, isAnimating } = useModalAnimation(!!id);
+  useLockBodyScroll(Boolean(id) && !inline);
   const navigate = useNavigate();
 
   const handleClose = () => {
@@ -264,7 +266,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       {/* Backdrop */}
       {!inline && (
         <div 
-          className={`fixed inset-0 bg-black/40 z-40 motion-overlay ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`}
+          className={`fixed inset-0 bg-black/40 z-40 max-md:z-[95] motion-overlay ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`}
           onClick={handleClose} 
         />
       )}
@@ -273,10 +275,10 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
       <div className={
         inline 
         ? `w-full bg-[#fafafa] rounded-[32px] overflow-hidden flex flex-col border border-black/10 shadow-sm my-6 motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
-        : `fixed max-md:inset-x-0 md:inset-x-6 max-md:top-16 md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10 motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
+        : `fixed max-md:inset-x-0 md:inset-x-6 max-md:top-[73px] md:top-24 max-md:bottom-0 md:bottom-[100px] bg-[#fafafa] z-50 max-md:z-[100] max-md:rounded-t-[32px] max-md:rounded-b-none md:rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col border border-black/10 motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`
       }>
-        <div className="px-4 md:px-8 py-6 md:py-8 border-b-2 border-black/5 flex max-md:flex-col max-md:items-start max-md:gap-4 md:items-center justify-between shrink-0 bg-[#fafafa] relative">
-          <div className="min-h-[50px] flex flex-col justify-center">
+        <div className="px-4 md:px-8 py-6 max-md:py-4 md:py-8 border-b-2 border-black/5 flex max-md:flex-col max-md:items-start max-md:gap-3 md:items-center justify-between shrink-0 bg-[#fafafa] relative">
+          <div className="min-h-[50px] max-md:min-h-0 max-md:pr-10 flex flex-col justify-center">
             {loading ? (
               <>
                 <div className="h-8 bg-black/10 rounded w-64 animate-pulse mb-2" />
@@ -284,7 +286,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
               </>
             ) : (
               <>
-                <h1 className="text-3xl font-bold uppercase tracking-tighter mb-1">{playlistTitle}</h1>
+                <h1 className="text-3xl max-md:text-2xl font-bold uppercase tracking-tighter mb-1">{playlistTitle}</h1>
                 <p className="text-black/50 uppercase font-bold tracking-widest text-[11px]">{tracks.length} Tracks</p>
               </>
             )}
@@ -349,7 +351,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
           </div>
         </div>
 
-        <div className={inline ? "px-4 md:px-8 py-6 bg-[#fafafa]" : "flex-grow overflow-y-auto overscroll-contain px-4 md:px-8 py-6 bg-[#fafafa]"}>
+        <div className={inline ? "px-4 md:px-8 py-6 bg-[#fafafa]" : "flex-grow max-md:min-h-0 overflow-y-auto overscroll-contain px-4 max-md:px-3 md:px-8 py-6 max-md:py-4 bg-[#fafafa]"}>
           {loading && initialTrackCount !== 0 ? (
             <div className="flex flex-col gap-1 pb-16">
               {[...Array(8)].map((_, i) => (
@@ -378,7 +380,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
             <div className={`flex flex-col gap-1 pb-16 ${isScrollableContainer ? 'max-h-[640px] overflow-y-auto overscroll-contain pr-2 custom-scrollbar' : ''}`}>
               {tracks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-6 py-20 text-black/40">
-                  <img src="/search-for-documents.svg" alt="Empty playlist" className="w-80 h-80" />
+                  <img src="/search-for-documents.svg" alt="Empty playlist" className="w-80 h-80 max-md:w-full max-md:max-w-[20rem] max-md:h-auto" />
                   <span className="font-bold uppercase tracking-widest text-sm text-center">This playlist is empty.<br/>Add tracks to start listening.</span>
                   <a href="/browse" className="px-6 py-3 bg-black text-white font-bold uppercase tracking-widest text-xs rounded-full hover:bg-black/90 transition-colors">
                     Browse Music
@@ -399,7 +401,7 @@ export default function PlaylistIsland(props: PlaylistIslandProps) {
                       onClick={(e) => { e.stopPropagation(); handlePlayPauseIsland(track); }}
                     >
                       <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
                         {currentTrack?.id === track.id && isPlaying ? (
                           <Pause className="w-4 h-4 fill-white text-white" />
                         ) : (

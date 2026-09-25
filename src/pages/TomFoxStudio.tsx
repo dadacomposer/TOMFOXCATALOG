@@ -431,16 +431,16 @@ export default function TomFoxStudio() {
 
 
   return (
-    <div className="h-[100dvh] bg-[#fafafa] font-outfit text-black flex flex-col overflow-hidden overscroll-none">
+    <div className="h-[100dvh] max-md:h-auto max-md:min-h-[100dvh] bg-[#fafafa] font-outfit text-black flex flex-col overflow-hidden max-md:overflow-y-auto overscroll-none">
       
       {/* Navbar con Titolo */}
-      <header className="w-full h-20 bg-white border-b-2 border-black/10 shrink-0 flex items-center justify-between px-6 z-10">
+      <header className="w-full h-20 max-md:h-16 bg-white border-b-2 border-black/10 shrink-0 flex items-center justify-between px-6 max-md:px-4 z-10">
         <div className="flex-1 flex justify-start items-center gap-8">
           <Link to="/">
             <img 
               src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
               alt="Tom Fox" 
-              className="h-7" 
+            className="h-7 max-md:h-6"
             />
           </Link>
           <Link 
@@ -450,8 +450,8 @@ export default function TomFoxStudio() {
             Catalog
           </Link>
         </div>
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 animate-in fade-in duration-300">
-          <span className="text-sm font-bold uppercase tracking-widest text-black/80">{project.title}</span>
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 animate-in fade-in duration-300 max-md:max-w-[45vw]">
+          <span className="text-sm max-md:text-xs font-bold uppercase tracking-widest text-black/80 max-md:truncate">{project.title}</span>
         </div>
         <div className="flex-1 flex justify-end gap-4 items-center">
           {(user?.id === project.user_id || isAdmin) && (
@@ -465,16 +465,16 @@ export default function TomFoxStudio() {
         </div>
       </header>
 
-      <div className="flex-grow px-4 pb-4 sm:px-6 sm:pb-6 pt-0 min-h-0 flex flex-col">
-        <div className="max-w-[1600px] mx-auto w-full h-full flex flex-col gap-4 sm:gap-6 min-h-0">
+      <div className="flex-grow px-4 pb-4 sm:px-6 sm:pb-6 pt-0 min-h-0 max-md:min-h-auto flex flex-col">
+        <div className="max-w-[1600px] mx-auto w-full h-full max-md:h-auto flex flex-col gap-4 sm:gap-6 min-h-0 max-md:min-h-auto">
         
         {/* Main Grid */}
-        <div className={`flex-grow grid gap-4 sm:gap-6 min-h-0 overflow-hidden ${isCompleted ? 'grid-cols-1 lg:grid-cols-1 max-w-5xl mx-auto' : 'grid-cols-1 lg:grid-cols-3'}`}>
+        <div className={`flex-grow grid gap-4 sm:gap-6 min-h-0 max-md:min-h-auto overflow-hidden max-md:overflow-visible ${isCompleted ? 'grid-cols-1 lg:grid-cols-1 max-w-5xl mx-auto' : 'grid-cols-1 lg:grid-cols-3'}`}>
           
           {/* Left Column: Player & Assets */}
-          <div className={`${isCompleted ? 'lg:col-span-1' : 'lg:col-span-2'} flex flex-col min-h-0 pr-2 pb-4`}>
+          <div className={`${isCompleted ? 'lg:col-span-1' : 'lg:col-span-2'} flex flex-col min-h-0 max-md:min-h-auto pr-2 max-md:pr-0 pb-4`}>
             
-            <div className="bg-white rounded-[32px] shadow-sm border border-black/5 flex flex-col min-h-0 overflow-hidden max-w-4xl w-full mx-auto">
+            <div className="bg-white rounded-[32px] shadow-sm border border-black/5 flex flex-col min-h-0 max-md:min-h-auto overflow-hidden max-w-4xl w-full mx-auto">
               
               {/* Video Player or Upload Overlay */}
               <div className="p-4 pb-2 shrink-0">
@@ -518,7 +518,7 @@ export default function TomFoxStudio() {
                 
                 {/* Play Button Overlay (Bottom Left, Hover Only) */}
                 <div 
-                  className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none flex items-end justify-start p-4"
+                  className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 max-md:opacity-100 transition-opacity duration-300 pointer-events-none flex items-end justify-start p-4"
                 >
                   <button 
                     onClick={(e) => { e.stopPropagation(); togglePlay(); }} 
@@ -532,7 +532,7 @@ export default function TomFoxStudio() {
               </div>
 
               {/* Audio Tracks Selection */}
-              <div className="p-4 sm:p-6 flex flex-col gap-3 overflow-y-auto min-h-0 pb-32 max-w-4xl w-full mx-auto">
+              <div className="p-4 sm:p-6 flex flex-col gap-3 overflow-y-auto min-h-0 max-md:max-h-[50dvh] max-md:pb-6 pb-32 max-w-4xl w-full mx-auto">
                 {audioAssets.map((asset) => {
                   const isActive = activeTrackId === asset.id;
                   const isTrackPlaying = isActive && isPlaying;
@@ -643,10 +643,10 @@ export default function TomFoxStudio() {
 
           {/* Right Column: Chat/Comments & Project Files */}
           {!isCompleted && (
-          <div className="flex flex-col gap-4 sm:gap-6 min-h-0 pr-2 pb-4 relative h-full flex-1">
+          <div className="flex flex-col gap-4 sm:gap-6 min-h-0 max-md:min-h-[32rem] pr-2 max-md:pr-0 pb-4 relative h-full max-md:h-auto flex-1">
             
             {/* Comments Sidebar */}
-            <div className="flex flex-col flex-1 min-h-0 bg-white rounded-[32px] border border-black/5 shadow-sm overflow-hidden relative">
+            <div className="flex flex-col flex-1 min-h-0 bg-white rounded-[32px] border border-black/5 shadow-sm overflow-hidden relative max-md:min-h-[28rem]">
 
               <div 
                 className="flex-grow overflow-y-auto p-4 flex flex-col relative"
@@ -852,7 +852,7 @@ export default function TomFoxStudio() {
       </div>
 
       {/* Footer Minimo */}
-      <footer className="w-full bg-white border-t border-black/10 py-4 px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-bold uppercase tracking-widest text-black/40 shrink-0 z-10">
+      <footer className="w-full bg-white border-t border-black/10 py-4 px-6 max-md:px-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-bold uppercase tracking-widest text-black/40 shrink-0 z-10">
         <div className="flex items-center gap-4">
           <span>© {new Date().getFullYear()} Tom Fox Catalog</span>
           <span className="hidden sm:inline text-black/20">•</span>

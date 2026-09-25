@@ -3,6 +3,7 @@ import { Building2, Check, X } from 'lucide-react';
 import { acceptWorkspaceInvite, declineWorkspaceInvite } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface Invite {
   id: string;
@@ -20,6 +21,7 @@ interface AcceptInviteModalProps {
 export default function AcceptInviteModal({ invite, onProcessed }: AcceptInviteModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { user, fetchWorkspaces } = useAuth();
+  useLockBodyScroll(true);
 
   const handleAccept = async () => {
     setIsProcessing(true);
@@ -51,8 +53,8 @@ export default function AcceptInviteModal({ invite, onProcessed }: AcceptInviteM
   };
 
   return (
-    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-200 motion-overlay">
-      <div className="animate-scale-in motion-surface relative bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col p-8 w-[400px] text-center">
+    <div className="fixed inset-0 animate-fade-in z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl animate-in fade-in duration-200 motion-overlay max-md:items-start max-md:overflow-y-auto max-md:px-4 max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,calc(env(safe-area-inset-bottom)+1rem))]">
+      <div className="animate-scale-in motion-surface relative bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col w-full max-w-[400px] text-center max-md:my-auto max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto max-md:overscroll-contain p-8 max-md:p-5">
         
         <div className="flex justify-center mb-6">
           <div className="w-20 h-20 rounded-full border border-black/10 overflow-hidden bg-black/5 flex items-center justify-center">

@@ -10,6 +10,7 @@ import { generateEmbedding } from '../../lib/embedding';
 import { searchTracksByEmbedding, fetchTracksByIds } from '../../lib/supabase';
 import WaveformView from '../WaveformView';
 import { parseWaveform } from '../../lib/audioUtils';
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 
 const parseTags = (t: string[] | string | undefined): string[] => {
   if (!t) return [];
@@ -44,6 +45,7 @@ export default function TrackDetailsModal() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
   const location = useLocation();
+  useLockBodyScroll(isOpen);
 
   useEffect(() => {
     if (selectedTrackForDetails) {
@@ -77,6 +79,48 @@ export default function TrackDetailsModal() {
       window.removeEventListener('resize', handleScroll);
     };
   }, []);
+
+  const getExpandedTagsPosition = () => {
+    if (!expandedSection || typeof window === 'undefined') return {};
+
+    const { rect } = expandedSection;
+
+    // Keep desktop/tablet placement unchanged. On a phone, choose the side of
+    // the trigger with more room and constrain the menu to that available
+    // space so it never renders below the viewport.
+    if (window.innerWidth >= 768) {
+      return {
+        top: rect.bottom + 8,
+        ...(rect.left > window.innerWidth - 400
+          ? { right: window.innerWidth - rect.right }
+          : { left: rect.left })
+      };
+    }
+
+    const viewportPadding = 12;
+    const gap = 8;
+    const availableBelow = Math.max(0, window.innerHeight - rect.bottom - gap - viewportPadding);
+    const availableAbove = Math.max(0, rect.top - gap - viewportPadding);
+    const openAbove = availableAbove > availableBelow;
+    const maxWidth = Math.min(280, window.innerWidth - viewportPadding * 2);
+    const left = Math.max(
+      viewportPadding,
+      Math.min(rect.left, Math.max(viewportPadding, window.innerWidth - maxWidth - viewportPadding))
+    );
+    const maxHeight = Math.max(0, openAbove ? availableAbove : availableBelow);
+
+    return openAbove
+      ? {
+          left,
+          bottom: Math.max(viewportPadding, window.innerHeight - rect.top + gap),
+          maxHeight,
+        }
+      : {
+          left,
+          top: Math.max(viewportPadding, rect.bottom + gap),
+          maxHeight,
+        };
+  };
 
   useEffect(() => {
     if (!displayTrack) {
@@ -123,13 +167,13 @@ export default function TrackDetailsModal() {
   if (!displayTrack) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 pt-[100px] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4 pt-[100px] max-md:pt-20 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <div 
         className={`absolute inset-0 bg-black/60 motion-overlay ${isOpen ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`}
         onClick={() => setSelectedTrackForDetails(null)} 
       />
       <div 
-        className={`relative w-full max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl motion-surface ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
+        className={`relative w-full max-h-[calc(100vh-120px)] max-md:max-h-[calc(100dvh-5rem)] overflow-y-auto custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl motion-surface ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
         onClick={() => setExpandedSection(null)}
       >
         
@@ -334,7 +378,7 @@ export default function TrackDetailsModal() {
                           }}
                         >
                           <TrackArtwork track={simTrack} className="absolute inset-0 w-full h-full transition-transform duration-500 group-hover:scale-105" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 max-md:opacity-100 transition-opacity flex items-center justify-center">
                             <button 
                               className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-105 transition-transform"
                               onClick={(e) => {
@@ -375,14 +419,9 @@ export default function TrackDetailsModal() {
 
       {expandedSection && createPortal(
         <div 
-          className="fixed p-3 bg-white border border-black/10 rounded-xl shadow-2xl z-[150] w-max max-w-[280px] md:max-w-[400px] flex flex-wrap gap-2 animate-in fade-in zoom-in-95 duration-200"
+          className="fixed p-3 bg-white border border-black/10 rounded-xl shadow-2xl z-[150] w-max max-w-[280px] max-md:max-w-[calc(100vw-1.5rem)] max-md:overflow-y-auto md:max-w-[400px] flex flex-wrap gap-2 animate-in fade-in zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
-          style={{
-            top: expandedSection.rect.bottom + 8,
-            ...(expandedSection.rect.left > window.innerWidth - 400 
-              ? { right: window.innerWidth - expandedSection.rect.right } 
-              : { left: expandedSection.rect.left })
-          }}
+          style={getExpandedTagsPosition()}
         >
           {expandedSection.tags.map(tag => (
             <span key={tag} className="px-3 py-1.5 bg-[#fafafa] border border-black/5 text-black rounded-lg text-xs font-sans cursor-default hover:bg-black/5 transition-colors">

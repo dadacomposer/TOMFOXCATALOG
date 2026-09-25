@@ -45,7 +45,7 @@ export default function Admin() {
 
 
   return (
-    <div className={`h-[100dvh] overflow-hidden overscroll-none bg-[#fafafa] text-black pt-20 flex ${currentTrack ? 'pb-[90px]' : ''}`}>
+    <div className={`h-[100dvh] max-md:h-auto max-md:min-h-[100dvh] overflow-hidden max-md:overflow-visible overscroll-none bg-[#fafafa] text-black pt-20 flex max-md:flex-col ${currentTrack ? 'pb-[90px]' : ''}`}>
       <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-6 py-6 bg-white border-b-2 border-black/10">
         <div className="flex items-baseline cursor-pointer">
           <Link to="/">
@@ -101,98 +101,98 @@ export default function Admin() {
       <div className="w-[72px] shrink-0 hidden sm:block" />
 
       {/* Sidebar */}
-      <div className="absolute sm:left-0 top-20 bottom-0 w-[72px] hover:w-64 bg-white border-r border-black/10 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out group z-40 flex flex-col">
-        <nav className="px-3 py-6 space-y-1 flex-grow">
+      <div className="absolute sm:left-0 top-20 bottom-0 w-[72px] hover:w-64 bg-white border-r border-black/10 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out group z-40 flex flex-col max-md:sticky max-md:top-20 max-md:bottom-auto max-md:w-full max-md:h-auto max-md:border-r-0 max-md:border-b max-md:overflow-x-auto max-md:overflow-y-hidden max-md:transition-none max-md:flex-row">
+        <nav className="px-3 py-6 space-y-1 flex-grow max-md:flex max-md:items-center max-md:w-max max-md:px-3 max-md:py-2 max-md:space-y-0 max-md:gap-1">
           <NavLink
             to="/admin/tracks"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
             title="Tracks"
           >
             <div className="w-6 h-6 shrink-0 flex items-center justify-center"><Music className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Tracks</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Tracks</span>
           </NavLink>
           <NavLink
             to="/admin/users"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
             title="Users"
           >
             <div className="w-6 h-6 shrink-0 flex items-center justify-center"><Users className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Users</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Users</span>
           </NavLink>
           <NavLink
             to="/admin/licensing"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
             title="Licensing"
           >
             <div className="w-6 h-6 shrink-0 flex items-center justify-center"><FileText className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Licensing</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Licensing</span>
           </NavLink>
 
           <NavLink
             to="/admin/statistics"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
             title="Statistics"
           >
             <div className="w-6 h-6 shrink-0 flex items-center justify-center"><BarChart className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Statistics</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Statistics</span>
           </NavLink>
 
 
           <NavLink
             to="/admin/studio"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
             title="Studio"
           >
             <div className="w-6 h-6 shrink-0 flex items-center justify-center"><DadaLogo className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Studio</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Studio</span>
           </NavLink>
           <NavLink
             to="/admin/features"
-            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+            className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
             title="Content"
           >
             <div className="w-6 h-6 shrink-0 flex items-center justify-center"><Palette className="w-5 h-5" /></div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Content</span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Content</span>
           </NavLink>
           
-          <div className={`pt-6 mt-6 border-t border-black/10 flex flex-col gap-1`}>
+          <div className="pt-6 mt-6 border-t border-black/10 flex flex-col gap-1 max-md:pt-0 max-md:mt-0 max-md:border-t-0 max-md:flex-row max-md:gap-1">
             <NavLink
               to="/admin/settings"
-              className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
+              className={({ isActive }) => `w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2 ${isActive ? 'bg-black text-white' : 'text-black/60 hover:bg-black/5 hover:text-black'}`}
               title="Settings"
             >
               <div className="w-6 h-6 shrink-0 flex items-center justify-center"><Settings className="w-5 h-5" /></div>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Settings</span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Settings</span>
             </NavLink>
             <button
               onClick={async () => {
                 await supabase.auth.signOut();
                 window.location.reload();
               }}
-              className="w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden text-red-500/60 hover:bg-red-50 hover:text-red-500"
+              className="w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden text-red-500/60 hover:bg-red-50 hover:text-red-500 max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2"
               title="Sign Out"
             >
               <div className="w-6 h-6 shrink-0 flex items-center justify-center"><LogOut className="w-5 h-5" /></div>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Sign Out</span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">Sign Out</span>
             </button>
             <Link 
               to="/"
-              className="w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden text-black/40 hover:bg-black/5 hover:text-black"
+              className="w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-all overflow-hidden text-black/40 hover:bg-black/5 hover:text-black max-md:w-auto max-md:shrink-0 max-md:gap-2 max-md:px-3 max-md:py-2"
               title="View Site"
             >
               <div className="w-6 h-6 shrink-0 flex items-center justify-center"><ExternalLink className="w-5 h-5" /></div>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">View Site</span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap max-md:opacity-100 max-md:text-xs">View Site</span>
             </Link>
           </div>
         </nav>
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#fafafa]">
-        <main className={`flex-1 flex flex-col min-h-0 ${isAdminTheaterRoute ? 'p-4 pb-0' : 'p-8 pb-0'}`}>
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 max-md:min-h-[calc(100dvh-8rem)] bg-[#fafafa]">
+        <main className={`flex-1 flex flex-col min-h-0 ${isAdminTheaterRoute ? 'p-4 pb-0' : 'p-8 pb-0 max-md:p-4 max-md:pb-0'}`}>
           <Outlet />
         </main>
 
-        <footer className="w-full bg-white border-t border-black/10 py-4 px-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-bold uppercase tracking-widest text-black/40 shrink-0">
+        <footer className="w-full bg-white border-t border-black/10 py-4 px-8 max-md:px-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-bold uppercase tracking-widest text-black/40 shrink-0">
           <span>© {new Date().getFullYear()} Tom Fox Catalog</span>
           <Link to="/" className="text-black/60 hover:text-black transition-colors flex items-center gap-2">
             Return to Public Site <ExternalLink className="w-3 h-3" />

@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { UploadCloud, Loader2, Link as LinkIcon, FileAudio, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { extractWaveformFromFile } from '../../utils/audioWaveform';
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 
 interface StudioOnboardingModalProps {
   projectId: string;
@@ -12,6 +13,7 @@ interface StudioOnboardingModalProps {
 
 export default function StudioOnboardingModal({ projectId, onComplete, onSkip }: StudioOnboardingModalProps) {
   const [isUploading, setIsUploading] = useState(false);
+  useLockBodyScroll(true);
   const [file, setFile] = useState<File | null>(null);
   const [referenceLinks, setReferenceLinks] = useState('');
   
@@ -192,7 +194,7 @@ export default function StudioOnboardingModal({ projectId, onComplete, onSkip }:
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto font-outfit text-black">
-      <div className="bg-[#fafafa] rounded-[32px] w-full max-w-2xl p-8 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto border border-black/5">
+      <div className="bg-[#fafafa] rounded-[32px] w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 md:p-12 shadow-2xl relative flex flex-col gap-8 my-auto border border-black/5">
         
         <div>
           <h2 className="text-3xl font-bold uppercase tracking-tighter mb-2">Welcome to your Project</h2>

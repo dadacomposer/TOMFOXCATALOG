@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function MyMusic() {
   const { user, loading: authLoading } = useAuth();
@@ -20,6 +21,7 @@ export default function MyMusic() {
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
+  useLockBodyScroll(showCreateModal || showDeleteModal);
   
   React.useEffect(() => {
     if (!authLoading && !user) {
@@ -155,7 +157,7 @@ export default function MyMusic() {
             {customPlaylists.length === 0 ? (
               <div className="w-full flex flex-col items-center justify-center py-12 pr-4 md:pr-12 lg:pr-24">
                 <div className="flex flex-col items-center justify-center gap-6 text-black/40 w-full max-w-2xl">
-                  <img src="/search-for-documents.svg" alt="No playlists" className="w-80 h-80" />
+                  <img src="/search-for-documents.svg" alt="No playlists" className="w-80 h-80 max-md:w-full max-md:max-w-[20rem] max-md:h-auto" />
                   <span className="font-bold uppercase tracking-widest text-sm text-center">You haven't created any custom playlists yet.<br/>Create one to organize your favorite tracks.</span>
                   <button 
                     onClick={() => setShowCreateModal(true)}

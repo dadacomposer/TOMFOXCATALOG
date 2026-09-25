@@ -4,10 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
 import { useModalAnimation } from '../hooks/useModalAnimation';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function ContactSalesModal() {
   const { isContactModalOpen, setContactModalOpen } = useAuth();
   const { isMounted, isAnimating } = useModalAnimation(isContactModalOpen);
+  useLockBodyScroll(isContactModalOpen);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -55,11 +57,11 @@ export default function ContactSalesModal() {
   if (!isMounted) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isAnimating ? '' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto px-4 py-4 ${isAnimating ? '' : 'pointer-events-none'}`}>
       <div className={`absolute inset-0 bg-black/60 motion-overlay ${isAnimating ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`} onClick={() => setContactModalOpen(false)} />
 
       {/* Modal Content */}
-      <div className={`relative z-10 w-full max-w-2xl bg-[#fafafa] shadow-2xl overflow-hidden rounded-[32px] border border-black/5 motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-2xl max-h-[calc(100dvh-2rem)] bg-[#fafafa] shadow-2xl overflow-y-auto rounded-[32px] border border-black/5 motion-surface ${isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}>
         <button 
           onClick={() => setContactModalOpen(false)} 
           className="absolute top-6 right-6 p-2 bg-black/5 rounded-full hover:bg-black/10 transition-colors z-20"
@@ -67,7 +69,7 @@ export default function ContactSalesModal() {
           <X className="w-5 h-5 text-black/60" />
         </button>
 
-        <div className="p-8 md:p-12 flex flex-col items-center">
+        <div className="p-6 md:p-12 flex flex-col items-center">
           
           <h2 className="text-4xl md:text-6xl font-bold uppercase tracking-tighter leading-[0.85] text-black text-center mb-4">
             Let's<br />Talk<br />Scale.

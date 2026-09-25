@@ -27,6 +27,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS, DEFAULT_ARTIST } from '../config';
 import TrackArtwork from '../components/TrackArtwork';
 import { FeaturedSun } from '../components/TopPicksEffects';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 
 
@@ -249,6 +250,17 @@ export default function Browse() {
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [searchBarPortals, setSearchBarPortals] = useState<{ right: HTMLElement | null; bottom: HTMLElement | null }>({ right: null, bottom: null });
   const [isMyMusicOpen, setIsMyMusicOpen] = useState(true);
+  // The desktop sidebar is deliberately hidden below `md`; keep its controls
+  // available through a separate phone-only sheet without changing desktop or
+  // tablet state/layout.
+  const [isMobileBrowseToolsOpen, setIsMobileBrowseToolsOpen] = useState(false);
+  const [mobileBrowseToolsSection, setMobileBrowseToolsSection] = useState<'filters' | 'music'>('filters');
+  const [mobileExpandedCategory, setMobileExpandedCategory] = useState<string | null>(null);
+  const [mobileFilterSearch, setMobileFilterSearch] = useState('');
+  const [isMobileInlineCreating, setIsMobileInlineCreating] = useState(false);
+  const [mobileCreateTitle, setMobileCreateTitle] = useState('');
+  const [isMobileCreatingPlaylist, setIsMobileCreatingPlaylist] = useState(false);
+  const mobileBrowseToolsCloseRef = useRef<HTMLButtonElement>(null);
   // Every asynchronous result below is tied to the state that started it.
   // A slower, older request must never replace a newer search/filter result.
   const catalogRequestRef = useRef(0);
@@ -259,6 +271,19 @@ export default function Browse() {
   // Ref for audio element
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const tracksPerPage = 25;
+
+  useLockBodyScroll(isMobileBrowseToolsOpen);
+
+  // Browse stays mounted underneath the Discover/Browse transition. If the
+  // route changes while the phone sheet is open, explicitly dismiss it so a
+  // hidden Browse control can never keep the body locked over Discover.
+  useEffect(() => {
+    if (location.pathname.startsWith('/browse')) return;
+
+    setIsMobileBrowseToolsOpen(false);
+    setIsMobileInlineCreating(false);
+    setMobileCreateTitle('');
+  }, [location.pathname]);
 
   // GlobalSearchBar owns these DOM targets. Browse can mount before that bar
   // has committed (especially after auth/session hydration), so resolve them
@@ -278,6 +303,39 @@ export default function Browse() {
 
     return () => cancelAnimationFrame(frame);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMobileBrowseToolsOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMobileBrowseToolsOpen(false);
+      }
+    };
+
+    const focusFrame = requestAnimationFrame(() => {
+      mobileBrowseToolsCloseRef.current?.focus();
+    });
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isMobileBrowseToolsOpen]);
+
+  // Avoid leaving a hidden phone-only sheet open (and the body locked) if the
+  // viewport grows into the unchanged desktop/tablet layout.
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const closeForLargerViewport = () => {
+      if (mediaQuery.matches) setIsMobileBrowseToolsOpen(false);
+    };
+
+    closeForLargerViewport();
+    mediaQuery.addEventListener('change', closeForLargerViewport);
+    return () => mediaQuery.removeEventListener('change', closeForLargerViewport);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -798,6 +856,45 @@ export default function Browse() {
     }
   };
 
+  const openMobileBrowseTools = (section: 'filters' | 'music') => {
+    setMobileBrowseToolsSection(section);
+    setMobileExpandedCategory(null);
+    setMobileFilterSearch('');
+    setIsMobileBrowseToolsOpen(true);
+  };
+
+  const openMobilePlaylist = (playlistId: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('playlist', playlistId);
+    setSearchParams(nextParams);
+    setIsMobileBrowseToolsOpen(false);
+  };
+
+  const handleMobilePlaylistCreate = async () => {
+    if (!user) {
+      setIsMobileBrowseToolsOpen(false);
+      setLoginModalOpen(true);
+      return;
+    }
+
+    const title = mobileCreateTitle.trim();
+    if (!title || isMobileCreatingPlaylist) return;
+
+    setIsMobileCreatingPlaylist(true);
+    try {
+      const playlist = await createPlaylist(title);
+      if (!playlist) throw new Error('Playlist creation did not complete');
+      setMobileCreateTitle('');
+      setIsMobileInlineCreating(false);
+      toast.success('Playlist created');
+    } catch (error) {
+      console.error('Error creating playlist from mobile Browse tools:', error);
+      toast.error('Could not create playlist');
+    } finally {
+      setIsMobileCreatingPlaylist(false);
+    }
+  };
+
   const handleSeek = (track: Track, percentage: number) => {
     if (currentTrack?.id === track.id) {
        setIsCurrentPreviewDormant(true);
@@ -1182,6 +1279,37 @@ export default function Browse() {
         {/* SCROLL CONTAINER for tracks */}
         <div className="flex-1 overflow-y-auto overscroll-none" id="full-catalog-browser">
           <div className="flex flex-col w-full pt-8 pb-8 px-2 md:px-8">
+            {/* The sidebar is intentionally desktop/tablet-only. These controls
+                keep its two essential areas reachable on phones without
+                changing any md+ layout. */}
+            <div className="md:hidden sticky top-0 z-20 -mx-2 px-2 pb-3 bg-[#fafafa]/95 backdrop-blur-md">
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => openMobileBrowseTools('filters')}
+                  aria-expanded={isMobileBrowseToolsOpen && mobileBrowseToolsSection === 'filters'}
+                  aria-controls="mobile-browse-tools"
+                  className="flex h-10 items-center justify-between rounded-lg border border-black/10 bg-white px-3 text-[10px] font-medium uppercase tracking-widest text-black shadow-sm transition-colors active:bg-black/5"
+                >
+                  <span>Filters</span>
+                  {totalActiveFilterCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-black px-1.5 text-[9px] text-white">
+                      {totalActiveFilterCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openMobileBrowseTools('music')}
+                  aria-expanded={isMobileBrowseToolsOpen && mobileBrowseToolsSection === 'music'}
+                  aria-controls="mobile-browse-tools"
+                  className="flex h-10 items-center justify-between rounded-lg border border-black/10 bg-white px-3 text-[10px] font-medium uppercase tracking-widest text-black shadow-sm transition-colors active:bg-black/5"
+                >
+                  <span>My Music</span>
+                  <ChevronDown className="h-4 w-4 -rotate-90 text-black/50" />
+                </button>
+              </div>
+            </div>
             <div className="flex-grow flex flex-col overflow-hidden">
               <div className="flex flex-col gap-1 mb-8">
             {React.useMemo(() => (
@@ -1220,7 +1348,7 @@ export default function Browse() {
                 className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}
               >
                 <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
                   {currentTrack?.id === track.id && isPlaying ? (
                     <Pause className="w-4 h-4 fill-white text-white" />
                   ) : (
@@ -1380,7 +1508,7 @@ export default function Browse() {
                   >
                     <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5">
                       <TrackArtwork track={version} className="absolute inset-0 w-full h-full" />
-                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === version.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/version:opacity-100'}`}>
+                      <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === version.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover/version:opacity-100 max-md:opacity-100'}`}>
                         {currentTrack?.id === version.id && isPlaying ? (
                           <Pause className="w-3 h-3 fill-white text-white" />
                         ) : (
@@ -1464,6 +1592,243 @@ export default function Browse() {
         </div>
       </div>
       </div>
+
+      {isMobileBrowseToolsOpen && (
+        <div className="md:hidden fixed inset-0 z-[120] flex items-end" role="presentation">
+          <button
+            type="button"
+            aria-label="Close Browse tools"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm motion-overlay"
+            onClick={() => setIsMobileBrowseToolsOpen(false)}
+          />
+
+          <section
+            id="mobile-browse-tools"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-browse-tools-title"
+            className="relative flex max-h-[82dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-t border-black/10 bg-[#fafafa] shadow-[0_-20px_60px_rgba(0,0,0,0.2)] motion-surface"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-black/10 px-5 py-4">
+              <h2 id="mobile-browse-tools-title" className="text-[11px] font-medium uppercase tracking-[0.18em] text-black">
+                Browse tools
+              </h2>
+              <button
+                ref={mobileBrowseToolsCloseRef}
+                type="button"
+                aria-label="Close Browse tools"
+                onClick={() => setIsMobileBrowseToolsOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5 text-black transition-colors active:bg-black/10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-black/10 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileBrowseToolsSection('filters');
+                  setMobileExpandedCategory(null);
+                  setMobileFilterSearch('');
+                }}
+                className={`h-10 rounded-lg text-[10px] font-medium uppercase tracking-widest transition-colors ${mobileBrowseToolsSection === 'filters' ? 'bg-black text-white' : 'bg-black/5 text-black/60'}`}
+              >
+                Filters{totalActiveFilterCount > 0 ? ` · ${totalActiveFilterCount}` : ''}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileBrowseToolsSection('music');
+                  setMobileExpandedCategory(null);
+                  setMobileFilterSearch('');
+                }}
+                className={`h-10 rounded-lg text-[10px] font-medium uppercase tracking-widest transition-colors ${mobileBrowseToolsSection === 'music' ? 'bg-black text-white' : 'bg-black/5 text-black/60'}`}
+              >
+                My Music
+              </button>
+            </div>
+
+            <div className={`min-h-0 flex-1 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 ${mobileBrowseToolsSection === 'filters' ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'}`}>
+              {mobileBrowseToolsSection === 'filters' ? (
+                <div className="flex flex-col gap-2">
+                  {totalActiveFilterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearAllFilters();
+                        setMobileExpandedCategory(null);
+                        setMobileFilterSearch('');
+                      }}
+                      className="mb-1 self-start text-[10px] font-medium uppercase tracking-widest text-black/50 underline underline-offset-4 transition-colors active:text-black"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+
+                  {FILTER_CATEGORIES.map(category => {
+                    const count = (activeFilters[category.key] as string[])?.length || 0;
+                    const isExpanded = mobileExpandedCategory === category.key;
+                    const filteredOptions = mobileFilterSearch
+                      ? category.options.filter(option => option.value.toLowerCase().includes(mobileFilterSearch.toLowerCase()))
+                      : category.options;
+
+                    return (
+                      <div key={category.key} className="overflow-hidden rounded-xl border border-black/10 bg-white">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMobileExpandedCategory(isExpanded ? null : category.key);
+                            setMobileFilterSearch('');
+                          }}
+                          aria-expanded={isExpanded}
+                          aria-controls={`mobile-filter-${category.key}`}
+                          className={`flex min-h-12 w-full items-center justify-between px-4 text-left text-[11px] font-medium uppercase tracking-widest transition-colors ${isExpanded ? 'bg-black text-white' : 'text-black/70 active:bg-black/5'}`}
+                        >
+                          <span>{category.title}</span>
+                          <span className="flex items-center gap-2">
+                            {count > 0 && (
+                              <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[9px] ${isExpanded ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                                {count}
+                              </span>
+                            )}
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          </span>
+                        </button>
+
+                        {isExpanded && (
+                          <div id={`mobile-filter-${category.key}`} className="border-t border-black/10 p-3">
+                            <div className="relative mb-3">
+                              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-black/40" />
+                              <input
+                                type="search"
+                                autoFocus
+                                placeholder={`Search ${category.title}`}
+                                value={mobileFilterSearch}
+                                onChange={event => setMobileFilterSearch(event.target.value)}
+                                className="h-10 w-full rounded-lg border border-black/10 bg-black/[0.03] pl-9 pr-3 text-[12px] text-black outline-none placeholder:text-black/35 focus:border-black/30"
+                              />
+                            </div>
+                            <div className="flex max-h-[34dvh] flex-col gap-1 overflow-y-auto overscroll-contain pr-1">
+                              {filteredOptions.map(option => {
+                                const isActive = (activeFilters[category.key] as string[])?.includes(option.value);
+                                return (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    aria-pressed={isActive}
+                                    onClick={() => toggleFilter(category.key, option.value)}
+                                    className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-[11px] transition-colors ${isActive ? 'bg-black text-white' : 'text-black/70 active:bg-black/5'}`}
+                                  >
+                                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isActive ? 'border-white bg-white text-black' : 'border-black/20'}`}>
+                                      {isActive && <span className="h-1.5 w-1.5 rounded-sm bg-black" />}
+                                    </span>
+                                    <span className="min-w-0 flex-1 truncate">{option.value}</span>
+                                    <span className={`shrink-0 text-[9px] ${isActive ? 'text-white/60' : 'text-black/35'}`}>{option.count}</span>
+                                  </button>
+                                );
+                              })}
+                              {filteredOptions.length === 0 && (
+                                <p className="px-3 py-5 text-center text-[11px] text-black/40">No matching filters</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="relative min-h-0 flex-1">
+                    <div className="flex h-full flex-col gap-1 overflow-y-auto overscroll-contain pb-5 pr-1">
+                    {profile && favoritesPlaylist && (
+                      <SidebarPlaylist
+                        playlist={favoritesPlaylist}
+                        isFavorites={true}
+                        isActive={playlistUrlId === favoritesPlaylist.id}
+                        onClick={() => openMobilePlaylist(favoritesPlaylist.id)}
+                        dragTarget={dragTarget}
+                        setDragTarget={setDragTarget}
+                      />
+                    )}
+                    {userPlaylists.filter(playlist => !playlist.is_favorites).map(playlist => (
+                      <SidebarPlaylist
+                        key={playlist.id}
+                        playlist={playlist}
+                        isActive={playlistUrlId === playlist.id}
+                        onClick={() => openMobilePlaylist(playlist.id)}
+                        dragTarget={dragTarget}
+                        setDragTarget={setDragTarget}
+                      />
+                    ))}
+                    {user && !favoritesPlaylist && userPlaylists.length === 0 && (
+                      <p className="px-3 py-5 text-center text-[11px] text-black/40">Your saved playlists will appear here.</p>
+                    )}
+                    </div>
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-[#fafafa]" />
+                  </div>
+
+                  <div className="shrink-0 border-t border-black/10 pt-4">
+                    {isMobileInlineCreating ? (
+                      <form
+                        className="flex items-center gap-2 rounded-xl bg-black p-2"
+                        onSubmit={event => {
+                          event.preventDefault();
+                          void handleMobilePlaylistCreate();
+                        }}
+                      >
+                        <input
+                          autoFocus
+                          type="text"
+                          value={mobileCreateTitle}
+                          onChange={event => setMobileCreateTitle(event.target.value)}
+                          placeholder="Playlist title"
+                          className="h-10 min-w-0 flex-1 bg-transparent px-2 text-[12px] text-white outline-none placeholder:text-white/50"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Cancel creating playlist"
+                          onClick={() => {
+                            setMobileCreateTitle('');
+                            setIsMobileInlineCreating(false);
+                          }}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/70 active:bg-white/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!mobileCreateTitle.trim() || isMobileCreatingPlaylist}
+                          className="flex h-9 shrink-0 items-center rounded-lg bg-white px-3 text-[10px] font-medium uppercase tracking-widest text-black disabled:opacity-50"
+                        >
+                          {isMobileCreatingPlaylist ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Create'}
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!user) {
+                            setIsMobileBrowseToolsOpen(false);
+                            setLoginModalOpen(true);
+                            return;
+                          }
+                          setIsMobileInlineCreating(true);
+                        }}
+                        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-black text-[11px] font-medium uppercase tracking-widest text-white shadow-md transition-colors active:bg-black/80"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create playlist
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
 
     </div>
   );

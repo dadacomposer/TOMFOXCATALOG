@@ -66,6 +66,8 @@ type PlayerContextType = {
   setIsShuffleEnabled: (enabled: boolean) => void;
   isRepeatEnabled: boolean;
   setIsRepeatEnabled: (enabled: boolean) => void;
+  isSimilarPanelExpanded: boolean;
+  setIsSimilarPanelExpanded: (expanded: boolean) => void;
 };
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -87,6 +89,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [lastVolume, setLastVolume] = useState(1);
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
   const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
+  const [isSimilarPanelExpanded, setIsSimilarPanelExpanded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const toggleMute = useCallback(() => {
@@ -410,7 +413,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       isShuffleEnabled,
       setIsShuffleEnabled,
       isRepeatEnabled,
-      setIsRepeatEnabled
+      setIsRepeatEnabled,
+      isSimilarPanelExpanded,
+      setIsSimilarPanelExpanded
     }}>
       {children}
     </PlayerContext.Provider>

@@ -51,8 +51,80 @@ export default function SharedPlayer() {
   const [isZipping, setIsZipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { currentTrack, isPlaying, playTrack, togglePlay, progress, setPendingSeek, setIsCurrentPreviewDormant, isPreviewMode, setIsPreviewMode } = usePlayer();
+  const {
+    currentTrack,
+    isPlaying,
+    playTrack,
+    togglePlay,
+    progress,
+    setPendingSeek,
+    setIsCurrentPreviewDormant,
+    isPreviewMode,
+    setIsPreviewMode,
+    audioRef,
+    pendingSeek,
+    setProgress,
+    setIsPlaying,
+    playNextTrack,
+    isCurrentPreviewDormant,
+    volume,
+    stopPlayback,
+  } = usePlayer();
   const { openDownloadModal } = useDownload();
+
+  // A shared link is its own listening context. Do not silently carry a
+  // catalog track into a route where the catalog player chrome is absent.
+  useEffect(() => {
+    stopPlayback();
+  }, [stopPlayback]);
+
+  // Shared links deliberately omit the global player chrome. Mount the same
+  // audio transport here so the shared-list controls still drive real audio
+  // through the common PlayerContext.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
+
+    audio.volume = volume;
+    if (isPlaying) {
+      audio.play().catch(error => console.error('Shared-player playback failed:', error));
+    } else {
+      audio.pause();
+    }
+  }, [audioRef, currentTrack, isPlaying, volume]);
+
+  const handleAudioTimeUpdate = () => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
+
+    const percentage = (audio.currentTime / (audio.duration || 1)) * 100;
+    setProgress(percentage);
+
+    if (isPreviewMode && !isCurrentPreviewDormant) {
+      const preview = getPreviewTimings(currentTrack);
+      if (preview && percentage >= preview.endPct) {
+        playNextTrack();
+      }
+    }
+  };
+
+  const handleAudioMetadata = () => {
+    const audio = audioRef.current;
+    if (pendingSeek === null || !audio?.duration) return;
+
+    audio.currentTime = (pendingSeek / 100) * audio.duration;
+    setPendingSeek(null);
+  };
+
+  // A seek can be requested after metadata has already loaded (for example
+  // from the visible waveform), so metadata alone is not sufficient.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (pendingSeek === null || !audio || audio.readyState < 1 || !audio.duration) return;
+
+    audio.currentTime = (pendingSeek / 100) * audio.duration;
+    setPendingSeek(null);
+  }, [audioRef, currentTrack?.id, pendingSeek, setPendingSeek]);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,8 +251,20 @@ export default function SharedPlayer() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex flex-col font-sans">
+      {currentTrack && (
+        <audio
+          ref={audioRef}
+          preload="auto"
+          src={currentTrack.r2_url}
+          onLoadedMetadata={handleAudioMetadata}
+          onTimeUpdate={handleAudioTimeUpdate}
+          onEnded={playNextTrack}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        />
+      )}
       {/* Minimal Header */}
-      <header className="w-full py-6 md:py-8 px-6 md:px-12 flex items-center justify-between border-b border-black/10 bg-[#fafafa] sticky top-0 z-50 shadow-sm">
+      <header className="w-full py-6 md:py-8 px-4 sm:px-6 md:px-12 flex items-center justify-between border-b border-black/10 bg-[#fafafa] sticky top-0 z-50 shadow-sm">
         <a href="/" className="block hover:opacity-70 transition-opacity">
           <img 
             src="https://pub-b6e9dcf542e141cda8a3cbb1764f5997.r2.dev/assets/logo.png" 
@@ -198,7 +282,7 @@ export default function SharedPlayer() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col items-center pt-16 pb-48 px-6 md:px-12 w-full">
+      <div className="flex-1 flex flex-col items-center pt-10 md:pt-16 pb-48 px-4 sm:px-6 md:px-12 w-full">
         <div className="w-full max-w-[1440px]">
           <div className="mb-12 text-center max-w-3xl mx-auto">
             <h2 className="text-[22px] font-bold uppercase tracking-tighter mb-6 text-black">
@@ -232,7 +316,7 @@ export default function SharedPlayer() {
               >
                 <div className={`w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5`}>
                   <TrackArtwork track={track} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
                     {currentTrack?.id === track.id && isPlaying ? (
                       <Pause className="w-4 h-4 fill-white text-white" />
                     ) : (
@@ -240,7 +324,7 @@ export default function SharedPlayer() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
+                <div className="flex flex-col justify-center w-[20%] max-md:w-auto max-md:flex-1 shrink-0 pr-4 max-md:pr-0 min-w-0">
                   <div className="font-bold truncate text-[14px]">{cleanTitle(track.file_name)}</div>
                   <div className="font-sans text-[12px] text-black/50 mt-0.5">{DEFAULT_ARTIST}</div>
                 </div>
@@ -302,10 +386,10 @@ export default function SharedPlayer() {
           })}
         </div>
         <div className="mt-16 text-center pt-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">Want to hear more?</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-black/45 mb-4">Want to hear more?</p>
           <a 
             href="/" 
-            className="inline-flex items-center justify-center px-5 py-2.5 border-2 border-white rounded-lg text-xs font-bold uppercase tracking-widest text-white hover:bg-white hover:text-black transition-all hover:scale-105"
+            className="inline-flex items-center justify-center px-5 py-2.5 border-2 border-black rounded-lg text-xs font-bold uppercase tracking-widest text-black hover:bg-black hover:text-white transition-all hover:scale-105"
           >
             Browse Full Catalog
           </a>

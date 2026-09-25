@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2, Download, ShoppingBag, TrendingUp, Shuffle, Repeat, Zap } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2, Download, ShoppingBag, TrendingUp, Shuffle, Repeat, Zap, MoreHorizontal, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import WaveformView from './WaveformView';
 import { usePlayer } from '../context/PlayerContext';
@@ -16,6 +16,7 @@ import TrackArtwork from './TrackArtwork';
 import { Track } from '../context/PlayerContext';
 import { DEFAULT_ARTWORK, DEFAULT_ARTIST } from '../config';
 import { useSettings } from '../context/SettingsContext';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 const formatTime = (seconds: number) => {
   const m = Math.floor(seconds / 60);
@@ -57,12 +58,12 @@ export default function GlobalPlayer() {
   const navigate = useNavigate();
   const isSharedPage = location.pathname.startsWith('/share');
   
-  const { currentTrack, currentPlaylist, isPlaying, setIsPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId, setSelectedTrackForDetails, volume, setVolume, toggleMute, isShuffleEnabled, setIsShuffleEnabled, isRepeatEnabled, setIsRepeatEnabled } = usePlayer();
+  const { currentTrack, currentPlaylist, isPlaying, setIsPlaying, progress, pendingSeek, setPendingSeek, setProgress, togglePlay, playNextTrack, playPrevTrack, audioRef, isPreviewMode, setIsPreviewMode, isCurrentPreviewDormant, setIsCurrentPreviewDormant, playTrack, setCurrentPlaylist, returnTrackId, setReturnTrackId, setSelectedTrackForDetails, volume, setVolume, toggleMute, isShuffleEnabled, setIsShuffleEnabled, isRepeatEnabled, setIsRepeatEnabled, isSimilarPanelExpanded: isSimilarExpanded, setIsSimilarPanelExpanded: setIsSimilarExpanded } = usePlayer();
   const { openDownloadModal } = useDownload();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
-  const { profile } = useAuth();
-  const [isSimilarExpanded, setIsSimilarExpanded] = React.useState(false);
+  const { profile, isLoginModalOpen } = useAuth();
+  const [isMobileControlsOpen, setIsMobileControlsOpen] = React.useState(false);
   const [referenceTrack, setReferenceTrack] = React.useState<Track | null>(null);
   const [similarTracks, setSimilarTracks] = React.useState<Track[]>([]);
   const [isSimilarLoading, setIsSimilarLoading] = React.useState(false);
@@ -74,6 +75,9 @@ export default function GlobalPlayer() {
   const originalPlaylistRef = React.useRef<Track[]>([]);
   const similarRequestRef = React.useRef(0);
   const similarLoadMoreRef = React.useRef(false);
+  const mobileControlsCloseRef = React.useRef<HTMLButtonElement>(null);
+
+  useLockBodyScroll(isMobileControlsOpen);
 
   const expandSimilar = () => {
     if (!isSimilarExpanded) {
@@ -93,6 +97,52 @@ export default function GlobalPlayer() {
       setCurrentPlaylist(originalPlaylistRef.current);
     }
   };
+
+  React.useEffect(() => {
+    if (currentTrack) return;
+
+    // A stopped player must not leave a hidden Similar panel or phone controls
+    // reserving space on a subsequent route.
+    setIsSimilarExpanded(false);
+    setIsMobileControlsOpen(false);
+  }, [currentTrack, setIsSimilarExpanded]);
+
+  // Similar-panel visibility is shared with Discover so its search bar can
+  // reserve the right amount of space. Clear that shared UI state when this
+  // player is absent on a route (for example Studio) so it cannot reappear as
+  // an empty expanded panel after returning to the catalog.
+  React.useEffect(() => () => {
+    setIsSimilarExpanded(false);
+  }, [setIsSimilarExpanded]);
+
+  // TrackActionButtons can open the global login dialog for signed-out users.
+  // Its overlay deliberately sits below the player sheet, so relinquish this
+  // layer first rather than leaving the login form visually unreachable.
+  React.useEffect(() => {
+    if (isLoginModalOpen) setIsMobileControlsOpen(false);
+  }, [isLoginModalOpen]);
+
+  React.useEffect(() => {
+    if (!isMobileControlsOpen) return;
+
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const closeOnDesktop = () => {
+      if (mediaQuery.matches) setIsMobileControlsOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMobileControlsOpen(false);
+    };
+    const focusFrame = requestAnimationFrame(() => mobileControlsCloseRef.current?.focus());
+
+    closeOnDesktop();
+    mediaQuery.addEventListener('change', closeOnDesktop);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      mediaQuery.removeEventListener('change', closeOnDesktop);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMobileControlsOpen]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -308,10 +358,10 @@ export default function GlobalPlayer() {
   const secondaryText = isSharedPage ? 'text-white/60' : 'text-black/60';
 
   return (
-    <div className={`global-player fixed bottom-0 left-0 w-full flex flex-col ${baseBg} ${baseText} border-t ${baseBorder} z-[90] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] motion-drawer no-radius !rounded-none ${currentTrack ? 'translate-y-0' : 'translate-y-[100%]'} ${isSimilarExpanded ? 'h-[75vh]' : 'h-[90px]'}`}>
+    <div className={`global-player fixed bottom-0 left-0 w-full flex flex-col ${baseBg} ${baseText} border-t ${baseBorder} z-[90] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] motion-drawer no-radius !rounded-none ${currentTrack ? 'translate-y-0' : 'translate-y-[100%]'} ${isSimilarExpanded ? 'h-[75vh] max-md:h-[76dvh]' : 'h-[90px] max-md:h-[76px]'}`}>
 
       {/* Main Player Bar FIRST so it's at the top of the expanded panel */}
-      <div className={`w-full h-[90px] shrink-0 flex items-center px-4 md:px-6 gap-4 md:gap-8 transition-colors relative z-10 ${isSimilarExpanded ? `border-b ${baseBorder} ${isSharedPage ? 'bg-[#1a1a1a]' : 'bg-white/50'}` : ''}`}>
+      <div className={`w-full h-[90px] max-md:h-[76px] shrink-0 flex items-center px-4 max-md:px-3 md:px-6 gap-4 max-md:gap-2 md:gap-8 transition-colors relative z-10 ${isSimilarExpanded ? `border-b ${baseBorder} ${isSharedPage ? 'bg-[#1a1a1a]' : 'bg-white/50'}` : ''}`}>
       {getNextTrack() && (
         <audio preload="auto" src={getNextTrack()?.r2_url} className="hidden" muted />
       )}
@@ -335,7 +385,7 @@ export default function GlobalPlayer() {
           onPause={() => setIsPlaying(false)}
         />
       )}
-      <div className="flex items-center gap-4 w-auto md:w-[280px] shrink-0">
+      <div className="flex items-center gap-4 max-md:gap-2 w-auto max-md:flex-1 max-md:min-w-0 md:w-[280px] shrink-0">
         <div 
           className={`w-12 h-12 rounded overflow-hidden flex items-center justify-center relative hidden sm:flex border ${baseBorder} ${isSharedPage ? 'bg-white/5' : 'bg-black/5'} cursor-pointer group`}
           onClick={() => currentTrack && setSelectedTrackForDetails(currentTrack)}
@@ -344,47 +394,47 @@ export default function GlobalPlayer() {
         </div>
         <div className="flex flex-col overflow-hidden">
           <div 
-            className="font-bold truncate text-[14px] cursor-pointer hover:underline underline-offset-2 pr-4"
+            className="font-bold truncate text-[14px] max-md:text-[12px] cursor-pointer hover:underline underline-offset-2 pr-4 max-md:pr-0"
             onClick={() => currentTrack && setSelectedTrackForDetails(currentTrack)}
           >
             {currentTrack ? cleanTitle(currentTrack.file_name) : ''}
           </div>
-          <div className={`font-sans text-[11px] ${secondaryText} truncate`}>
+          <div className={`font-sans text-[11px] max-md:hidden ${secondaryText} truncate`}>
             {getComposers(currentTrack?.composers)}
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center gap-4 max-md:gap-1 shrink-0">
         <button 
           onClick={() => setIsShuffleEnabled(!isShuffleEnabled)} 
-          className={`transition-colors ${isShuffleEnabled ? (isSharedPage ? 'text-white' : 'text-black') : (isSharedPage ? 'text-white/30 hover:text-white/60' : 'text-black/30 hover:text-black/60')}`}
+          className={`max-md:hidden transition-colors ${isShuffleEnabled ? (isSharedPage ? 'text-white' : 'text-black') : (isSharedPage ? 'text-white/30 hover:text-white/60' : 'text-black/30 hover:text-black/60')}`}
           title="Shuffle"
         >
           <Shuffle className="w-4 h-4" />
         </button>
-        <button onClick={playPrevTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipBack className="w-5 h-5 fill-current" /></button>
+        <button onClick={playPrevTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipBack className="w-5 h-5 max-md:w-4 max-md:h-4 fill-current" /></button>
         {isBuffering ? (
-          <button disabled className={`w-10 h-10 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black' : 'bg-black text-white'} transition-colors`}>
+          <button disabled className={`w-10 h-10 max-md:w-9 max-md:h-9 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black' : 'bg-black text-white'} transition-colors`}>
             <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
           </button>
         ) : (
           <button 
-            className={`w-10 h-10 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-black/90'} transition-colors`}
+            className={`w-10 h-10 max-md:w-9 max-md:h-9 flex items-center justify-center rounded-lg ${isSharedPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-black/90'} transition-colors`}
             onClick={togglePlay}
           >
             {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" style={{ transform: 'translateX(4.166%)' }} />}
           </button>
         )}
-        <button onClick={handleNextTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipForward className="w-5 h-5 fill-current" /></button>
+        <button onClick={handleNextTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipForward className="w-5 h-5 max-md:w-4 max-md:h-4 fill-current" /></button>
         <button 
           onClick={() => setIsRepeatEnabled(!isRepeatEnabled)} 
-          className={`transition-colors ${isRepeatEnabled ? (isSharedPage ? 'text-white' : 'text-black') : (isSharedPage ? 'text-white/30 hover:text-white/60' : 'text-black/30 hover:text-black/60')}`}
+          className={`max-md:hidden transition-colors ${isRepeatEnabled ? (isSharedPage ? 'text-white' : 'text-black') : (isSharedPage ? 'text-white/30 hover:text-white/60' : 'text-black/30 hover:text-black/60')}`}
           title="Repeat"
         >
           <Repeat className="w-4 h-4" />
         </button>
       </div>
-      <div className="flex-grow flex items-center">
+      <div className="flex-grow max-md:flex-grow-0 flex items-center">
         {/* 2. Find Similar Tracks */}
         {!isSharedPage && currentTrack && (
           <button 
@@ -399,7 +449,7 @@ export default function GlobalPlayer() {
                 }
               }
             }} 
-            className={`flex items-center justify-center p-1.5 rounded-full transition-colors mr-6 ${isSimilarExpanded && currentTrack?.id === referenceTrack?.id ? 'text-black bg-black/10' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
+            className={`flex items-center justify-center p-1.5 rounded-full transition-colors mr-6 max-md:mr-0 ${isSimilarExpanded && currentTrack?.id === referenceTrack?.id ? 'text-black bg-black/10' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
             title="Find Similar"
           >
             <Zap className="w-4 h-4" />
@@ -407,7 +457,7 @@ export default function GlobalPlayer() {
         )}
 
               {/* 3. Toggle Preview */}
-        <div className="flex items-center gap-3 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+        <div className="hidden md:flex items-center gap-3 cursor-pointer group/preview" onClick={() => setIsPreviewMode(!isPreviewMode)}>
           <span className={`hidden md:block text-[10px] font-bold tracking-widest uppercase transition-colors ${isPreviewMode ? (isSharedPage ? 'text-white' : 'text-black group-hover/preview:text-black/70') : (isSharedPage ? 'text-white/50' : 'text-black/30 group-hover/preview:text-black/60')}`}>Preview</span>
           <div 
             className={`preview-toggle w-9 h-5 rounded-full p-[2px] transition-colors relative flex items-center shadow-inner ${isPreviewMode ? (isSharedPage ? 'bg-white/30 group-hover/preview:bg-white/40' : 'bg-[#111111] group-hover/preview:bg-[#333]') : (isSharedPage ? 'bg-white/10 group-hover/preview:bg-white/20' : 'bg-[#e0e0e0] group-hover/preview:bg-[#d0d0d0]')}`}
@@ -416,7 +466,7 @@ export default function GlobalPlayer() {
           </div>
         </div>
 
-              <div className="flex-grow mx-8 h-8 flex items-center">
+              <div className="hidden md:flex flex-grow mx-8 h-8 items-center">
           {currentTrack && (
             <WaveformView 
               data={parseWaveform(currentTrack.waveform_data)} 
@@ -430,12 +480,12 @@ export default function GlobalPlayer() {
           )}
         </div>
         {!isSharedPage && currentTrack && (
-          <div className="flex items-center mr-4 shrink-0">
+          <div className="hidden md:flex items-center mr-4 shrink-0">
             <TrackActionButtons trackId={currentTrack.id} />
           </div>
         )}
         {/* 1. Volume Controls */}
-        <div className="relative group/volume flex items-center shrink-0 mr-4">
+        <div className="relative group/volume hidden md:flex items-center shrink-0 mr-4">
           <button 
             onClick={toggleMute} 
             className={`p-1.5 rounded-full transition-colors flex items-center justify-center shrink-0 ${isSharedPage ? 'text-white/40 hover:text-white hover:bg-white/10' : 'text-black/40 hover:text-black hover:bg-black/5'}`}
@@ -457,41 +507,53 @@ export default function GlobalPlayer() {
         </div>
 
         
-        <div className={`font-sans text-[11px] ${secondaryText} uppercase tracking-widest w-20 text-right shrink-0`}>
+        <div className={`hidden md:block font-sans text-[11px] ${secondaryText} uppercase tracking-widest w-20 text-right shrink-0`}>
           {audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'} / {audioRef.current?.duration ? formatTime(audioRef.current.duration) : (currentTrack?.duration ? formatTime(currentTrack.duration) : '0:00')}
         </div>
       </div>
-      <div className="shrink-0 flex items-center gap-4 ml-4">
+      <div className="shrink-0 flex items-center gap-4 max-md:gap-0 max-md:ml-1 ml-4">
         
         {/* 4. Download and License */}
         {!isSharedPage && (
-          <div className="flex gap-4 ml-2">
+          <div className="flex gap-4 max-md:gap-0 ml-2 max-md:ml-0">
             {profile?.can_download !== false && (
-              <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors flex items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
+              <button className="hidden md:flex p-1.5 hover:bg-black/5 rounded-full transition-colors items-center justify-center text-black/40 hover:text-black shrink-0" onClick={(e) => { if (currentTrack) openDownloadModal(currentTrack, e); }}>
                 <Download className="w-4 h-4" />
               </button>
             )}
             {location.pathname !== '/admin' && (
-              <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={() => { if (currentTrack) openLicenseModal(currentTrack); }}>
-                <ShoppingBag className="w-3.5 h-3.5" /> License
+              <button className="flex items-center gap-2 max-md:justify-center max-md:w-9 max-md:h-9 max-md:px-0 max-md:py-0 px-4 py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[11px] uppercase tracking-widest" onClick={() => { if (currentTrack) openLicenseModal(currentTrack); }}>
+                <ShoppingBag className="w-3.5 h-3.5" /> <span className="max-md:hidden">License</span>
               </button>
             )}
           </div>
         )}
       </div>
+      {!isSharedPage && currentTrack && (
+        <button
+          type="button"
+          onClick={() => setIsMobileControlsOpen(true)}
+          aria-label="Open player controls"
+          aria-expanded={isMobileControlsOpen}
+          aria-controls="mobile-player-controls"
+          className="hidden max-md:flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+        >
+          <MoreHorizontal className="h-5 w-5" />
+        </button>
+      )}
       </div>
 
       {/* Expanded Similar Tracks View */}
       <div className={`w-full overflow-hidden flex flex-col motion-drawer ${isSimilarExpanded ? 'opacity-100 flex-grow' : 'opacity-0 h-0'}`}>
         {referenceTrack && (
-          <div className="flex items-center gap-6 px-6 py-6 border-b border-black/10 shrink-0 bg-black/5">
-            <div className="w-24 h-24 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-black/10 shadow-sm relative bg-white">
+          <div className="flex items-center gap-6 max-md:gap-3 px-6 max-md:px-4 py-6 max-md:py-3 border-b border-black/10 shrink-0 bg-black/5">
+            <div className="w-24 h-24 max-md:w-12 max-md:h-12 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-black/10 shadow-sm relative bg-white">
               <TrackArtwork track={referenceTrack} className="w-full h-full object-cover" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <div className="font-sans text-[10px] text-black/50 uppercase tracking-widest mb-1">Based on track</div>
-              <div className="font-bold text-3xl tracking-tight leading-none mb-1">{cleanTitle(referenceTrack.file_name)}</div>
-              <div className="font-sans text-[13px] text-black/60">Similar tracks selected for you</div>
+              <div className="font-bold text-3xl max-md:text-lg truncate tracking-tight leading-none mb-1">{cleanTitle(referenceTrack.file_name)}</div>
+              <div className="font-sans text-[13px] max-md:text-[11px] text-black/60">Similar tracks selected for you</div>
             </div>
             <div className="ml-auto">
               <button onClick={closeSimilar} className="text-black/40 hover:text-black p-2 rounded-full hover:bg-black/5 transition-colors">
@@ -500,7 +562,7 @@ export default function GlobalPlayer() {
             </div>
           </div>
         )}
-        <div className="flex-grow overflow-y-auto overscroll-contain hide-scrollbar px-4 py-4">
+        <div className="flex-grow max-md:min-h-0 overflow-y-auto overscroll-contain hide-scrollbar px-4 max-md:px-3 py-4">
           {isSimilarLoading && similarTracks.length === 0 ? (
             // Initial Skeleton Loader
             [...Array(10)].map((_, i) => (
@@ -530,12 +592,12 @@ export default function GlobalPlayer() {
               {similarTracks.map(track => (
                 <div 
                   key={track.id}
-                  className="flex items-center gap-4 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none mb-1"
+                  className="flex items-center gap-4 max-md:gap-2 hover:bg-[#f6f6f6] p-2 rounded-xl group transition-colors cursor-pointer select-none mb-1"
                   onClick={() => handlePlaySimilar(track)}
                 >
-                  <div className="w-12 h-12 rounded bg-black/5 overflow-hidden flex items-center justify-center relative shrink-0">
+                  <div className="w-12 h-12 max-md:w-10 max-md:h-10 rounded bg-black/5 overflow-hidden flex items-center justify-center relative shrink-0">
                     <TrackArtwork track={track} className="absolute inset-0 w-full h-full" />
-                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${currentTrack?.id === track.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}>
                       {currentTrack?.id === track.id && isPlaying ? (
                         <Pause className="w-5 h-5 fill-white text-white" />
                       ) : (
@@ -543,7 +605,7 @@ export default function GlobalPlayer() {
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-col justify-center w-[20%] shrink-0 pr-4">
+                  <div className="flex flex-col justify-center w-[20%] max-md:w-auto max-md:min-w-0 max-md:flex-1 shrink-0 pr-4 max-md:pr-0">
                     <div 
                       className={`font-bold truncate text-[14px] hover:underline cursor-pointer ${currentTrack?.id === track.id ? 'text-black' : ''}`}
                       onClick={(e) => { e.stopPropagation(); setSelectedTrackForDetails(track); }}
@@ -621,7 +683,7 @@ export default function GlobalPlayer() {
 
                   {/* Action Buttons, Duration, Download and License buttons */}
                   <div className={`flex items-center justify-end pr-2 md:pr-4 shrink-0 w-auto gap-1.5 md:gap-2`}>
-                    <TrackActionButtons trackId={track.id} />
+                    <div className="max-md:[&>div]:gap-1"><TrackActionButtons trackId={track.id} /></div>
                     <div className="hidden md:block text-[11px] font-sans font-medium text-black/40 tracking-wider w-auto min-w-[40px] text-right mr-2">
                       {track.duration ? formatTime(track.duration) : '0:00'}
                     </div>
@@ -632,7 +694,7 @@ export default function GlobalPlayer() {
                         <Download className="w-4 h-4" />
                       </button>
                     )}
-                    <button className="flex items-center gap-1.5 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>
+                    <button className="flex items-center justify-center gap-1.5 md:gap-2 w-8 h-8 px-0 md:w-auto md:h-auto md:px-4 py-1.5 md:py-2 bg-black text-white rounded hover:bg-black/90 transition-colors font-sans text-[10px] md:text-[11px] uppercase tracking-widest shrink-0" onClick={(e) => { e.stopPropagation(); openLicenseModal(track); }}>
                       <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden md:inline">License</span>
                     </button>
                   </div>
@@ -679,6 +741,142 @@ export default function GlobalPlayer() {
           )}
         </div>
       </div>
+      {isMobileControlsOpen && currentTrack && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[140] hidden max-md:flex items-end" role="presentation">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm motion-overlay"
+            onClick={() => setIsMobileControlsOpen(false)}
+          />
+          <section
+            id="mobile-player-controls"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-player-controls-title"
+            className="relative flex max-h-[min(82dvh,38rem)] w-full flex-col overflow-hidden rounded-t-[28px] border-t border-black/10 bg-[#fafafa] text-black shadow-[0_-20px_60px_rgba(0,0,0,0.2)] motion-surface"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-black/10 px-5 py-4">
+              <div className="min-w-0 pr-4">
+                <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-black/40">Now playing</p>
+                <h2 id="mobile-player-controls-title" className="mt-1 truncate text-sm font-bold uppercase tracking-tight">
+                  {cleanTitle(currentTrack.file_name)}
+                </h2>
+              </div>
+              <button
+                ref={mobileControlsCloseRef}
+                type="button"
+                aria-label="Close player controls"
+                onClick={() => setIsMobileControlsOpen(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/5 text-black transition-colors active:bg-black/10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5">
+              <div className="flex flex-col gap-5">
+                <div className="rounded-2xl border border-black/10 bg-white p-4">
+                  <button
+                    type="button"
+                    aria-pressed={isPreviewMode}
+                    onClick={() => setIsPreviewMode(!isPreviewMode)}
+                    className="flex w-full items-center justify-between text-left"
+                  >
+                    <span>
+                      <span className="block text-[10px] font-medium uppercase tracking-widest text-black/40">Playback mode</span>
+                      <span className="mt-1 block text-sm font-bold uppercase tracking-tight">Preview</span>
+                    </span>
+                    <span className={`preview-toggle relative flex h-5 w-9 items-center rounded-full p-[2px] shadow-inner ${isPreviewMode ? 'bg-black' : 'bg-[#e0e0e0]'}`}>
+                      <span className={`absolute h-4 w-4 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.2)] transition-transform ${isPreviewMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </span>
+                  </button>
+
+                  <div className="mt-5 h-12">
+                    <WaveformView
+                      data={parseWaveform(currentTrack.waveform_data)}
+                      isPlaying={isPlaying}
+                      progress={progress}
+                      onSeek={handleSeek}
+                      previewStartPct={isPreviewMode ? getPreviewTimings(currentTrack)?.startPct : undefined}
+                      previewEndPct={isPreviewMode ? getPreviewTimings(currentTrack)?.endPct : undefined}
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[10px] font-medium uppercase tracking-widest text-black/45">
+                    <span>{audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'}</span>
+                    <span>{audioRef.current?.duration ? formatTime(audioRef.current.duration) : (currentTrack.duration ? formatTime(currentTrack.duration) : '0:00')}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={isShuffleEnabled}
+                    onClick={() => setIsShuffleEnabled(!isShuffleEnabled)}
+                    className={`flex min-h-12 items-center gap-3 rounded-xl border px-4 text-left text-[10px] font-medium uppercase tracking-widest transition-colors ${isShuffleEnabled ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-black/65 active:bg-black/5'}`}
+                  >
+                    <Shuffle className="h-4 w-4" /> Shuffle
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={isRepeatEnabled}
+                    onClick={() => setIsRepeatEnabled(!isRepeatEnabled)}
+                    className={`flex min-h-12 items-center gap-3 rounded-xl border px-4 text-left text-[10px] font-medium uppercase tracking-widest transition-colors ${isRepeatEnabled ? 'border-black bg-black text-white' : 'border-black/10 bg-white text-black/65 active:bg-black/5'}`}
+                  >
+                    <Repeat className="h-4 w-4" /> Repeat
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-4">
+                  <button
+                    type="button"
+                    aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+                    onClick={toggleMute}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/5 text-black transition-colors active:bg-black/10"
+                  >
+                    {volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </button>
+                  <label className="min-w-0 flex-1">
+                    <span className="mb-2 block text-[10px] font-medium uppercase tracking-widest text-black/40">Volume</span>
+                    <input
+                      aria-label="Volume"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={volume}
+                      onChange={(event) => setVolume(parseFloat(event.target.value))}
+                      className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-black/10 accent-black"
+                    />
+                  </label>
+                  <span className="w-9 text-right text-[10px] font-medium tabular-nums text-black/50">{Math.round(volume * 100)}%</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-4">
+                  <span>
+                    <span className="block text-[10px] font-medium uppercase tracking-widest text-black/40">Library</span>
+                    <span className="mt-1 block text-sm font-bold uppercase tracking-tight">Save this track</span>
+                  </span>
+                  <TrackActionButtons trackId={currentTrack.id} />
+                </div>
+
+                {profile?.can_download !== false && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      setIsMobileControlsOpen(false);
+                      openDownloadModal(currentTrack, event);
+                    }}
+                    className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-4 text-[10px] font-medium uppercase tracking-widest text-black transition-colors active:bg-black/5"
+                  >
+                    <Download className="h-4 w-4" /> Download
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>,
+        document.body
+      )}
       {expandedTags && typeof document !== 'undefined' && createPortal(
         <div
           ref={expandedTagsRef}

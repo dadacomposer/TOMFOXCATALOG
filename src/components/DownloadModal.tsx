@@ -6,6 +6,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { X, Download, ShieldCheck, FileAudio, Music, AudioLines } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export default function DownloadModal() {
   const { downloadTrack, buttonRect, buttonElement, forceUnrestricted, sharedSlug, closeDownloadModal } = useDownload();
@@ -21,6 +22,7 @@ export default function DownloadModal() {
   const isSubscriber = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
   
   const showDropdown = forceUnrestricted || isSubscriber || settings.free_hd_enabled;
+  useLockBodyScroll(isOpen && !showDropdown);
   const draftFormat = settings.free_watermarks_enabled ? 'watermarked' : 'mp3';
   const draftTitle = settings.free_watermarks_enabled ? 'Draft' : 'Download MP3';
   const draftSub = settings.free_watermarks_enabled ? 'Watermarked Audio' : 'Clean Audio File';
@@ -154,7 +156,7 @@ export default function DownloadModal() {
         
         <div 
           style={dropdownStyle}
-          className={`absolute bg-white shadow-[0_10px_30px_-5px_rgba(0,0,0,0.15)] border border-black/10 rounded-xl p-1 flex flex-col gap-1 motion-surface origin-bottom ${isOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-2'}`}
+          className={`absolute bg-white shadow-[0_10px_30px_-5px_rgba(0,0,0,0.15)] border border-black/10 rounded-xl p-1 flex flex-col gap-1 motion-surface origin-bottom max-md:max-w-[calc(100vw-2rem)] ${isOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-2'}`}
         >
           {/* MP3 Button */}
           {downloadTrack?.has_mp3 !== false && (
@@ -219,10 +221,10 @@ export default function DownloadModal() {
 
   // Non-Subscriber View: Try It / License Modal
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 max-md:items-start max-md:overflow-y-auto max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,calc(env(safe-area-inset-bottom)+1rem))] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <div className={`absolute inset-0 motion-overlay ${isOpen ? 'bg-black/40 backdrop-blur-sm opacity-100' : 'bg-black/0 backdrop-blur-none opacity-0'}`} onClick={closeDownloadModal} />
       
-      <div className={`relative z-10 w-full max-w-lg bg-[#fafafa] shadow-2xl overflow-hidden rounded-[32px] p-8 border border-black/10 flex flex-col motion-surface ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+      <div className={`relative z-10 w-full max-w-lg bg-[#fafafa] shadow-2xl overflow-hidden rounded-[32px] p-8 border border-black/10 flex flex-col motion-surface max-md:my-auto max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto max-md:overscroll-contain max-md:p-5 ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
         
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
