@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchRecentlyPlayedTracks, fetchSuggestedTracks, fetchPlaylistTrackIds, fetchTracksByIds } from '../lib/supabase';
+import { fetchPlaylists, fetchTrendingTracks, fetchPlaylistTracks, fetchSuggestedPlaylists, fetchPersonalizedTrackShelves, fetchPlaylistTrackIds, fetchTracksByIds } from '../lib/supabase';
 import { Play, Pause, TrendingUp, Loader2, Star } from 'lucide-react';
 import PlaylistIsland from '../components/PlaylistIsland';
 import TrackArtwork from '../components/TrackArtwork';
@@ -111,7 +111,8 @@ export default function Home() {
   const [suggestedPlaylists, setSuggestedPlaylists] = useState<any[]>([]);
   const [recentlyPlayedTracks, setRecentlyPlayedTracks] = useState<any[]>([]);
   const [suggestedTracks, setSuggestedTracks] = useState<any[]>([]);
-  const [isPersonalLoading, setIsPersonalLoading] = useState(false);
+  const [isSuggestedPlaylistsLoading, setIsSuggestedPlaylistsLoading] = useState(false);
+  const [isPersonalTracksLoading, setIsPersonalTracksLoading] = useState(false);
   
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
   const [supportsDesktopDrag, setSupportsDesktopDrag] = useState(() =>
@@ -131,13 +132,14 @@ export default function Home() {
   const suggestedRef = useRef<HTMLDivElement>(null);
   const suggestedTracksRef = useRef<HTMLDivElement>(null);
   const recentlyPlayedRef = useRef<HTMLDivElement>(null);
+  const latestCompletedTrackRef = useRef<Track | null>(null);
 
   const { user, setLoginModalOpen } = useAuth();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
   const { 
     playTrack, playPlaylist, currentTrack, isPlaying, togglePlay, 
-    progress, setPendingSeek, setCurrentSource, setSelectedTrackForDetails
+    progress, setPendingSeek, setCurrentSource, setSelectedTrackForDetails, lastCompletedTrack
   } = usePlayer();
 
   // Safari can mistake an HTML drag source for a scroll/tap gesture. Keep
@@ -176,32 +178,55 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSuggested() {
-      try {
-        if (user?.id) {
-          setIsPersonalLoading(true);
-          const [results, recentResults, suggestedTrks] = await Promise.all([
-            fetchSuggestedPlaylists(user.id),
-            fetchRecentlyPlayedTracks(user.id),
-            fetchSuggestedTracks(user.id)
-          ]);
-          if (!cancelled) {
-            setSuggestedPlaylists(results as any[]);
-            setRecentlyPlayedTracks(recentResults as any[]);
-            setSuggestedTracks(suggestedTrks as any[]);
-          }
-        } else if (!cancelled) {
-          setSuggestedPlaylists([]);
-          setRecentlyPlayedTracks([]);
-          setSuggestedTracks([]);
-        }
-      } catch (error) {
-        if (!cancelled) console.error('Error loading personalized home data:', error);
-      } finally {
-        if (!cancelled) setIsPersonalLoading(false);
-      }
+    if (!user?.id) {
+      latestCompletedTrackRef.current = null;
+      setSuggestedPlaylists([]);
+      setRecentlyPlayedTracks([]);
+      setSuggestedTracks([]);
+      setIsSuggestedPlaylistsLoading(false);
+      setIsPersonalTracksLoading(false);
+      return () => { cancelled = true; };
     }
-    void loadSuggested();
+
+    // Do not make one personal shelf wait for another. The two track shelves
+    // share a single hydration query; playlists render as soon as their own
+    // request is ready.
+    latestCompletedTrackRef.current = null;
+    setIsSuggestedPlaylistsLoading(true);
+    setIsPersonalTracksLoading(true);
+
+    void fetchSuggestedPlaylists(user.id)
+      .then(results => {
+        if (!cancelled) setSuggestedPlaylists(results as any[]);
+      })
+      .catch(error => {
+        if (!cancelled) console.error('Error loading suggested playlists:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setIsSuggestedPlaylistsLoading(false);
+      });
+
+    void fetchPersonalizedTrackShelves(user.id)
+      .then(({ recentlyPlayedTracks: recentResults, suggestedTracks: suggestedResults }) => {
+        if (!cancelled) {
+          setRecentlyPlayedTracks(() => {
+            const completedTrack = latestCompletedTrackRef.current;
+            if (!completedTrack) return recentResults as any[];
+            return [
+              completedTrack,
+              ...(recentResults as any[]).filter(track => track.id !== completedTrack.id)
+            ].slice(0, 16);
+          });
+          setSuggestedTracks(suggestedResults as any[]);
+        }
+      })
+      .catch(error => {
+        if (!cancelled) console.error('Error loading personal track shelves:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setIsPersonalTracksLoading(false);
+      });
+
     return () => { cancelled = true; };
   }, [user?.id]);
 
@@ -229,13 +254,14 @@ export default function Home() {
   }, [user, playlists]);
 
   useEffect(() => {
-    if (currentTrack && user?.id) {
+    if (lastCompletedTrack && user?.id) {
+      latestCompletedTrackRef.current = lastCompletedTrack.track;
       setRecentlyPlayedTracks(prev => {
-        const filtered = prev.filter(t => t.id !== currentTrack.id);
-        return [currentTrack, ...filtered].slice(0, 16);
+        const filtered = prev.filter(t => t.id !== lastCompletedTrack.track.id);
+        return [lastCompletedTrack.track, ...filtered].slice(0, 16);
       });
     }
-  }, [currentTrack, user?.id]);
+  }, [lastCompletedTrack, user?.id]);
 
   const trendingTrackIds = new Set(trendingTracks.map(t => t.id));
 
@@ -574,14 +600,14 @@ export default function Home() {
 
 
       {/* Suggested For You */}
-      {(isPersonalLoading || suggestedPlaylists.length > 0) && (
+      {(isSuggestedPlaylistsLoading || suggestedPlaylists.length > 0) && (
         <div className="w-full pt-4 pb-2 flex flex-col relative group/section no-radius !rounded-none">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black px-8">Suggested for you</h2>
           
           <div className="w-full relative max-md:px-4 md:px-8">
             <ScrollArrows scrollRef={suggestedRef} offsetY={8} />
             <div ref={suggestedRef} className="flex gap-6 md:gap-8 w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar snap-x snap-mandatory">
-              {isPersonalLoading ? Array.from({ length: 3 }, (_, index) => (
+              {isSuggestedPlaylistsLoading ? Array.from({ length: 3 }, (_, index) => (
                 <div key={`suggested-skeleton-${index}`} className="w-[240px] sm:w-[260px] md:w-[280px] shrink-0 animate-pulse">
                   <div className="aspect-[4/3] rounded-2xl bg-black/5" />
                   <div className="mt-3 h-3 w-3/4 rounded bg-black/5" />
@@ -625,13 +651,18 @@ export default function Home() {
       )}
 
       {/* Suggested Tracks (Same layout as Trending Tracks) */}
-      {suggestedTracks.length > 0 && (
+      {(isPersonalTracksLoading || suggestedTracks.length > 0) && (
         <div className={`w-full px-8 pt-0 pb-12 flex flex-col relative group/section no-radius !rounded-none ${!user ? 'bg-[#111] text-white' : 'bg-transparent text-black'}`}>
           <div className="w-full relative">
             <ScrollArrows scrollRef={suggestedTracksRef} isDark={!user} offsetY={8} />
             <div ref={suggestedTracksRef} className="w-full overflow-x-auto overscroll-x-none pb-4 hide-scrollbar -mx-4 px-4">
               <div className="grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start min-w-min">
-                {suggestedTracks.slice(0, 16).map((track, i) => {
+                {isPersonalTracksLoading ? Array.from({ length: 6 }, (_, index) => (
+                  <div key={`suggested-track-skeleton-${index}`} className="flex items-center gap-3 p-2 animate-pulse">
+                    <div className="h-12 w-12 shrink-0 rounded bg-black/5" />
+                    <div className="min-w-0 flex-1 space-y-2"><div className="h-3 w-3/4 rounded bg-black/5" /><div className="h-2.5 w-1/2 rounded bg-black/5" /></div>
+                  </div>
+                )) : suggestedTracks.slice(0, 16).map((track, i) => {
                   const isThisPlaying = currentTrack?.file_name === track.file_name && isPlaying;
                   return (
                     <div 
@@ -668,14 +699,14 @@ export default function Home() {
       )}
 
       {/* Recently Played */}
-      {(isPersonalLoading || recentlyPlayedTracks.length > 0) && (
+      {(isPersonalTracksLoading || recentlyPlayedTracks.length > 0) && (
         <div className="w-full pt-4 pb-12 flex flex-col relative group/section no-radius !rounded-none">
           <h2 className="text-[22px] font-medium uppercase tracking-tighter mb-6 text-black px-8">Recently Played</h2>
           
           <div className="w-full relative max-md:px-4 md:px-8">
             <ScrollArrows scrollRef={recentlyPlayedRef} offsetY={16} />
             <div ref={recentlyPlayedRef} className="w-full overflow-x-auto overscroll-x-none pb-8 hide-scrollbar grid grid-rows-2 grid-flow-col auto-cols-[300px] gap-x-6 gap-y-2 content-start snap-x snap-mandatory">
-                {isPersonalLoading ? Array.from({ length: 6 }, (_, index) => (
+                {isPersonalTracksLoading ? Array.from({ length: 6 }, (_, index) => (
                   <div key={`recent-skeleton-${index}`} className="flex items-center gap-3 py-2 animate-pulse">
                     <div className="h-12 w-12 shrink-0 rounded bg-black/5" />
                     <div className="min-w-0 flex-1 space-y-2"><div className="h-3 w-3/4 rounded bg-black/5" /><div className="h-2.5 w-1/2 rounded bg-black/5" /></div>

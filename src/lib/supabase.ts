@@ -178,6 +178,45 @@ export async function fetchSuggestedTracks(userId: string) {
   return fullTracks;
 }
 
+/**
+ * The personal track shelves share the same costly hydration step. Fetch both
+ * recommendation ID sets in parallel, then hydrate their combined track list
+ * only once. The caller still receives the exact RPC ordering for each shelf.
+ */
+export async function fetchPersonalizedTrackShelves(userId: string) {
+  if (!userId) {
+    return { recentlyPlayedTracks: [], suggestedTracks: [] };
+  }
+
+  const [recentResponse, suggestedResponse] = await Promise.all([
+    supabase.rpc('get_recently_played_tracks', { p_user_id: userId }),
+    supabase.rpc('get_suggested_tracks', { p_user_id: userId })
+  ]);
+
+  if (recentResponse.error) {
+    console.error('Error fetching recently played tracks:', recentResponse.error);
+  }
+  if (suggestedResponse.error) {
+    console.error('Error fetching suggested tracks:', suggestedResponse.error);
+  }
+
+  const recentlyPlayedIds: string[] = recentResponse.error || !recentResponse.data
+    ? []
+    : recentResponse.data.map((track: { track_id: string }) => track.track_id);
+  const suggestedIds: string[] = suggestedResponse.error || !suggestedResponse.data
+    ? []
+    : suggestedResponse.data.map((track: { track_id: string }) => track.track_id);
+
+  const allIds = [...new Set([...recentlyPlayedIds, ...suggestedIds])];
+  const hydratedTracks = await fetchTracksByIds(allIds);
+  const trackMap = new Map(hydratedTracks.map(track => [track.id, track]));
+
+  return {
+    recentlyPlayedTracks: recentlyPlayedIds.map((id: string) => trackMap.get(id)).filter(Boolean),
+    suggestedTracks: suggestedIds.map((id: string) => trackMap.get(id)).filter(Boolean)
+  };
+}
+
 export async function fetchRecentlyPlayedTracks(userId: string) {
   if (!userId) return [];
   const { data, error } = await supabase.rpc('get_recently_played_tracks', {

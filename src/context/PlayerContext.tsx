@@ -30,18 +30,27 @@ export type Track = {
   [key: string]: any;
 };
 
+export type PlaybackCompletionReason = 'completed' | 'skipped';
+
+export type PlaybackCompletion = {
+  track: Track;
+  reason: PlaybackCompletionReason;
+  completedAt: number;
+};
+
 type PlayerContextType = {
   currentTrack: Track | null;
   currentPlaylist: Track[];
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   progress: number;
+  lastCompletedTrack: PlaybackCompletion | null;
   pendingSeek: number | null;
   audioRef: React.MutableRefObject<HTMLAudioElement | null>;
-  playTrack: (track: Track, playlist?: Track[], source?: 'top' | 'browse' | 'playlist' | 'suggested') => void;
+  playTrack: (track: Track, playlist?: Track[], source?: 'top' | 'browse' | 'playlist' | 'suggested', completionReason?: PlaybackCompletionReason) => void;
   playPlaylist: (playlist: Track[], startIndex?: number) => void;
   togglePlay: () => void;
-  playNextTrack: () => void;
+  playNextTrack: (reason?: PlaybackCompletionReason) => void;
   playPrevTrack: () => void;
   stopPlayback: () => void;
   setPendingSeek: (seek: number | null) => void;
@@ -78,6 +87,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentPlaylist, setCurrentPlaylist] = useState<Track[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [lastCompletedTrack, setLastCompletedTrack] = useState<PlaybackCompletion | null>(null);
   const [pendingSeek, setPendingSeek] = useState<number | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [isCurrentPreviewDormant, setIsCurrentPreviewDormant] = useState(false);
@@ -91,6 +101,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
   const [isSimilarPanelExpanded, setIsSimilarPanelExpanded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const finalizedTrackIdRef = useRef<string | null>(null);
 
   const toggleMute = useCallback(() => {
     if (volume === 0) {
@@ -139,6 +150,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTrack?.id, user?.id]);
 
+  // A track becomes "recently played" only once the listener has finished it
+  // or deliberately moved away from it. This prevents a simple tap from
+  // immediately reshuffling the personal history.
+  const finalizeCurrentTrack = useCallback((reason: PlaybackCompletionReason) => {
+    if (!currentTrack || finalizedTrackIdRef.current === currentTrack.id) return;
+
+    finalizedTrackIdRef.current = currentTrack.id;
+    const playedSeconds = Math.floor(audioRef.current?.currentTime || 0);
+    analytics.trackPlayFinish(currentTrack.id, reason, playedSeconds, user?.id);
+
+    if (user?.id) {
+      setLastCompletedTrack({
+        track: currentTrack,
+        reason,
+        completedAt: Date.now()
+      });
+    }
+  }, [currentTrack, user?.id]);
+
+  useEffect(() => {
+    // Each new selected track is a new playback lifecycle and may be
+    // finalized independently of the previous one.
+    finalizedTrackIdRef.current = null;
+  }, [currentTrack?.id]);
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isPlaying && currentTrack && audioRef.current) {
@@ -167,7 +203,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const playTrack = (track: Track, playlist?: Track[], source?: 'top' | 'browse' | 'playlist' | 'suggested') => {
+  const playTrack = (
+    track: Track,
+    playlist?: Track[],
+    source?: 'top' | 'browse' | 'playlist' | 'suggested',
+    completionReason: PlaybackCompletionReason = 'skipped'
+  ) => {
+    if (currentTrack && currentTrack.id !== track.id) {
+      finalizeCurrentTrack(completionReason);
+    }
     setIsCurrentPreviewDormant(false);
     if (source === 'top' || source === 'suggested') {
       setIsPreviewMode(false);
@@ -185,6 +229,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playPlaylist = (playlist: Track[], startIndex = 0) => {
     if (playlist.length > 0) {
+      if (currentTrack && currentTrack.id !== playlist[startIndex].id) {
+        finalizeCurrentTrack('skipped');
+      }
       applyPreview(playlist[startIndex]);
       setCurrentPlaylist(playlist);
       setCurrentTrack(playlist[startIndex]);
@@ -206,9 +253,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setIsPlaying(false);
   }, []);
 
-  const playNextTrack = useCallback(() => {
+  const playNextTrack = useCallback((reason: PlaybackCompletionReason = 'skipped') => {
     setIsCurrentPreviewDormant(false);
-    if (!currentPlaylist.length || !currentTrack) return;
+    if (!currentTrack) return;
+
+    if (isRepeatEnabled) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(console.error);
+        setProgress(0);
+      }
+      return;
+    }
+
+    finalizeCurrentTrack(reason);
+
+    if (!currentPlaylist.length) {
+      setIsPlaying(false);
+      return;
+    }
     
     // Check if the current track is a version
     if (currentTrack.parent_track_id) {
@@ -235,15 +298,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           return;
         }
       }
-    }
-
-    if (isRepeatEnabled) {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(console.error);
-        setProgress(0);
-      }
-      return;
     }
 
     if (isShuffleEnabled && currentPlaylist.length > 1) {
@@ -312,7 +366,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setIsPlaying(false);
       }
     }
-  }, [currentPlaylist, currentTrack, currentSource, fallbackPlaylist, returnTrackId, isShuffleEnabled, isRepeatEnabled]);
+  }, [currentPlaylist, currentTrack, currentSource, fallbackPlaylist, returnTrackId, isShuffleEnabled, isRepeatEnabled, finalizeCurrentTrack]);
 
   const playPrevTrack = () => {
     if (!currentPlaylist.length || !currentTrack) return;
@@ -322,6 +376,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setPendingSeek(0);
       return;
     }
+
+    finalizeCurrentTrack('skipped');
 
     // Check if the current track is a version
     if (currentTrack.parent_track_id) {
@@ -383,6 +439,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       currentPlaylist,
       isPlaying,
       progress,
+      lastCompletedTrack,
       pendingSeek,
       audioRef,
       playTrack,

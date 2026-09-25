@@ -103,7 +103,7 @@ export default function SharedPlayer() {
     if (isPreviewMode && !isCurrentPreviewDormant) {
       const preview = getPreviewTimings(currentTrack);
       if (preview && percentage >= preview.endPct) {
-        playNextTrack();
+        playNextTrack('completed');
       }
     }
   };
@@ -258,7 +258,7 @@ export default function SharedPlayer() {
           src={currentTrack.r2_url}
           onLoadedMetadata={handleAudioMetadata}
           onTimeUpdate={handleAudioTimeUpdate}
-          onEnded={playNextTrack}
+          onEnded={() => playNextTrack('completed')}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
         />

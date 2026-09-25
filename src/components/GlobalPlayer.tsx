@@ -170,7 +170,7 @@ export default function GlobalPlayer() {
     navigate(`/browse?tag=${encodeURIComponent(tag)}`);
   };
 
-  const handleNextTrack = () => {
+  const handleNextTrack = (reason: 'completed' | 'skipped' = 'skipped') => {
     if (isRepeatEnabled) {
       playNextTrack();
       return;
@@ -183,13 +183,13 @@ export default function GlobalPlayer() {
         closeSimilar();
         const returnIdx = originalPlaylistRef.current.findIndex(t => t.id === returnTrackId);
         if (returnIdx >= 0 && returnIdx < originalPlaylistRef.current.length - 1) {
-           playTrack(originalPlaylistRef.current[returnIdx + 1], originalPlaylistRef.current, 'browse');
+           playTrack(originalPlaylistRef.current[returnIdx + 1], originalPlaylistRef.current, 'browse', reason);
            setReturnTrackId(null);
         }
         return;
       }
     }
-    playNextTrack();
+    playNextTrack(reason);
   };
 
   React.useEffect(() => {
@@ -264,7 +264,7 @@ export default function GlobalPlayer() {
       if (isPreviewMode && !isCurrentPreviewDormant) {
         const timings = getPreviewTimings(currentTrack);
         if (timings && pct >= timings.endPct) {
-          playNextTrack();
+          playNextTrack('completed');
         }
       }
     }
@@ -378,7 +378,7 @@ export default function GlobalPlayer() {
             }
           }}
           onTimeUpdate={handleTimeUpdate}
-          onEnded={handleNextTrack}
+          onEnded={() => handleNextTrack('completed')}
           onWaiting={() => setIsBuffering(true)}
           onPlaying={() => setIsBuffering(false)}
           onLoadStart={() => setIsBuffering(true)}
@@ -427,7 +427,7 @@ export default function GlobalPlayer() {
             {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" style={{ transform: 'translateX(4.166%)' }} />}
           </button>
         )}
-        <button onClick={handleNextTrack} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipForward className="w-5 h-5 max-md:w-4 max-md:h-4 fill-current" /></button>
+        <button onClick={() => handleNextTrack()} className={`${isSharedPage ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} transition-colors`}><SkipForward className="w-5 h-5 max-md:w-4 max-md:h-4 fill-current" /></button>
         <button 
           onClick={() => setIsRepeatEnabled(!isRepeatEnabled)} 
           className={`max-md:hidden transition-colors ${isRepeatEnabled ? (isSharedPage ? 'text-white' : 'text-black') : (isSharedPage ? 'text-white/30 hover:text-white/60' : 'text-black/30 hover:text-black/60')}`}

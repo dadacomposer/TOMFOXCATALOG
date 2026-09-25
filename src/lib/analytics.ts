@@ -43,6 +43,30 @@ export const analytics = {
   },
 
   /**
+   * Track the moment a listener finishes a track or explicitly skips away
+   * from it. The database deliberately stores both cases as a completed
+   * listen, while the UI retains the more specific reason for its behaviour.
+   */
+  trackPlayFinish: async (
+    trackId: string,
+    reason: 'completed' | 'skipped',
+    durationSeconds: number,
+    userId?: string
+  ) => {
+    try {
+      await supabase.from('play_events').insert({
+        track_id: trackId,
+        user_id: userId || null,
+        session_id: sessionId || 'unknown',
+        event_type: 'complete',
+        duration: durationSeconds
+      });
+    } catch (err) {
+      console.error('Analytics error:', err);
+    }
+  },
+
+  /**
    * Track when a user searches for something
    */
   trackSearch: async (query: string, userId?: string) => {
