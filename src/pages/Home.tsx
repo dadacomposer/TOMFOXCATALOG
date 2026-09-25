@@ -465,15 +465,20 @@ export default function Home() {
           )}
 
           {!user && (
-            <section className="relative z-40 mx-4 mt-12 border-t border-white/10 pt-12 md:mx-8 md:mt-20 md:pt-16">
-              <blockquote className="mx-auto max-w-3xl text-center">
-                <p className="text-lg font-medium leading-[1.35] tracking-tight text-white md:text-2xl lg:text-3xl">
+            <section className="relative z-40 mx-4 mt-10 border-t border-white/10 pt-10 md:mx-8 md:mt-16 md:pt-12">
+              <blockquote className="mx-auto max-w-2xl text-center">
+                <img
+                  src="/assets/cleo-abram.png"
+                  alt="Cleo Abram"
+                  className="mx-auto mb-5 h-16 w-16 rounded-full border border-white/20 object-cover shadow-lg md:h-20 md:w-20"
+                />
+                <p className="text-base font-normal leading-[1.45] tracking-tight text-white md:text-lg lg:text-xl">
                   &ldquo;Tom&rsquo;s music helps our stories truly come alive. He brings real emotion to every track, and has a track for every emotion. Tom is simply the best!&rdquo;
                 </p>
                 <footer className="mt-6 md:mt-8">
                   <cite className="not-italic">
                     <span className="block text-base font-bold uppercase tracking-tight text-white md:text-lg">Cleo Abram</span>
-                    <span className="mt-2 block text-[10px] font-medium uppercase tracking-[0.16em] text-white/55 md:text-[11px]">Journalist, Video Creator: &lsquo;Huge If True&rsquo;</span>
+                    <span className="mt-2 block text-[10px] font-normal uppercase tracking-[0.16em] text-white/55 md:text-[11px]">Journalist, Video Creator: &lsquo;Huge If True&rsquo;</span>
                   </cite>
                 </footer>
               </blockquote>
