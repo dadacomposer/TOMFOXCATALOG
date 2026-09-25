@@ -24,7 +24,7 @@ export default function CookiePolicy() {
 
         <h2 className="text-lg mt-12 mb-4">3. Product analytics</h2>
         <p className="mb-6">
-          We record limited product events, such as music playback, searches, and filters, to understand how the catalog is used and improve it. A random session identifier may be stored for the duration of your browser session. We do not use advertising cookies or sell personal information.
+          We record limited product events, such as music playback, searches, and filters, to understand how the catalog is used and improve it. We also use Google Analytics to measure aggregate public-site traffic and page use. Google Analytics may use analytics cookies or similar technologies according to Google&apos;s policies. A random session identifier may be stored for the duration of your browser session. We do not use advertising cookies or sell personal information.
         </p>
 
         <h2 className="text-lg mt-12 mb-4">4. Your choices</h2>

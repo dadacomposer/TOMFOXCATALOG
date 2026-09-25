@@ -21,7 +21,7 @@ export default function Privacy() {
 
         <h2 className="text-lg mt-12 mb-4">3. Sharing of Information</h2>
         <p className="mb-6">
-          We do not share your personal information with third parties except as described in this privacy policy, such as with vendors, consultants, and other service providers who need access to such information to carry out work on our behalf.
+          We do not share your personal information with third parties except as described in this privacy policy, such as with vendors, consultants, and other service providers who need access to such information to carry out work on our behalf. This includes Google Analytics, which processes aggregate public-site usage information for us under its own policies.
         </p>
 
         <h2 className="text-lg mt-12 mb-4">4. Security</h2>

@@ -132,7 +132,7 @@ export default function Home() {
   const suggestedTracksRef = useRef<HTMLDivElement>(null);
   const recentlyPlayedRef = useRef<HTMLDivElement>(null);
 
-  const { user, setLoginModalOpen, setGeneralContactModalOpen } = useAuth();
+  const { user, setLoginModalOpen, setContactModalOpen } = useAuth();
   const { openLicenseModal } = useLicense();
   const { settings } = useSettings();
   const { 
@@ -707,27 +707,34 @@ export default function Home() {
             
             <div className="w-full md:w-[50%] flex flex-col justify-between py-4 text-left">
               <p className="font-sans text-base md:text-[17px] leading-[2.2] text-white/80 font-light tracking-wide">
-                Tom Fox is a US based composer and sound designer who has worked with brands like Adidas and Anthropic.
+                Artist. Composer. Sound Designer.
               </p>
               <p className="font-sans text-base md:text-[17px] leading-[2.2] text-white/80 font-light tracking-wide">
-                His most important work, however, is giving YouTubers and creators music designed to move, push, thrill, and provide propulsion.
+                Currently freelancing, based in Virginia. Over the last 8 years as a professional, I have created roughly 2,600 tracks specifically for story-driven media, video documentaries, and podcasts. I have worked with brands such as The New York Times, BBC, Google, Vox, Anthropic, Audible, and the journalism outlet Newpress.
               </p>
-              <p className="font-sans text-base md:text-[17px] leading-[2.2] text-white/80 font-light tracking-wide">
-                His musical research is hybrid—blending traditional instruments with electronic elements, minimalism, and distortion.
-              </p>
+              <div className="mt-8 border-t border-white/15 pt-8 font-sans text-sm md:text-base leading-relaxed text-white/80">
+                <h2 className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white">Contact</h2>
+                <p>
+                  For licensing inquiries, please use{' '}
+                  <button
+                    onClick={() => setContactModalOpen(true)}
+                    className="font-medium text-white underline decoration-white/50 underline-offset-4 transition-colors hover:text-white/60 hover:decoration-white/30"
+                  >
+                    this form
+                  </button>.
+                </p>
+                <p className="mt-4">For general inquiries:</p>
+                <a href="mailto:hello@tomfox.site" className="font-medium text-white underline decoration-white/50 underline-offset-4 transition-colors hover:text-white/60 hover:decoration-white/30">
+                  hello@tomfox.site
+                </a>
+                <p className="mt-4">
+                  Instagram:{' '}
+                  <a href="https://www.instagram.com/tom._fox/" target="_blank" rel="noopener noreferrer" className="font-medium text-white underline decoration-white/50 underline-offset-4 transition-colors hover:text-white/60 hover:decoration-white/30">
+                    @tom._fox
+                  </a>
+                </p>
+              </div>
             </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center mt-8">
-            <span className="font-sans text-sm uppercase tracking-widest text-white/50">
-              If you need to get in touch for licensing or just to learn more,
-            </span>
-            <button 
-              onClick={() => setGeneralContactModalOpen(true)}
-              className="font-sans text-sm uppercase tracking-widest font-bold border-b border-white hover:text-white/60 hover:border-white/60 transition-colors no-radius !rounded-none"
-            >
-              click here
-            </button>
           </div>
         </div>
       )}

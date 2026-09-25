@@ -38,6 +38,7 @@ import TrackDetailsModal from './components/shared/TrackDetailsModal';
 import OnboardingModal from './components/OnboardingModal';
 import InviteManager from './components/InviteManager';
 import Seo from './components/Seo';
+import GoogleAnalytics from './components/GoogleAnalytics';
 
 // Admin, studio and shared-player tooling are not part of a public catalogue
 // visit. Route-level loading keeps their code off the first mobile download.
@@ -97,6 +98,7 @@ function AppLayout() {
     <div className={`w-full min-h-screen bg-[#fafafa] text-black font-sans selection:bg-black selection:text-white flex flex-col no-radius !rounded-none ${currentTrack && !location.pathname.startsWith('/studio') && !location.pathname.startsWith('/admin') && location.pathname !== '/' && !location.pathname.startsWith('/browse') ? 'pb-[90px]' : ''}`}>
       <ScrollToTop />
       <Seo />
+      <GoogleAnalytics />
       {!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && <Header />}
       
       <div className="flex-grow flex flex-col min-h-0">
