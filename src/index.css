@@ -304,6 +304,13 @@
   border-radius: 0 !important;
 }
 
+/* Avatars are intentionally circular even inside full-bleed, square-layout
+   sections such as the public Discover page. */
+.no-radius .is-avatar,
+.no-radius .is-avatar * {
+  border-radius: 50% !important;
+}
+
 /* Force preview-toggle to always be round, overriding global constraints */
 .preview-toggle, .preview-toggle * {
   border-radius: 9999px !important;

@@ -467,11 +467,13 @@ export default function Home() {
           {!user && (
             <section className="relative z-40 mx-4 mt-10 border-t border-white/10 pt-10 md:mx-8 md:mt-16 md:pt-12">
               <blockquote className="mx-auto max-w-2xl text-center">
-                <img
-                  src="/assets/cleo-abram.png"
-                  alt="Cleo Abram"
-                  className="mx-auto mb-5 h-16 w-16 rounded-full border border-white/20 object-cover shadow-lg md:h-20 md:w-20"
-                />
+                <div className="is-avatar mx-auto mb-5 h-16 w-16 overflow-hidden bg-black shadow-lg md:h-20 md:w-20">
+                  <img
+                    src="/assets/cleo-abram.png"
+                    alt="Cleo Abram"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
                 <p className="text-base font-normal leading-[1.45] tracking-tight text-white md:text-lg lg:text-xl">
                   &ldquo;Tom&rsquo;s music helps our stories truly come alive. He brings real emotion to every track, and has a track for every emotion. Tom is simply the best!&rdquo;
                 </p>
