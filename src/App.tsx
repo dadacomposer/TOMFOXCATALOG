@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import DiscoverBrowseWrapper from './pages/DiscoverBrowseWrapper';
@@ -13,19 +13,6 @@ import Privacy from './pages/Privacy';
 import CookiePolicy from './pages/CookiePolicy';
 import Pricing from './pages/Pricing';
 import Enterprise from './pages/Enterprise';
-import Admin from './pages/Admin';
-import AdminTracks from './components/admin/AdminTracks';
-import AdminUsers from './components/admin/AdminUsers';
-import AdminLicensing from './components/admin/AdminLicensing';
-
-import AdminSettings from './components/admin/AdminSettings';
-import AdminFeatures from './components/admin/AdminFeatures';
-import AdminTomFoxStudio from './components/admin/AdminTomFoxStudio';
-import AdminTheater from './components/admin/AdminTheater';
-import AdminPlaylists from './components/admin/AdminPlaylists';
-import AdminStatistics from './components/admin/AdminStatistics';
-import SharedPlayer from './pages/SharedPlayer';
-import TomFoxStudio from './pages/TomFoxStudio';
 import NotFound from './pages/NotFound';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { DownloadProvider } from './context/DownloadContext';
@@ -52,6 +39,20 @@ import OnboardingModal from './components/OnboardingModal';
 import InviteManager from './components/InviteManager';
 import Seo from './components/Seo';
 
+// Admin, studio and shared-player tooling are not part of a public catalogue
+// visit. Route-level loading keeps their code off the first mobile download.
+const Admin = lazy(() => import('./pages/Admin'));
+const AdminTracks = lazy(() => import('./components/admin/AdminTracks'));
+const AdminUsers = lazy(() => import('./components/admin/AdminUsers'));
+const AdminLicensing = lazy(() => import('./components/admin/AdminLicensing'));
+const AdminSettings = lazy(() => import('./components/admin/AdminSettings'));
+const AdminFeatures = lazy(() => import('./components/admin/AdminFeatures'));
+const AdminTomFoxStudio = lazy(() => import('./components/admin/AdminTomFoxStudio'));
+const AdminTheater = lazy(() => import('./components/admin/AdminTheater'));
+const AdminStatistics = lazy(() => import('./components/admin/AdminStatistics'));
+const SharedPlayer = lazy(() => import('./pages/SharedPlayer'));
+const TomFoxStudio = lazy(() => import('./pages/TomFoxStudio'));
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -69,6 +70,24 @@ function ScrollToTop() {
   return null;
 }
 
+function DesktopOnlyAdmin() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsMobile(mediaQuery.matches);
+    sync();
+    mediaQuery.addEventListener('change', sync);
+    return () => mediaQuery.removeEventListener('change', sync);
+  }, []);
+
+  // Mobile has no admin surface, including direct bookmarks to an admin URL.
+  // Tablet and desktop retain the existing admin experience unchanged.
+  return isMobile ? <Navigate to="/" replace /> : <Admin />;
+}
+
 function AppLayout() {
   const { currentTrack } = usePlayer();
   const location = useLocation();
@@ -84,6 +103,7 @@ function AppLayout() {
       
       <div className="flex-grow flex flex-col min-h-0">
         <ErrorBoundary>
+          <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-[11px] uppercase tracking-[0.16em] text-black/40">Loading</div>}>
           <Routes>
             <Route path="/" element={<DiscoverBrowseWrapper />} />
             <Route path="/browse" element={<DiscoverBrowseWrapper />} />
@@ -98,7 +118,7 @@ function AppLayout() {
             <Route path="/cookie-policy" element={<CookiePolicy />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/enterprise" element={<Enterprise />} />
-            <Route path="/admin" element={<Admin />}>
+            <Route path="/admin" element={<DesktopOnlyAdmin />}>
               <Route index element={<Navigate to="tracks" replace />} />
               <Route path="tracks" element={<AdminTracks />} />
               <Route path="users" element={<AdminUsers />} />
@@ -114,6 +134,7 @@ function AppLayout() {
             <Route path="/share/:slug" element={<SharedPlayer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </ErrorBoundary>
       </div>
       {location.pathname !== '/' && !location.pathname.startsWith('/browse') && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/share') && !location.pathname.startsWith('/studio') && (

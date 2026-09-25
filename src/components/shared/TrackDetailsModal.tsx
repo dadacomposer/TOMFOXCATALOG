@@ -6,8 +6,7 @@ import { usePlayer, Track } from '../../context/PlayerContext';
 import { useAuth } from '../../context/AuthContext';
 import { DEFAULT_COMPOSERS } from '../../config';
 import TrackArtwork from '../TrackArtwork';
-import { generateEmbedding } from '../../lib/embedding';
-import { searchTracksByEmbedding, fetchTracksByIds } from '../../lib/supabase';
+import { searchTracksByEmbedding, fetchSimilarTracks, fetchTracksByIds } from '../../lib/supabase';
 import WaveformView from '../WaveformView';
 import { parseWaveform } from '../../lib/audioUtils';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
@@ -134,7 +133,15 @@ export default function TrackDetailsModal() {
       if (!displayTrack) return;
       setLoadingSimilar(true);
       try {
+        // A lightweight metadata-based query keeps the details sheet instant
+        // on phones. Desktop retains the richer semantic enhancement below.
+        if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+          const tracks = await fetchSimilarTracks(displayTrack.id, 5);
+          if (isMounted) setSimilarTracks(tracks as Track[]);
+          return;
+        }
         const queryStr = `${displayTrack.file_name} ${parseTags(displayTrack.subgenre).join(' ')} ${parseTags(displayTrack.moods).join(' ')} ${parseTags(displayTrack.instruments).join(' ')}`;
+        const { generateEmbedding } = await import('../../lib/embedding');
         const vector = await generateEmbedding(queryStr);
         if (vector) {
           const similarRaw = await searchTracksByEmbedding(vector);
@@ -167,13 +174,13 @@ export default function TrackDetailsModal() {
   if (!displayTrack) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4 pt-[100px] max-md:pt-20 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] p-4 pt-[100px] max-md:pt-20 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
       <div 
         className={`absolute inset-0 bg-black/60 motion-overlay ${isOpen ? 'backdrop-blur-sm opacity-100' : 'backdrop-blur-none opacity-0'}`}
         onClick={() => setSelectedTrackForDetails(null)} 
       />
       <div 
-        className={`relative w-full max-h-[calc(100vh-120px)] max-md:max-h-[calc(100dvh-5rem)] overflow-y-auto custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl motion-surface ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
+        className={`relative w-full max-h-[calc(100vh-120px)] max-md:max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] custom-scrollbar max-w-[90vw] md:max-w-7xl bg-[#fafafa] rounded-3xl shadow-2xl motion-surface ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
         onClick={() => setExpandedSection(null)}
       >
         

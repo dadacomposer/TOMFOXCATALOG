@@ -45,7 +45,7 @@ export default function DiscoverBrowseWrapper() {
       
       {/* Background Layer: Discover (Home) */}
       <div 
-        className="absolute inset-0 z-0 overflow-y-auto overscroll-none"
+        className="absolute inset-0 z-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
         id="discover-scroll-container"
       >
         <Home />

@@ -37,6 +37,22 @@
     overscroll-behavior: none;
     scroll-behavior: smooth;
   }
+
+  /* Programmatic smooth scrolling is useful with a mouse. On touch devices it
+     makes ordinary navigation feel delayed and can fight Safari momentum. */
+  @media (max-width: 767px) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    /* Every independently scrollable surface gets native iOS momentum. This
+       matters for sheets, drawers and modals, where a nested scroll must not
+       feel like a tap/drag conflict with the page below it. */
+    [class*="overflow-y-auto"] {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+    }
+  }
   
   body {
     background-color: var(--color-brand-bg);

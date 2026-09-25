@@ -352,7 +352,9 @@ export default function GlobalPlayer() {
     };
   }, [currentTrack, isPlaying, togglePlay, playNextTrack, playPrevTrack]);
 
-  const baseBg = isSharedPage ? 'bg-[#111111]' : 'bg-[#fafafa]/85 backdrop-blur-xl';
+  // On phones an opaque surface is both clearer over content and much cheaper
+  // to composite while the waveform is updating. md+ preserves the glass UI.
+  const baseBg = isSharedPage ? 'bg-[#111111]' : 'bg-[#fafafa] md:bg-[#fafafa]/85 md:backdrop-blur-xl';
   const baseText = isSharedPage ? 'text-white' : 'text-black';
   const baseBorder = isSharedPage ? 'border-white/10' : 'border-black/10';
   const secondaryText = isSharedPage ? 'text-white/60' : 'text-black/60';
@@ -562,7 +564,7 @@ export default function GlobalPlayer() {
             </div>
           </div>
         )}
-        <div className="flex-grow max-md:min-h-0 overflow-y-auto overscroll-contain hide-scrollbar px-4 max-md:px-3 py-4">
+        <div className="flex-grow max-md:min-h-0 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] hide-scrollbar px-4 max-md:px-3 py-4">
           {isSimilarLoading && similarTracks.length === 0 ? (
             // Initial Skeleton Loader
             [...Array(10)].map((_, i) => (

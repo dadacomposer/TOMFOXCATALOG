@@ -113,6 +113,9 @@ export default function Home() {
   const [suggestedTracks, setSuggestedTracks] = useState<any[]>([]);
   
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
+  const [supportsDesktopDrag, setSupportsDesktopDrag] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  );
   const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
@@ -135,6 +138,16 @@ export default function Home() {
     playTrack, playPlaylist, currentTrack, isPlaying, togglePlay, 
     progress, setPendingSeek, setCurrentSource, setSelectedTrackForDetails
   } = usePlayer();
+
+  // Safari can mistake an HTML drag source for a scroll/tap gesture. Keep
+  // native drag-and-drop for md+ and let phone rows be straightforward taps.
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const sync = () => setSupportsDesktopDrag(mediaQuery.matches);
+    sync();
+    mediaQuery.addEventListener('change', sync);
+    return () => mediaQuery.removeEventListener('change', sync);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -275,7 +288,7 @@ export default function Home() {
         {/* Full-section Sun Animation (Only when Dark Mode / Unauthenticated) */}
         {!user && settings?.top_picks_animation_enabled !== false && (
           <div
-            className="absolute inset-0 pointer-events-none z-30"
+            className="absolute inset-0 pointer-events-none z-30 max-md:hidden"
             style={{ mixBlendMode: 'screen', transform: 'translateZ(0)' }}
           >
             <FeaturedSun isHovered={isFeaturedHovered} />
@@ -304,7 +317,7 @@ export default function Home() {
           {/* Constrained Sun Animation (Only when Light Mode / Authenticated) */}
           {user && settings?.top_picks_animation_enabled !== false && (
             <div
-              className="absolute inset-0 pointer-events-none z-30"
+              className="absolute inset-0 pointer-events-none z-30 max-md:hidden"
               style={{ mixBlendMode: 'screen', transform: 'translateZ(0)' }}
             >
               <FeaturedSun isHovered={isFeaturedHovered} />
@@ -388,12 +401,12 @@ export default function Home() {
                       {!user && <div className="absolute inset-0 bg-black/40 z-[15] pointer-events-none group-hover:bg-black/20 transition-colors duration-500" />}
 
                       {/* Animated Mesh Background (Idle State) */}
-                      <div className="absolute inset-[-100%] animate-[spin_16s_linear_infinite] origin-[45%_55%] pointer-events-none">
-                        <div className={`absolute inset-0 ${style.bgIdle} blur-[100px] scale-150`} />
+                      <div className="absolute inset-[-100%] animate-[spin_16s_linear_infinite] max-md:animate-none origin-[45%_55%] pointer-events-none">
+                        <div className={`absolute inset-0 ${style.bgIdle} blur-[100px] max-md:blur-[48px] scale-150`} />
                       </div>
                       
                       {/* Animated Mesh Background (Active State) */}
-                      <div className="absolute inset-[-100%] animate-[spin_8s_linear_infinite] origin-[45%_55%] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+                      <div className="absolute inset-[-100%] animate-[spin_8s_linear_infinite] max-md:animate-none origin-[45%_55%] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
                         <div className={`absolute inset-0 ${style.bgHover} blur-[100px] scale-150`} />
                       </div>
                       
@@ -485,7 +498,7 @@ export default function Home() {
                   key={i} 
                   className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border snap-always snap-center ${selectedTrackIds.has(track.id) ? (!user ? 'bg-white/10 border-white/20' : 'bg-black/5 border-black/10') : (!user ? 'border-transparent hover:bg-white/5 hover:border-white/10' : 'border-transparent hover:bg-black/5 hover:border-black/5')}`}
                   onClick={(e) => handleTrackClick(e, track, 'top')}
-                  draggable
+                  draggable={supportsDesktopDrag}
                   onDragStart={(e) => handleTrackDragStart(e, track.id)}
                 >
                   <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 ${!user ? 'bg-white/5' : 'bg-black/5'}`}>
@@ -518,7 +531,7 @@ export default function Home() {
             
             {/* CTA for non-logged in users */}
             {!user && (
-              <div className="absolute top-0 right-8 bottom-4 flex flex-col items-center justify-center gap-4 z-20 pointer-events-auto pl-24">
+              <div className="absolute top-0 right-8 bottom-4 hidden md:flex flex-col items-center justify-center gap-4 z-20 pointer-events-auto pl-24">
                 <div className="text-white/80 uppercase font-medium tracking-widest text-[12px]">Explore the catalog</div>
                 <Link to="/browse" className="bg-white text-black px-6 py-3 rounded hover:bg-white/90 transition-colors uppercase font-bold text-[11px] tracking-widest shadow-lg">
                   Browse
@@ -588,7 +601,7 @@ export default function Home() {
                       key={i} 
                       className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border ${selectedTrackIds.has(track.id) ? (!user ? 'bg-white/10 border-white/20' : 'bg-black/5 border-black/10') : (!user ? 'border-transparent hover:bg-white/5 hover:border-white/10' : 'border-transparent hover:bg-black/5 hover:border-black/5')}`}
                       onClick={(e) => handleTrackClick(e, track, 'suggested')}
-                      draggable
+                      draggable={supportsDesktopDrag}
                       onDragStart={(e) => handleTrackDragStart(e, track.id)}
                     >
                       <div className={`w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 ${!user ? 'bg-white/5' : 'bg-black/5'}`}>
@@ -632,7 +645,7 @@ export default function Home() {
                       key={`${track.id}-${i}`} 
                       className={`flex items-center gap-3 group cursor-pointer p-2 rounded transition-colors select-none border border-transparent snap-always snap-center ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-black/5 hover:border-black/5'}`}
                       onClick={(e) => handleTrackClick(e, track, 'top')}
-                      draggable
+                      draggable={supportsDesktopDrag}
                       onDragStart={(e) => handleTrackDragStart(e, track.id)}
                     >
                       <div className="w-12 h-12 rounded relative overflow-hidden flex items-center justify-center shrink-0 bg-black/5">

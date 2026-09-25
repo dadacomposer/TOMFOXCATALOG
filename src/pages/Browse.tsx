@@ -1,16 +1,14 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 import { toast } from 'react-hot-toast';
 import { useLocation, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { supabase, fetchTracks, searchTracksIntelligent, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, fetchDefaultTrackOrder, fetchTracksByIds, fetchPlaylistTrackIds, fetchFilterOptions, fetchPlaylistTracks, fetchSuggestedTracks } from '../lib/supabase';
+import { supabase, fetchTracks, searchTracksIntelligent, searchTracksByEmbedding, fetchPlaylists, fetchTrendingTracks, fetchPlaylistTrackIds, fetchFilterOptions, fetchPlaylistTracks, fetchSuggestedTracks } from '../lib/supabase';
 import { analytics } from '../lib/analytics';
 import { useDownload } from '../context/DownloadContext';
 import { useLicense } from '../context/LicenseContext';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { generateEmbedding, initEmbeddingModel } from '../lib/embedding';
+import { generateEmbedding } from '../lib/embedding';
 import { parseWaveform, getPreviewTimings } from '../lib/audioUtils';
 import { ChevronLeft, ChevronRight, ChevronDown, Search, TrendingUp, Play, Pause, Download, ShoppingBag, Layers, Plus, Heart, X, Loader2 } from 'lucide-react';
 import Footer from '../components/Footer';
@@ -26,7 +24,6 @@ import { smoothScroll } from '../utils/scrollUtils';
 import { usePlayer } from '../context/PlayerContext';
 import { DEFAULT_ARTWORK, DEFAULT_COMPOSERS, DEFAULT_ARTIST } from '../config';
 import TrackArtwork from '../components/TrackArtwork';
-import { FeaturedSun } from '../components/TopPicksEffects';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 
@@ -204,7 +201,6 @@ export default function Browse() {
 
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
   const [expandedTags, setExpandedTags] = useState<{trackId: string, tags: any[]} | null>(null);
-  const [isFeaturedHovered, setIsFeaturedHovered] = useState(false);
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
   const [loadingPlaylistId, setLoadingPlaylistId] = useState<string | null>(null);
   const expandedTagsRef = useRef<HTMLDivElement>(null);
@@ -245,7 +241,9 @@ export default function Browse() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [defaultTrackIds, setDefaultTrackIds] = useState<string[]>([]);
+  const [supportsDesktopDrag, setSupportsDesktopDrag] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  );
   const [sortBy, setSortBy] = useState('relevance');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [searchBarPortals, setSearchBarPortals] = useState<{ right: HTMLElement | null; bottom: HTMLElement | null }>({ right: null, bottom: null });
@@ -273,6 +271,16 @@ export default function Browse() {
   const tracksPerPage = 25;
 
   useLockBodyScroll(isMobileBrowseToolsOpen);
+
+  // Native drag-and-drop competes with Safari's tap and scroll recognition.
+  // It remains available on the unchanged tablet/desktop experience only.
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const sync = () => setSupportsDesktopDrag(mediaQuery.matches);
+    sync();
+    mediaQuery.addEventListener('change', sync);
+    return () => mediaQuery.removeEventListener('change', sync);
+  }, []);
 
   // Browse stays mounted underneath the Discover/Browse transition. If the
   // route changes while the phone sheet is open, explicitly dismiss it so a
@@ -353,15 +361,13 @@ export default function Browse() {
   }, []);
 
   useEffect(() => {
-    initEmbeddingModel();
     let cancelled = false;
     
     async function loadData() {
       try {
-        const [pData, tData, ids, fOpts] = await Promise.all([
+        const [pData, tData, fOpts] = await Promise.all([
           fetchPlaylists(),
           fetchTrendingTracks(),
-          fetchDefaultTrackOrder(),
           fetchFilterOptions()
         ]);
         
@@ -371,14 +377,18 @@ export default function Browse() {
         if (newPlaylist) {
           setNewMusicPlaylist(newPlaylist);
           setPlaylists(pData);
-          const newTrackIds = await fetchPlaylistTrackIds(newPlaylist.id);
-          if (!cancelled) setNewMusicTrackIds(new Set(newTrackIds));
+          // This badge data is decorative. Do not make the catalogue wait for
+          // an additional round-trip before it can render.
+          void fetchPlaylistTrackIds(newPlaylist.id)
+            .then(newTrackIds => {
+              if (!cancelled) setNewMusicTrackIds(new Set(newTrackIds));
+            })
+            .catch(error => console.error('Error loading New Music track IDs:', error));
         } else {
           setPlaylists(pData || []);
         }
         
         setTrendingTracks((tData || []) as Track[]);
-        setDefaultTrackIds(ids || []);
         if (fOpts) {
           setFilterOptions(fOpts);
         } else {
@@ -506,18 +516,13 @@ export default function Browse() {
 
     const loadTracks = async () => {
       try {
-        const hasFilters = totalActiveFilterCount > 0;
-        const data = !hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance' && !shadowTagIds
-          ? await fetchTracksByIds(defaultTrackIds.slice(0, tracksPerPage))
-          : await fetchTracks(1, tracksPerPage, activeFilters, sortBy, shadowTagIds || undefined);
+        const data = await fetchTracks(1, tracksPerPage, activeFilters, sortBy, shadowTagIds || undefined);
 
         if (cancelled || catalogRequestRef.current !== requestId) return;
 
         setDisplayedTracks(data as Track[]);
         setCurrentPage(1);
-        setHasMoreTracks(!hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance' && !shadowTagIds
-          ? defaultTrackIds.length > tracksPerPage
-          : data.length === tracksPerPage);
+        setHasMoreTracks(data.length === tracksPerPage);
       } catch (error) {
         console.error('Error loading browse tracks:', error);
         if (!cancelled && catalogRequestRef.current === requestId) {
@@ -535,28 +540,19 @@ export default function Browse() {
 
     void loadTracks();
     return () => { cancelled = true; };
-  }, [searchQuery, loading, activeFilters, defaultTrackIds, sortBy, totalActiveFilterCount, shadowTagIds]);
+  }, [searchQuery, loading, activeFilters, sortBy, shadowTagIds]);
 
   const executeSearch = async (q: string, currentSearchId: number) => {
     if (!q.trim()) return;
     analytics.trackSearch(q);
     
     try {
-      // Run intelligent text/tag search and semantic search in parallel
-      const [vector, textRaw] = await Promise.all([
-        generateEmbedding(q).catch(() => null),
-        searchTracksIntelligent(q)
-      ]);
-
+      // Text/tag matching is available immediately. Showing it first keeps a
+      // first mobile search responsive instead of waiting for the optional AI
+      // model download and semantic request.
+      const textRaw = await searchTracksIntelligent(q);
       const allIds = new Set<string>();
-      // Intelligent text/tag results first (most precise)
       textRaw.forEach((r: any) => allIds.add(r.id));
-      
-      // Semantic last (broader)
-      if (vector) {
-        const semanticRaw = await searchTracksByEmbedding(vector);
-        semanticRaw.forEach((r: any) => allIds.add(r.id));
-      }
       
       let finalIds = Array.from(allIds);
       
@@ -576,6 +572,34 @@ export default function Browse() {
       if (searchCounter.current === currentSearchId) {
         setDisplayedTracks(combined);
         setHasMoreTracks(false);
+        setIsSearching(false);
+        setIsTypingSearch(false);
+        setIsInitialTracksLoaded(true);
+      }
+
+      // Semantic results enhance desktop search after useful results are
+      // already visible. Phones deliberately skip the 20MB model so taps and
+      // scrolling stay responsive on a cellular connection.
+      if (typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches) {
+        void (async () => {
+          try {
+            const vector = await generateEmbedding(q);
+            const semanticRaw = await searchTracksByEmbedding(vector);
+            if (searchCounter.current !== currentSearchId) return;
+
+            const enhancedIds = new Set(finalIds);
+            semanticRaw.forEach((r: any) => enhancedIds.add(r.id));
+            let ids = Array.from(enhancedIds);
+            if (shadowTagIds) ids = ids.filter(id => shadowTagIds.includes(id));
+
+            const enhanced = ids.length > 0
+              ? await fetchTracks(1, tracksPerPage, activeFilters, sortBy, ids) as Track[]
+              : [];
+            if (searchCounter.current === currentSearchId) setDisplayedTracks(enhanced);
+          } catch (semanticError) {
+            console.warn('Semantic search enhancement unavailable:', semanticError);
+          }
+        })();
       }
     } catch (err) {
       console.error('Error during search:', err);
@@ -633,6 +657,12 @@ export default function Browse() {
     if (uniqueSelected.length === 0) return;
 
     const toastId = toast.loading(`Fetching 0/${uniqueSelected.length} files...`);
+    // These libraries are only needed after an explicit bulk-download action;
+    // keeping them out of the initial mobile bundle makes Browse start faster.
+    const [{ default: JSZip }, { saveAs }] = await Promise.all([
+      import('jszip'),
+      import('file-saver')
+    ]);
     const zip = new JSZip();
     let fetched = 0;
 
@@ -693,23 +723,11 @@ export default function Browse() {
     loadMoreInFlightRef.current = true;
     setIsLoadingMore(true);
     const nextPage = currentPage + 1;
-    const hasFilters = Object.values(activeFilters).some(v => v.length > 0);
-
     try {
-      let newTracks: Track[] = [];
-      let nextHasMore = false;
-
-      if (!hasFilters && defaultTrackIds.length > 0 && sortBy === 'relevance') {
-        const startIndex = currentPage * tracksPerPage;
-        const endIndex = startIndex + tracksPerPage;
-        newTracks = await fetchTracksByIds(defaultTrackIds.slice(startIndex, endIndex)) as Track[];
-        nextHasMore = endIndex < defaultTrackIds.length;
-      } else {
-        // Shadow tags are resolved to IDs before querying; preserve that constraint
-        // for every subsequent page as well as the first one.
-        newTracks = await fetchTracks(nextPage, tracksPerPage, activeFilters, sortBy, shadowTagIds || undefined) as Track[];
-        nextHasMore = newTracks.length === tracksPerPage;
-      }
+      // Shadow tags are resolved to IDs before querying; preserve that
+      // constraint for every subsequent page as well as the first one.
+      const newTracks = await fetchTracks(nextPage, tracksPerPage, activeFilters, sortBy, shadowTagIds || undefined) as Track[];
+      const nextHasMore = newTracks.length === tracksPerPage;
 
       if (catalogRequestRef.current !== catalogRequestId) return;
 
@@ -1277,7 +1295,7 @@ export default function Browse() {
           </div>
 
         {/* SCROLL CONTAINER for tracks */}
-        <div className="flex-1 overflow-y-auto overscroll-none" id="full-catalog-browser">
+        <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]" id="full-catalog-browser">
           <div className="flex flex-col w-full pt-8 pb-8 px-2 md:px-8">
             {/* The sidebar is intentionally desktop/tablet-only. These controls
                 keep its two essential areas reachable on phones without
@@ -1341,7 +1359,7 @@ export default function Browse() {
               <div 
               className={`flex items-center gap-4 p-2 rounded-xl group transition-colors cursor-pointer select-none border border-transparent ${selectedTrackIds.has(track.id) ? 'bg-black/5 border-black/10' : 'hover:bg-[#f6f6f6]'}`}
               onClick={(e) => handleTrackClick(e, track, 'browse')}
-              draggable
+              draggable={supportsDesktopDrag}
               onDragStart={(e) => handleTrackDragStart(e, track.id)}
             >
               <div 
@@ -1503,7 +1521,7 @@ export default function Browse() {
                     key={version.id} 
                     className={`flex items-center gap-4 p-2 rounded-xl group/version transition-colors cursor-pointer select-none border border-transparent ${selectedTrackIds.has(version.id) ? 'bg-black/5 border-black/10' : 'hover:bg-[#f6f6f6]'}`}
                     onClick={(e) => handleTrackClick(e, version, 'browse')}
-                    draggable
+                    draggable={supportsDesktopDrag}
                     onDragStart={(e) => handleTrackDragStart(e, version.id)}
                   >
                     <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-lg relative overflow-hidden bg-black/5">

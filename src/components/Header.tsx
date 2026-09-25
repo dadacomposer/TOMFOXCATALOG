@@ -268,12 +268,6 @@ export default function Header() {
                 <NavLink to="/enterprise" onClick={() => setIsMobileMenuOpen(false)} className={({isActive}) => `font-bold uppercase text-base tracking-widest transition-colors ${isActive ? (isHeaderDark ? 'text-white' : 'text-black') : (isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black')}`}>Enterprise</NavLink>
               </>
             )}
-            {isAdmin && (
-              <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-2 ${isHeaderDark ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black'}`}>
-                <Wrench className="w-5 h-5" />
-                Admin Panel
-              </Link>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
