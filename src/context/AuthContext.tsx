@@ -42,7 +42,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   setWorkspaces: (ws: any[]) => void;
-  fetchWorkspaces: (userId: string) => Promise<void>;
+  fetchWorkspaces: (userId: string) => Promise<any[]>;
   customMusicIntent: boolean;
   setCustomMusicIntent: (val: boolean) => void;
   isUpdatePasswordModalOpen: boolean;
@@ -78,7 +78,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   refreshProfile: async () => {},
   setWorkspaces: () => {},
-  fetchWorkspaces: async () => {},
+  fetchWorkspaces: async () => [],
   studioProjects: [],
   setStudioProjects: () => {},
   fetchStudioProjects: async () => {},
@@ -114,7 +114,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setActiveWorkspace((prev: any) => {
         if (!prev) return ws[0];
         const updated = ws.find(w => w.id === prev.id);
-        return updated || prev;
+        // A user can leave a workspace from the Team view. Never retain a
+        // stale, no-longer-authorized workspace as the active context.
+        return updated || ws[0];
       });
     } else {
       setActiveWorkspace(null);
@@ -125,8 +127,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const ws = await getUserWorkspaces(userId);
       applyWorkspaces(ws);
+      return ws;
     } catch (e) {
       console.error("Error loading workspaces", e);
+      return [];
     }
   };
 

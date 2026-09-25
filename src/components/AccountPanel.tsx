@@ -27,6 +27,7 @@ export default function AccountPanel() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [newOwnerId, setNewOwnerId] = useState<string>('');
   const [isTransferringOwnership, setIsTransferringOwnership] = useState(false);
+  const [managingMemberId, setManagingMemberId] = useState<string | null>(null);
   
   // Invite Member Modal State
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -264,6 +265,40 @@ export default function AccountPanel() {
     }
   };
 
+  const handleMemberAction = async (
+    action: 'leave' | 'remove' | 'set_role',
+    memberId: string,
+    role?: 'member' | 'admin',
+  ) => {
+    if (!activeWorkspace) return;
+
+    try {
+      setManagingMemberId(memberId);
+      const { data, error } = await supabase.functions.invoke('manage-workspace-member', {
+        body: { workspaceId: activeWorkspace.id, memberId, action, role },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const updatedWorkspaces = await fetchWorkspaces(user.id);
+      if (action === 'leave') {
+        setActiveView('menu');
+        toast.success('You left the workspace.');
+        return;
+      }
+
+      if (updatedWorkspaces.some((workspace) => workspace.id === activeWorkspace.id)) {
+        setMembers(await getWorkspaceMembers(activeWorkspace.id));
+      }
+      toast.success(action === 'remove' ? 'Member removed from the workspace.' : 'Member role updated.');
+    } catch (error: any) {
+      console.error('Failed to manage workspace member:', error);
+      toast.error(error.message || 'Failed to update workspace membership.');
+    } finally {
+      setManagingMemberId(null);
+    }
+  };
+
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWsName.trim()) return;
@@ -293,11 +328,12 @@ export default function AccountPanel() {
   const personalAvatar = profile?.avatar_url || user.user_metadata?.avatar_url;
   const userName = profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}` : user.email?.split('@')[0];
   const currentOwner = members.find(m => m.role === 'owner');
-  const currentUserRole = members.find(m => m.user_id === user.id)?.role;
-  // In our DB structure, the creator is marked in activeWorkspace.user_id, but might not have an 'owner' role in workspace_members due to legacy setup
-  const isOwnerOrAdmin = activeWorkspace?.user_id === user?.id || currentUserRole === 'owner' || currentUserRole === 'admin';
+  const currentUserRole = members.find(m => m.user_id === user.id)?.role
+    || (activeWorkspace?.user_id === user.id ? 'owner' : undefined);
+  const isWorkspaceOwner = activeWorkspace?.user_id === user.id || currentUserRole === 'owner';
+  const isOwnerOrAdmin = isWorkspaceOwner || currentUserRole === 'admin';
   const workspaceOwnerId = activeWorkspace?.user_id || currentOwner?.user_id;
-  const canTransferOwnership = workspaceOwnerId === user.id || currentUserRole === 'owner';
+  const canTransferOwnership = isWorkspaceOwner;
 
   // When expanding, the panel goes from 384px (max-w-sm) to 1152px (triple width)
   const isExpanded = activeView !== 'menu';
@@ -762,13 +798,21 @@ export default function AccountPanel() {
                 <div className="grid grid-cols-12 gap-4 pb-2 border-b border-black/10 text-[10px] text-black/40 uppercase tracking-widest font-bold px-2 shrink-0">
                   <div className="col-span-5">Name</div>
                   <div className="col-span-4">Email</div>
-                  <div className="col-span-3">Role</div>
+                  <div className="col-span-3 text-right">Role & access</div>
                 </div>
 
                 {/* Members List (Scrollable) */}
                 <div className="flex-1 overflow-y-auto min-h-0">
                   <div className="flex flex-col">
-                    {filteredMembers.map(member => (
+                    {filteredMembers.map(member => {
+                      const isCurrentUser = member.user_id === user.id;
+                      const memberIsOwner = member.user_id === workspaceOwnerId || member.role === 'owner';
+                      const canManageThisMember = !isCurrentUser
+                        && !memberIsOwner
+                        && (isWorkspaceOwner || (currentUserRole === 'admin' && member.role === 'member'));
+                      const isMemberActionPending = managingMemberId === member.user_id;
+
+                      return (
                       <div key={member.user_id} className="grid grid-cols-12 gap-4 py-2 px-2 items-center border-b border-black/5 hover:bg-black/5 transition-colors group">
                         <div className="col-span-5 flex items-center gap-2">
                           {member.profiles?.avatar_url ? (
@@ -795,18 +839,58 @@ export default function AccountPanel() {
                           <span className="font-sans text-xs text-black/70">{member.profiles?.email}</span>
                         </div>
                         <div className="col-span-3 flex items-center justify-between">
-                          <span className="font-sans text-xs capitalize text-black/70">{member.role}</span>
-                          {member.role === 'owner' && canTransferOwnership && (
+                          <div className="ml-auto flex items-center justify-end gap-2">
+                          {isWorkspaceOwner && !memberIsOwner && !isCurrentUser ? (
+                            <select
+                              value={member.role}
+                              aria-label={`Role for ${member.profiles?.first_name || 'team member'}`}
+                              disabled={isMemberActionPending}
+                              onChange={(event) => void handleMemberAction('set_role', member.user_id, event.target.value as 'member' | 'admin')}
+                              className="max-w-[84px] bg-white border border-black/10 px-1.5 py-1 font-sans text-[10px] capitalize disabled:opacity-50"
+                            >
+                              <option value="member">Member</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          ) : (
+                            <span className="font-sans text-xs capitalize text-black/70">{memberIsOwner ? 'owner' : member.role}</span>
+                          )}
+                          {isCurrentUser && (
+                            <button
+                              onClick={() => void handleMemberAction('leave', member.user_id)}
+                              disabled={memberIsOwner || isMemberActionPending}
+                              title={memberIsOwner ? 'Transfer ownership before leaving this workspace' : 'Leave this workspace'}
+                              className="px-2 py-1 border border-red-200 text-[10px] text-red-700 hover:bg-red-50 transition-colors disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              {memberIsOwner ? 'Transfer first' : 'Leave'}
+                            </button>
+                          )}
+                          {canManageThisMember && (
+                            <button
+                              onClick={() => void handleMemberAction('remove', member.user_id)}
+                              disabled={isMemberActionPending}
+                              className="px-2 py-1 border border-red-200 text-[10px] text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50"
+                            >
+                              {isMemberActionPending ? '...' : 'Remove'}
+                            </button>
+                          )}
+                          {memberIsOwner && canTransferOwnership && (
                             <button 
                               onClick={() => setIsTransferModalOpen(true)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 border border-black/10 text-[10px] hover:bg-white hover:border-black/20 whitespace-nowrap bg-white shadow-sm"
+                              className="px-2 py-1 border border-black/10 text-[10px] hover:bg-white hover:border-black/20 whitespace-nowrap bg-white shadow-sm"
                             >
                               Transfer
                             </button>
                           )}
+                          </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
+                    {filteredMembers.length === 0 && (
+                      <div className="py-8 text-center font-sans text-xs text-black/45">
+                        No team members match this search.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

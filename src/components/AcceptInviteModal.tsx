@@ -20,14 +20,18 @@ interface AcceptInviteModalProps {
 
 export default function AcceptInviteModal({ invite, onProcessed }: AcceptInviteModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const { user, fetchWorkspaces } = useAuth();
+  const { user, fetchWorkspaces, setActiveWorkspace } = useAuth();
   useLockBodyScroll(true);
 
   const handleAccept = async () => {
     setIsProcessing(true);
     try {
       await acceptWorkspaceInvite(invite.id);
-      if (user) await fetchWorkspaces(user.id);
+      if (user) {
+        const updatedWorkspaces = await fetchWorkspaces(user.id);
+        const joinedWorkspace = updatedWorkspaces.find((workspace) => workspace.id === invite.workspace_id);
+        if (joinedWorkspace) setActiveWorkspace(joinedWorkspace);
+      }
       toast.success('Successfully joined ' + invite.workspace_name);
       onProcessed();
     } catch (e: any) {

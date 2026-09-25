@@ -455,31 +455,16 @@ export async function updateWorkspace(workspaceId: string, updates: { name?: str
 }
 
 export async function getWorkspaceMembers(workspaceId: string) {
-  const { data, error } = await supabase
-    .from('workspace_members')
-    .select(`
-      id,
-      role,
-      profiles:user_id ( id, first_name, last_name, email, avatar_url ),
-      user_id
-    `)
-    .eq('workspace_id', workspaceId);
-    
-  if (error) throw error;
-  return data || [];
-}
-
-export async function updateWorkspaceMember(workspaceId: string, userId: string, updates: { role: string }) {
-  const { data, error } = await supabase
-    .from('workspace_members')
-    .update(updates)
-    .eq('workspace_id', workspaceId)
-    .eq('user_id', userId)
-    .select()
-    .single();
+  // Member emails live in Supabase Auth, not in the public profiles table.
+  // Resolve the complete team through an authenticated server function so a
+  // missing public email field cannot make the entire Team view fail to load.
+  const { data, error } = await supabase.functions.invoke('get-workspace-members', {
+    body: { workspaceId },
+  });
 
   if (error) throw error;
-  return data;
+  if (data?.error) throw new Error(data.error);
+  return data?.members || [];
 }
 
 export async function inviteTeamMember(workspaceId: string, email: string) {
@@ -506,4 +491,3 @@ export async function declineWorkspaceInvite(inviteId: string) {
   const { error } = await supabase.rpc('decline_workspace_invite', { p_invite_id: inviteId });
   if (error) throw error;
 }
-
